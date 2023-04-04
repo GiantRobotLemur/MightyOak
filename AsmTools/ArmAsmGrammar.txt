@@ -1,0 +1,531 @@
+ARM Assembler Grammar
+
+Tokens:
+
+Global Tokens:
+Error
+
+Expression Tokens:
+
+Plus: "+"
+Minus: "-"
+Asterisk: "*"
+Backslash: "/"
+Dollar: "$"
+OpenParenthesis: "("
+CloseParenthesis: ")"
+DoubleLeftAngleBracket: "<<"
+DoubleRightAngleBracket: ">>"
+KeywordNot: "NOT"
+KeywordMod: "MOD"
+KeywordAnd "AND"
+KeywordOr: "OR"
+KeywordXor: "XOR" | "EOR"
+Symbol: [A-Za-z_][A-Za-z0-9_]*
+DecimalLiteral: [+\-]?[0-9]+
+HexLiteral: "&"[0-9A-Fa-f]+ | "0"[Xx][0-9A-Fa-f]+
+BinaryLiteral: "%"[01]+ | "0"[Bb][01]+
+RealLiteral: [+-]?[0-9]+("."[0-9]+)?([Ee][+-]?[0-9]+)
+Character: "'"[^\n]"'" | "'\x[0-9A-Fa-f]{1,2}'" | "'\u[0-9A-Fa-f]{1,8}'"
+String: ["]([^\n\\] | "\x"[0-9A-Fa-f]{1,2} | "\u"[0-9A-Fa-f]{1,8})* ["]
+
+Statement Tokens:
+
+Comma: ","
+Hash: "#"
+Bang: "!"
+Hat: "^"
+OpenSquareBracket: "["
+CloseSquareBracket: "]"
+OpenBrace: "{"
+CloseBrace: "}"
+StatementSeparator: [:\n]
+DirectiveNoOperand: "%armv2" | "%armv2a" | "%armv3" | "%armv4" | "%fpa" |
+                    "%vfp" | "%arm" | "%thumb" | "%26bit" | "%32bit"
+DataDirectiveByte: "EQUB" | "DCB"
+DataDirectiveHalfWord: "EQUW" | "DCW"
+DataDirectiveWord: "EQUD" | "DCD"
+DataDirectiveString: "EQUS" | "DCS"
+KeywordAlign: "ALIGN"
+Label: "[.][_A-Za-z][_0-9A-Za-z]*"
+CoreRegister: ("R"([0-9] | "1"[0-5])) | ("A"[1-4]) | ("V"[1-6]) | "SL" |
+              "FP" | "IP" | "SP" | "LR" | "LINK" | "PC"
+CoreStatusReg: ("CPSR" | "SPSR") ("_"[CXSF]{1,4})?
+
+CoreStatusRegMask: CoreStatusRegMask
+
+ShiftMnemonic: "LSL" | "LSR" | "ASR" | "ROR" | "RRX"
+
+ConditionCode: "EQ" | "NE" | "CS" | "HS" | "CC" | "LO" | "MI" | "PL" | "VS" |
+               "VC" | "HI" | "LS" | "GE" | "LT" | "GT" | "LE" | "AL" | "NV"
+
+CoreDataProc3OperandMnemonic: ("ADD" | "SUB | "ADC | "SBC | "RSB | "RSC" |
+                               "AND" | "EOR" | "ORR" | "BIC") ConditionCode? "S"?
+
+
+CoreDataProc2OperandMnemonic: ("MOV" | "MVN") ConditionCode? "S"?
+CoreDataProcComparisonMnemonic: ("CMP" | "CMN" | "TST" | "TEQ") ConditionCode? "P"?
+CoreDataTransferMnemonic: ("LDR" | "STR") ConditionCode? ("H" | "B" | "SH" | "SB")? "T"?
+
+CoreMultiDataTransferMnemonic: ("LDM" | "STM") ConditionCode?
+                               ("IA" | "IB" | "DB" | "DA" | "FD" | "FA" | "ED" | "EA")
+
+CoProcessorDataProcMnemonic: "CDP" ConditionCode?
+CoProcessorDataTransferMnemonic: ("LDC" | "STC") ConditionCode? "L"?
+
+CoProcessorIdentifier: "C" "P"? (([0-9]) | ("1"[0-5]))
+
+BranchMnemonic: ("B" "L"?) ConditionCode?
+BranchExchangeMnemonic: "BX" ConditionCode?
+MultiplyMnemonic: "MUL" ConditionCode? "S"?
+MultiplyAccumMnemonic: "MLA" ConditionCode? "S"?
+LongMultiplyMnemonic: ("SMULL" | "SMLAL" | "UMULL" | "UMLAL") ConditionCode? "S"?
+
+MoveStatusToCoreRegMnemonic: "MRS" ConditionCode?
+MoveCoreToStatusRegMnemonic: "MSR" ConditionCode?
+SwapMnemonic: "SWP" ConditionCode? "B"?
+MoveCoProcRegMnemonic: ("MCR" | "MRC") ConditionCode?
+SoftwareInterruptMnemonic: "SWI" ConditionCode?
+AddressDirectiveMnemonic: "ADR" ConditionCode? "L"?
+FpaDataTransferMnemonic: ("LDF" | "STF") ConditionCode? [SDEP]
+FpaMultiDataTransferMnemonic: ("LFM" | "SFM") ConditionCode? ("FD" | "EA")
+FpaDyadicOpMnemonic: ("ADF" | "SUF" | "RSF" | "MUF" | "DVF" | "RDF" |
+                      "FML" | "FDV" | "FRD" | "RMF") ConditionCode? [SDEP] [PMZ]
+FpaMonadicOpMnemonic: ("ABS" | "URD" | "NRM" | "MVF" | "MNF" | "SQT" | "RND" | "POW"
+ 		       "RPW" | "POL" | "LOG" | "LGN" | "EXP" | "SIN" | "COS" | "TAN"
+		       "ASN" | "ACS" | "ATN" ) ConditionCode? [SDEP] [PMZ]?
+FpaRegTransferToCoreMnemonic: "FIX" ConditionCode? [PMZ]?
+FpaRegTransferToFpaMnemonic: "FLT" ConditionCode? [SDEP] [PMZ]?
+FpaComparisonMnemonic: ("CMF" | "CMFE" | "CNF" | "CNFE") ConditionCode?
+FpaStatusRegOpMnemonic: ("WFS" | "RFS" | "WFC" | "RFC") ConditionCode?
+FpaReg: "F"[0-7]
+BreakpointMnemonic: "BKPT"
+
+
+Language:
+
+An assembly language source code file is line based, i.e. statements cannot span lines unless
+a line ends with a continuation marker '\'.
+
+Multiple statements can appear on the same line using the statement separator character ':'.
+Line comments can appear in any character following the ';' character.
+Instructions, register names and directive names are case-insensitive.
+Function names and symbols are case sensitive.
+
+Additional content can be essentially pasted into the file using the %include "<filename>" directive.
+
+The EQU directive can be used to define macro symbols: EQU Wimp_CreateWindow &400162
+
+Multi-line macros can be created using
+
+%macro <macro name>[,<parameter 1>[,<parameter 2> ...]]
+<macro lines referencing <parameter n>>
+%endmacro
+
+Subroutines can be defined as:
+%proc <name> [{LOCAL|GLOBAL}]
+<subroutine instructions>
+%endproc
+
+Labels and macro symbols are scoped to macros and subroutines.
+Labels and macro symbols defined outside of a macro or subroutine are in the global scope and are accessible everywhere.
+
+Expressions
+-----------
+
+Expressions used syntax reminiscent of BBC BASIC with some more modern languages mixed in.
+
+Literals are expressed as:
+
+Integer: { [0-9]+ | 0[Xx][0-9A-Fa-f]+ | &[0-9A-Fa-f]+ | 0[Bb][01]+ | %[01]+ }
+Real: [0-9].[0-9]+([Ee][+-]?[0-9]+)
+String: "[.]" | '[.]'
+    Escaped characters: '\\', '\0', '\t', '\b', '\r', '\n'
+    Escape sequences:   \x?? - 8-bit character
+                        \u???? - 16-bit character
+                        \U???????? - 32-bit character
+
+Symbols can by any string of characters matching the following which doesn't clash with a keyword:
+
+Symbol := [A-Za-z_][A-Za-z_0-9]*
+
+'$' - A special symbol specifying the current assembly offset.
+
+Unary operators:
+
+NOT <expr> - logical NOT
++ <expr> - absolute
+- <expr> - negative
+
+Binary operators:
+
+AND - Bitwise-AND
+OR - Bitwise-OR
+EOR - Bitwise-Exclusive OR
+XOR - Bitwise-Exclusive OR
+MOD - Remainder from integer division
++ - Addition
+'-' - Subtraction
+* - Multiplication
+/ - Division
+<< - Logical shift left
+>> - Logical shift right
+>>> - Arithmetic shift right
+
+Instruction statements and data directive statements are expressed in terms of expressions which can be evaluated to concrete values. Where a register is required for an instruction statement, an expression evaluating to an integer value between 0 and the highest available register is permitted. Special case-insensitive constants are defined for such expressions to allow registers to be expressed directly in their canonical form or via aliases (e.g. PC = R15).
+
+Statements
+----------
+
+NOTE: All instruction mnemonics and constant directive keywords are case-insensitive. All symbols defined in labels or as macros are case sensitive.
+
+Labels are a statement of the form:
+
+.<symbol>
+
+Where symbol character constraints apply.
+
+.e.g:
+
+.myLabel
+
+This associates the symbol myLabel with the current location in the source code.
+
+Marco Directives
+----------------
+
+EQU <symbol> <value>
+
+Associates an untyped value with a symbol which can be substituted into other expressions in the scope in which the macro is defined.
+
+e.g.
+
+EQU Wimp_CreateWindow &400162
+
+
+DCD Wimp_CreateWindow
+
+Assembly Directives
+-------------------
+
+%include <file name expression>
+
+Interprets a specified source file before continuing to interpret the current one.
+
+%ARMv2
+
+Restricts instruction set usage to instruction available on the ARM2 and ARM250.
+
+%ARMv2a
+
+Restricts instruction set usage to instructions available on the ARM3.
+
+%ARMv3
+
+Restricts instruction set usage to instructions defined by the ARM v3 architecture such as the ARM610 and ARM710 processors.
+
+%ARMv4
+
+Restricts instruction set usage to instructions defined by the ARM v4 architecture such as the ARM810 and StrongARM processors.
+
+
+%FPA
+
+Enables use of FPA co-processor instructions during assembly.
+
+%VFP
+
+Enables use of the VFP co-processor instructions during assembly.
+
+%ARM
+
+Expects core ARM instructions to follow.
+
+%Thumb
+
+Expects 16-bit thumb instructions to follow.
+
+%26Bit
+
+Expects ARMv2 26-bit-compatible instructions to follow.
+
+%32Bit
+
+Expects ARMv3 and later-compatible instructions to follow.
+
+ALIGN [<n>]
+
+Increments the current assembly offset to an even address boundary. If n is not specified, it defaults to while assembling ARM instructions, 2 while assembling thumb instructions. The value of n must be a whole power of 2 greater than 1, i.e. 2, 4, 8, 16, etc.
+
+
+Data Directives
+---------------
+
+Data directives define literal data to be assembled inline with the machine code.
+EQU{ B | W | D | Q | S | SU8 | SU16 | SU32 | F | R | E } <value> [, <value> ...]
+DC{ B | W | D | Q | S | SU8 | SU16 | SU32  | F | R | E } <value> [, <value> ...]
+
+The comma separated values are evaluated to the data type specified in the mnemonic.
+
+EQUB/DCB assemble 8-bit integer values.
+EQUW/DCW assemble 16-bit integer values (legacy 'word' values)
+EQUD/DCD assemble 32-bit integer values (legacy 'double word' values)
+EQUQ/DCQ assemble 64-bit integer values.
+EQUS/DCS assemble string values in the native encoding.
+EQUSU8/DCU8 assemble strings in a UTF-8 encoding.
+EQUSU16/DCU16 assemble strings in a UTF-16 encoding.
+EQUSU32/DCU32 assemble strings as 32-bit Unicode code points.
+EQUF/DCF assemble 32-bit single precision floating point values.
+EQUR/DCR assemble 64-bit double precision floating point values.
+EQUE/DCE assemble 96-bit extended precision floating point values.
+
+E.g.:
+
+EQUD &DEADBEEF, 0xCAFEBABE, 0b10010011, 'A'
+
+Instruction Directives
+----------------------
+
+The address directive loads a register with the absolute address of an object defined in the source code. It has the following form:
+
+ADR[<condition code>][L] <Rd>,<offset expression>
+
+The 'L' suffix allows the directive to be expressed as multiple instructions if the offset is too
+complex to load in a single instruction.
+
+Core Instructions
+-----------------
+
+All instructions (apart from BRPT) support an optional condition code suffix. The following condition codes are defined:
+
+    EQ
+    NE
+    CS
+    HS
+    CC
+    LO
+    MI
+    PL
+    VS
+    VC
+    HI
+    LS
+    GE
+    LT
+    GT
+    LE
+    AL
+    NV
+
+Core registers expressed below as <Rd>, <Rm>, <Rn>, <Rs> are integer expressions which evaluate to core register indices (0-15). In such expressions the following constant case-insensitive symbols are defined:
+
+R0-R15
+A1-A4 (aliases for R0-R3)
+V1-V6 (aliases for R4-R9)
+PC (alias for R15)
+LK (alias for R14)
+Link (alias for R14)
+SP (alias for R13)
+SL (alias for R10 in APCS-M)
+FP (alias for R11 in APCS-M)
+IP (alias for R12 in APCS-M)
+
+Core Shifter Operand
+
+Immediate constant: '#' <constant expression>
+
+Register: <Rm>
+
+Register shifted by immediate: <Rm>, <shift> '#' <constant expression>
+
+shift := { LSL | LSR | ASR | ROR }
+
+Register shifted by register: <Rm>, <shift> <Rs>
+
+Rotate right with extend: <Rm>, 'ROX'
+
+Core 2-operand ALU instructions are defined as:
+
+<mnemonic>[<condition code>][S] <Rd>,<shifter operand>
+
+mnemonic := { MOV | MVN }
+
+Core 3-operand ALU instructions are defined as:
+
+<mnemonic>[<condition code>][S] <Rd>,<Rn>,<shifter operand>
+
+mnemonic := { ADD | ADC | SUB | SBC | RSB | RSC | AND | EOR | ORR | BIC }
+
+Core ALU comparison instructions are defined as:
+
+<mnemonic>[<condition code>][P] <Rn>,<shifter operand>
+
+mnemonic := { CMP | CMN | TST | TEQ }
+
+Core ALU multiply instructions are defined as:
+
+MUL[<condition code>][S] <Rd>,<Rm>,<Rs>
+MLA[<condition code>][S] <Rd>,<Rm>,<Rs>,<Rn>
+
+Core single register data transfer instructions are defined as:
+
+<mnemonic>[<condition code>][{ B | BT | H | SB | SH | T }] <Rd>,<addr operand>
+
+Addr operand := <offset expression> |
+                '['<Rn>, <mem shifter operand>']'[!] |
+                '['<Rn>']', <mem shifter operand> |
+
+mem shifter operand:
+
+Immediate constant offset: '#' [+-]? <constant expression>
+Register offset: [+-]<Rm>
+Register scaled by constant offset: [+-]<Rm>, <shift> '#' <constant expression>
+Register scaled by ROX: [+-]<Rm>, 'ROX'
+
+
+Core multi-register data transfer instructions are defined as:
+
+<mnemonic>[<condition code>]<transfer mode> <Rd>[!],'{'<register list>'}'[^]
+
+Core branch instructions are defined as:
+
+<mnemonic>[<condition code>] <offset expression>
+
+Core software interrupt instructions are defined as:
+
+SWI[<condition code>] <numeric expression>
+
+Core swap instructions are defined as:
+
+SWP[<condition code>][B] <Rd>,<Rm>,'['<Rn>']'
+
+Status Register Instructions
+----------------------------
+
+MRS[<condition code>] <Rd>, { CPSR | SPSR }
+MSR[<condition code>] CPSR_f, # <constant expr>
+MSR[<condition code>] CPSR_[cxsf]{1,4}, <Rm>
+MSR[<condition code>] SPSR_f, # <constant expr>
+MSR[<condition code>] SPSR_[cxsf]{1,4}, <Rm>
+
+
+Co-processor Instructions
+-------------------------
+
+CDP[<condition code>] <CpID>, <op code 1 expr>, <CRd>, <CRn>, <CRm>, <op code 2 expr>
+MRC/MCR[<condition code>] <CpID>, <op code 1 expr>, <Rd>, <CRn>, <CRm>, <op code 2 expr>
+LDC/STC[<condition code>][L] <CpID>, <CRd>, <addr operand>
+
+Branch and Exchange (enter thumb code)
+--------------------------------------
+
+BX <Rm>
+
+FPA Instructions
+----------------
+
+FPA Registers are represented as <Fd>, <Fn> and <Fm> integer expressions which are evaluated in a context in which the constants F0-F7 are defined.
+
+FPA dyadic data processing operations:
+
+<mnemonic>[<condition code>]<precision>[<rounding mode>] <Fd>, <Fn>, {<Fm> | '#' <expr>}
+
+mnemonic := { ADF | SUF | RSF | MUF | DVF | RDF | FML | FDV | FRD | RMF }
+rounding mode := { P | M | Z }
+
+FPA monadic data processing operations:
+
+<mnemonic>[<condition code>]<precision>[<rounding mode>] <Fd>, {<Fm> | '#' <expr>}
+
+mnemonic := { ABS | URD | NRM | MVF | MNF | SQT | RND |
+                POW | RPW | POL | LOG | LGN | EXP | SIN |
+                COS | TAN | ASN | ACS | ATN }
+
+FPA register transfer instructions:
+
+FLT[<condition code>]<precision>[<rounding mode>] <Fn>, <Rd>
+FIX[<condition code>]<rounding mode> <Rd>, <Fm>
+<mnemonic>[<condition code>] <Rd>
+
+mnemonic := { WFS | RFS | WFC | RFC }
+
+FPA comparison operations:
+
+<mnemonic>[<condition code>] <Fn>, <Fm>
+
+mnemonic := { CMF | CNF | CMFE | CNFE }
+
+
+FPA data transfer instructions are defined as:
+
+<mnemonic>[<condition code>]<precision> <Fd>, <addr operand>
+
+mnemonic := { LDF | STF }
+precision := { S | D | E | P }
+
+
+FPA multi-data transfer instructions are defined as:
+
+<mnemonic>[<condition code>][<mode>] <Fd>, <count expr>, <addr operand>
+
+mnemonic := { LFM | SFM }
+mode := { FD | EA }
+
+
+Long Multiply Instructions
+--------------------------
+
+<mnemonic>[<condition code>][S] <RdLo>, <RdHi>, <Rm>, <Rs>
+
+mnemonic := { SMLAL | SMULL | UMLAL | UMULL }
+
+
+Code Structure
+--------------
+
+Statements are expressed in text source files.
+Instructions, data directives and instruction directives are all assembled into the instruction stream.
+
+Multi-line macros can be expressed as follows:
+
+%macro <macro name>[,<parameter 1 name>[,<parameter 2 name> ...]]
+<macro lines referencing <parameter n names>>
+%endmacro
+
+Then called with:
+
+<macro name>(<parameter 1>, <parameter 2>, etc.)
+
+Subroutines can be expressed as:
+%proc <name> [{LOCAL|GLOBAL}]
+<subroutine instructions>
+%endproc
+
+The machine code statements are assembled in-place, but labels and macros are scoped to the subroutine to prevent pollution of the global namespace. However, the name of the subroutine is added to the global namespace so that it can be called by other code.
+
+
+Characters => ISyntaxNode
+ISyntaxNodes combined to form a StatementNode
+StatementNodes are added to the top-level StatementList
+
+
+%include "SomeFile.asm" - when assembled, the file is read to produce another StatementList?
+
+.myLabel - When assembled, marks a point in code, only solid after all previous statements have been sized.
+
+%macro/%endmacro - When assembled add to set of scoped macro definitions which are statement lists and parameter descriptions so that the statements can be assembled with different sets of parameter values in context?
+
+%proc/%endproc - When assembled, create new scope for symbols?
+
+
+Assembly Process:
+
+Parser pass - defines AST as a list of StatementNode-derived ISyntaxNode objects.
+    Deferred include processing?
+    Result is a single statement list with all labels defined, but not with concrete values.
+    Statements which don't reference any symbols can be assembled immediately?
+        No, not with deferred include processing.
+
+Assembly pass - creates object code and gives concrete values to labels for evaluation later in the assembly process.
+    The result is a block of object code.
+    Note: If statements rely on labels with non-concrete values, a error should be produced?

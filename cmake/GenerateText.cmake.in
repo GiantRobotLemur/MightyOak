@@ -1,0 +1,42 @@
+# CMake script for embedding text files as static C++ data.
+
+set(UtilsDir "@UtilsDir@")
+
+function(add_static_data sourceFileName)
+    foreach(fullName IN ITEMS ${ARGN})
+        get_filename_component(baseName ${fullName} NAME_WLE)
+
+        string(APPEND declarations "const char *get${baseName}Text();\n")
+
+        string(APPEND sourceCode "// Imported from ${fullName}\n")
+        string(APPEND sourceCode "const char *get${baseName}Text()\n{\n    return\n")
+
+        # Read the file as one long string.
+        file(READ ${fullName} fileContent)
+        STRING(REGEX REPLACE "\r\n" "\n" fileContent "${fileContent}")
+        
+        # Find the first line break.
+        string(FIND "${fileContent}" "\n" "lineLength")
+
+        while (${lineLength} GREATER -1)
+            string(SUBSTRING "${fileContent}" 0 "${lineLength}" line)
+            string(APPEND sourceCode "\"${line}\\n\"\n")
+            math(EXPR lineLength "${lineLength} + 1")
+
+            # Remove the line from the beginning of the string, including
+            # the new line character.
+            string(SUBSTRING "${fileContent}" "${lineLength}" "-1" fileContent)
+
+            # Find the next line break.
+            string(FIND "${fileContent}" "\n" "lineLength")
+        endwhile()
+
+        # Append the last line.
+        string(APPEND sourceCode "\"${fileContent}\\n\";\n}\n\n")
+    endforeach()
+
+    # Write the source code to a file.
+    configure_file("${UtilsDir}/StaticData.cpp.in" ${sourceFileName} @ONLY)
+endfunction()
+
+add_static_data("@fullSourceName@" "@inputFiles@")

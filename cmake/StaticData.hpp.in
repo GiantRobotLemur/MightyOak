@@ -1,0 +1,7 @@
+// CMake-Generated Static Data declarations
+
+#ifndef __@headerGuard@__
+
+@declarations@
+
+#endif

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+
+  <Type Name="Ag::String">
+    <DisplayString>{_str->_data,s8b}</DisplayString>
+    <StringView>_str->_data,s8b</StringView>
+    <Expand>
+      <Item Name="UTF-8">_str->_data,s8b</Item>
+      <Item Name="UTF-8 Length">_str->_utf8Length</Item>
+      <Item Name="UTF-16 Length">_str->_utf16Length</Item>
+      <Item Name="UTF-32 Length">_str->_utf32Length</Item>
+      <Item Name="Hash Code">_str->_hashCode,X</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="Ag::Fs::Path">
+    <DisplayString>{_source}</DisplayString>
+    <StringView>_source</StringView>
+    <Expand>
+      <Item Name="Source">_source</Item>
+      <Item Name="Root Type">_rootType</Item>
+      <Item Name="Root Length">_rootLength</Item>
+      <Item Name="File Name Length">_fileNameLength</Item>
+      <Item Name="Extension Length">_fileExtLength</Item>
+    </Expand>
+  </Type>
+</AutoVisualizer>

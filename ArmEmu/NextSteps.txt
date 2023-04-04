@@ -1,0 +1,28 @@
+Acorn Emulator Next Steps:
+
+* Implement data transfer instructions.
+* Verify the ARMv2 core.
+    * Should RRX update the carry flag when used with a non-S-suffix instruction?
+    + No, it just sets the carry-out from the barrel shifter, the instruction defines
+      what should be done with that.
+* Implement long multiply - Emulation needs testing
+* Implement move to/from PSR - Emulation needs testing
+* Implement half-word data transfer - Emulation needs testing
+* Implement signed data transfer - Emulation needs testing
+* Implement generic co-processor interface? - Emulation needs testing
+* Implement FPA co-processor
+* Implement Thumb for ARMv4 - possibly not worth it.
+    
+* Convert classes to templates using the base class as a template parameter in order to fit different components together.
+* Implement MEMC address translation + Memory mapped I/O.
+* Beef up the disassembler to produce tokens rather than a single line of text.
+* Create a desktop disassembler tool which allows code to be annotated and edited and for those changes to be saved as a side file or a new block of assembly language source code.
+    * Qt or Win32-only? Not sure.
+* Disassemble the RISC OS 3.10 ROM to discover POST and other bits.
+* Implement IOC emulation
+    * Implement I2C bus and CMOS RAM
+* Implement VIDC emulation with memory frame buffer.
+* Implement IOEB (Input/Output Expansion Block)
+    * Controls 82c710/711 and extra ROM access (another 4MB).
+    * Controls a faster video clock for hi-res display modes
+* Implement 82c710/711 I/O controller emulation

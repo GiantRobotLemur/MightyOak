@@ -1,0 +1,72 @@
+Instruction Decoding
+
+Top 4 bits - condition code.
+Bits 25-27 - Major Op Code:
+
+0: Data Processing - [shifted] register second operand.
+    Bits 21-24: Minor Op Code.
+        Op codes 8-11: Comparison ops, bit 20 must be set.
+                       TST:  8
+                       TEQ:  9
+                       CMP: 10
+                       CMN: 11
+                       For normal operation bits 16-19 must be clear.
+                       For update PSR (26-bit only) bits 16-19 must be set.
+            TST[no S] Rd,R15,R0 = MRS Rd,CPSR
+            TEQ[no S] R0,Rn,Rm = MSR CPSR_*,Rm
+            TEQ[no S] R15,R15,Rm, LSL R15 = BX Rm (ARMv4T or ARMv5+)
+            TEQ[no S] R15,R15,Rm, LSR R15 = Branch and link/exchange (ARMv5+)
+            TEQ[no S] Rx,Rx,Rx,ROR Rx = BKPT (ARMv5+)
+            CMP[no S] Rd,R15,R0 = MRS Rd,SPSR
+            CMN[no S] R0,Rn,Rm = MSR SPSR_*,Rm
+            CMN[no S] Rd,R15,Rm,LSL R15 = CLZ Rd,Rm (ARMv5+)
+            All Rd,Rn,Rm,ASR R0 = Enhanced DSP add/sub (Enhanced DSP extension)
+            All Rd,Rn,Rs,Rm,<shift> #<immed> = Enhanced DSP multiplies (Enhanced DSP extension)
+
+    Bits 4 and 7 set: Illegal shift, used to encode extensions
+        With bits 5-6 = 0
+        Extension op code in bits 21-24:
+            00: Multiply
+            01: Multiply with accumulate
+            02: ?
+            03: ?
+            04: Long signed multiply
+            05: Long signed multiply with accumulate
+            06: Long unsigned multiply
+            07: Long unsigned multiply with accumulate
+            08: Atomic swap word
+            09: ?
+            10: Atomic swap byte
+            11-15: ?
+        With bits 5-6 = 1
+            Load/store half-word (ARMv4+)
+        With bits 5-6 = 2-3
+            Load signed half-word/byte - note NOT store.
+            Load/store two words (Enhanced DSP Ext)
+
+1: Data Processing - immediate constant second operand.
+    Bits 21-24: Minor Op Code.
+        Op codes 8-11: Comparison ops, bit 20 must be set.
+                   For normal operation bits 16-19 must be clear.
+                   For update PSR (26-bit only) bits 16-19 must be set.
+                       TST:  8
+                       TEQ:  9
+                       CMP: 10
+                       CMN: 11
+                       For normal operation bits 16-19 must be clear.
+                       For update PSR (26-bit only) bits 16-19 must be set.
+            TST[no S] ?
+            TEQ[no S] R0,Rn,Rm = MSR CPSR_*,#<immed>
+            CMP[no S] ?
+            CMN[no S] R0,Rn,Rm = MSR SPSR_*,#<immed>
+
+2: Word/Byte Data Transfer - Immediate offset
+3: Word/Byte Data Transfer - [shifted] Register offset
+4: Multi-word Data Transfer
+5: Branch [with link]
+6: Co-processor Data Transfer
+7: SWI or Co-Processor Data Processing/Register Transfer
+    Bit 24 set: SWI
+    Bit 24 clear:
+        Bit 4 clear: Co-processor data processing
+        Bit 4 set: Co-processor register transfer
