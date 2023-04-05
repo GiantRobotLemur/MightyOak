@@ -1,5 +1,5 @@
 # Root CMakeLists for the MightyOak emulator built on the Silver cross-platform runtime library.
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.21)
 enable_testing()
 
 set(CMAKE_CXX_STANDARD          17)

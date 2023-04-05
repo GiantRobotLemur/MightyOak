@@ -19,6 +19,7 @@
 #include <memory>
 
 #include "Configuration.hpp"
+#include "EnumInfo.hpp"
 #include "String.hpp"
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -150,6 +151,49 @@ private:
 ////////////////////////////////////////////////////////////////////////////////
 // Templates
 ////////////////////////////////////////////////////////////////////////////////
+//! @brief A useful function for creating descriptions for enumeration-based
+//! command line option values.
+//! @tparam TEnum The data type of the described enumeration which can be
+//! inferred from the typeInfo argument.
+//! @tparam TEnumSym The data type of the object which describes each
+//! enumeration symbol, also inferred from the typeInfo argument.
+//! @param[out] buffer The UTF-8 encoded string to append the description to.
+//! @param[in] typeInfo The enum type metadata containing the descriptions to
+//! extract.
+template<typename TEnum, typename TEnumSym>
+static void appendValidValues(std::string &buffer,
+                              const EnumInfo<TEnum, TEnumSym> &typeInfo)
+{
+    const auto &symbols = typeInfo.getSymbols();
+
+    if (symbols.size() == 1)
+    {
+        buffer.append("The only valid value is ");
+        buffer.append(symbols.front().getSymbol());
+        buffer.push_back('.');
+    }
+    else if (symbols.size() > 1)
+    {
+        size_t lastSymbol = symbols.size() - 1;
+
+        buffer.append("Valid values are ");
+
+        for (size_t i = 0; i < lastSymbol; ++i)
+        {
+            if (i > 0)
+            {
+                buffer.push_back(',');
+                buffer.push_back(' ');
+            }
+
+            buffer.append(symbols[i].getSymbol());
+        }
+
+        buffer.append(" and ");
+        buffer.append(symbols.back().getSymbol());
+        buffer.push_back('.');
+    }
+}
 
 }} // namespace Ag::Cli
 

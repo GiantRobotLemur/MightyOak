@@ -214,9 +214,16 @@ add_ag_test_app(AsmTools_Tests TEST_LIB AsmTools
 add_cli_app(AAsm FOLDER ARM
                  NAME AAsm
                  DESCRIPTION "A 32-bit ARM assembler."
-                 VERSION "0.1.0.0"
+                 VERSION "${PROJECT_VERSION}"
                  SOURCES AAsm_Main.cpp
                  LIBS AgCore AsmTools)
+
+add_cli_app(ADisasm FOLDER ARM
+                    NAME ADisasm
+                    DESCRIPTION "A 32-bit ARM disassembler."
+                    VERSION "${PROJECT_VERSION}"
+                    SOURCES ADisasm_Main.cpp
+                    LIBS AgCore AsmTools)
 
 # add_gui_app(target ...)
 # Arguments: target                  - The mandatory target name

@@ -13,10 +13,6 @@
 #include "Ag/Core.hpp"
 #include "AsmTools.hpp"
 
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
-
 namespace Ag {
 namespace Asm {
 
@@ -56,40 +52,6 @@ private:
     AAsmCommand _command;
     bool _usePIC;
 
-    template<typename TEnum>
-    static void appendValidValues(std::string &buffer, const EnumInfo<TEnum> &typeInfo)
-    {
-        const auto &symbols = typeInfo.getSymbols();
-
-        if (symbols.size() == 1)
-        {
-            buffer.append("The only valid value is ");
-            buffer.append(symbols.front().getSymbol());
-            buffer.push_back('.');
-        }
-        else if (symbols.size() > 1)
-        {
-            size_t lastSymbol = symbols.size() - 1;
-
-            buffer.append("Valid values are ");
-
-            for (size_t i = 0; i < lastSymbol; ++i)
-            {
-                if (i > 0)
-                {
-                    buffer.push_back(',');
-                    buffer.push_back(' ');
-                }
-
-                buffer.append(symbols[i].getSymbol());
-            }
-
-            buffer.append(" and ");
-            buffer.append(symbols.back().getSymbol());
-            buffer.push_back('.');
-        }
-    }
-
     // Internal Functions
     static Cli::Schema createSchema()
     {
@@ -114,7 +76,7 @@ private:
 
         std::string description;
         description.assign("Specifies the initial instruction set. ");
-        appendValidValues(description, getInstructionSetType());
+        Cli::appendValidValues(description, getInstructionSetType());
 
         builder.defineOption(Option::InitialInstructionSet,
                              description.c_str(),
@@ -124,7 +86,7 @@ private:
 
         description.clear();
         description.assign("Specifies an extension instruction set to enable. ");
-        appendValidValues(description, getArchExtensionsType());
+        Cli::appendValidValues(description, getArchExtensionsType());
 
         builder.defineOption(Option::Extension,
                              description.c_str(),
@@ -488,22 +450,13 @@ protected:
     }
 };
 
-////////////////////////////////////////////////////////////////////////////////
-// Local Data
-////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////
-// Local Functions
-////////////////////////////////////////////////////////////////////////////////
-
 } // Anonymous namespace
+
+}} // namespace Ag::Asm
 
 ////////////////////////////////////////////////////////////////////////////////
 // Global Function Definitions
 ////////////////////////////////////////////////////////////////////////////////
-
-}} // namespace Ag::Asm
-
 IMPLEMENT_MAIN(Ag::Asm::AAsmApp);
 
 ////////////////////////////////////////////////////////////////////////////////
