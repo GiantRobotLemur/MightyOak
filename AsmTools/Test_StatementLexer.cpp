@@ -542,7 +542,7 @@ GTEST_TEST(StatementLexer, RecogniseAluInstructions)
     Token next;
     InstructionMnemonic mnemonic;
 
-    for (const auto expectedInstruction : mnemonics)
+    for (const auto &expectedInstruction : mnemonics)
     {
         String instruction = String::format("InstructionMnemonic: {0}",
                                             { static_cast<uint32_t>(expectedInstruction.second) });
@@ -588,7 +588,7 @@ GTEST_TEST(StatementLexer, RecogniseBranchInstructions)
     InstructionMnemonic mnemonic;
     ConditionCode cond;
 
-    for (const auto expected : mnemonics)
+    for (const auto &expected : mnemonics)
     {
         String instruction = String::format("InstructionMnemonic: {0}, Cond: {1}",
                                             { static_cast<uint32_t>(std::get<1>(expected)),
@@ -661,7 +661,7 @@ GTEST_TEST(StatementLexer, RecogniseConditionCodes)
     InstructionMnemonic mnemonic;
     ConditionCode cond;
 
-    for (const auto expected : mnemonics)
+    for (const auto &expected : mnemonics)
     {
         String instruction = String::format("InstructionMnemonic: {0}, Cond: {1}",
                                             { static_cast<uint32_t>(std::get<1>(expected)),

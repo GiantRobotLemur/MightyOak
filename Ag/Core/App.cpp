@@ -42,7 +42,7 @@ struct CommandLineInfo
     int ArgCount;
 
     //! @brief The main() command line arguments to parse.
-    const char **Args;
+    const char * const *Args;
 
     //! @brief The wmain() command line arguments to parse.
     const wchar_t * const *WideArgs;
@@ -51,7 +51,7 @@ struct CommandLineInfo
     bool Success;
 
     //! @brief Constructs an object describing a console of POSIX command line.
-    CommandLineInfo(Ag::CommandLineUPtr &&processor, int argc, const char **argv) :
+    CommandLineInfo(Ag::CommandLineUPtr &&processor, int argc, const char * const *argv) :
         Manager(std::move(processor)),
         CommandLine(nullptr),
         ArgCount(argc),
@@ -191,7 +191,7 @@ int App::exec()
 //! @returns The global process result value to return from main().
 //! @details This function is intended to run a traditional POSIX application
 //! or a Win32 ANSI console application.
-int App::exec(int argc, const char **argv)
+int App::exec(int argc, const char * const *argv)
 {
     CommandLineInfo commandLineInfo(createCommandLineArguments(), argc, argv);
 

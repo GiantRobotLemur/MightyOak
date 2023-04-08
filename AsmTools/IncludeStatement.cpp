@@ -86,6 +86,8 @@ ISyntaxNode *IncludeNode::applyToken(ParseContext & /* context */,
             result = this;
         }
         break;
+
+    default: break;
     }
 
     return result;

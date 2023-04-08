@@ -190,7 +190,7 @@ template<> bool innerBitScanReverse(uint64_t value, int32_t &msb)
 #endif // if x86
 
 // ifdef _MSC_VER
-#else if defined __GNUC__
+#elifdef __GNUC__
 template<> bool innerBitScanForward<uint32_t>(uint32_t value, int32_t &msb)
 {
     if (value != 0)

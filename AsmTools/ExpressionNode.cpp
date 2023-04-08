@@ -651,7 +651,6 @@ void UnaryOperatorNode::recover(ParseContext &context,
                                 ISyntaxNode *node)
 {
     ExpressionNode *childExpr = nullptr;
-    bool usedChild = false;
 
     if ((_state == State::BeforeExpr))
     {
@@ -660,7 +659,6 @@ void UnaryOperatorNode::recover(ParseContext &context,
             _child.reset(childExpr);
             _isValid = false;
             _state = State::Complete;
-            usedChild = true;
         }
         else
         {
@@ -843,7 +841,6 @@ void BinaryOperatorNode::recover(ParseContext &context,
                                  ISyntaxNode *node)
 {
     ExpressionNode *childExpr = nullptr;
-    bool usedChild = false;
 
     if ((_state == State::BeforeRhsExpr))
     {
@@ -852,7 +849,6 @@ void BinaryOperatorNode::recover(ParseContext &context,
             _rhsChild.reset(childExpr);
             _isValid = false;
             _state = State::Complete;
-            usedChild = true;
         }
         else
         {

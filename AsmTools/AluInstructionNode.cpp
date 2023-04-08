@@ -214,6 +214,9 @@ AluInstructionNode::AluInstructionNode(ParseContext &context, const Token &mnemo
         // Ensure the first operand is skipped for these instruction types.
         _flags |= NoRn;
         break;
+
+    default:
+        break;
     }
 }
 

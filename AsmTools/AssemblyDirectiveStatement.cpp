@@ -365,6 +365,8 @@ ISyntaxNode *AlignDirectiveNode::applyToken(ParseContext &context, const Token &
         }
         break;
 
+    default:
+        break;
     }
 
     return node;

@@ -263,6 +263,7 @@ ISyntaxNode *ShifterOperandNode::applyToken(ParseContext &context,
         case TokenClass::ArithmeticShiftRight: _shiftType = ShiftType::Asr; break;
         case TokenClass::RotateRightShift: _shiftType = ShiftType::Ror; break;
         case TokenClass::RotateRightWithExtendShift: _shiftType = ShiftType::Rrx; break;
+        default: break;
         }
 
         if (_shiftType == ShiftType::Rrx)

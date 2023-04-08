@@ -470,8 +470,8 @@ protected:
 SwiInstructionNode::SwiInstructionNode(ParseContext &context,
                                        const Token &mnemonic) :
     StatementNode(context, mnemonic),
-    _state(State::AfterMnemonic),
-    _condition(getTokenEnum(mnemonic, TokenProperty::ConditionCode, ConditionCode::Al))
+    _condition(getTokenEnum(mnemonic, TokenProperty::ConditionCode, ConditionCode::Al)),
+    _state(State::AfterMnemonic)
 {
     context.pushLexicalContext(getExpressionLexer());
 }
@@ -562,9 +562,9 @@ Statement *SwiInstructionNode::compile(Messages &output) const
 BranchInstructionNode::BranchInstructionNode(ParseContext &context,
                                        const Token &mnemonic) :
     StatementNode(context, mnemonic),
-    _state(State::AfterMnemonic),
     _mnemonic(getTokenEnum(mnemonic, TokenProperty::Mnemonic, InstructionMnemonic::B)),
-    _condition(getTokenEnum(mnemonic, TokenProperty::ConditionCode, ConditionCode::Al))
+    _condition(getTokenEnum(mnemonic, TokenProperty::ConditionCode, ConditionCode::Al)),
+    _state(State::AfterMnemonic)
 {
     context.pushLexicalContext(getExpressionLexer());
 }
@@ -657,9 +657,9 @@ MultiplyInstructionNode::MultiplyInstructionNode(ParseContext &context,
     StatementNode(context, mnemonic),
     _expectedRegCount(0),
     _regCount(0),
-    _state(State::AfterSeparator),
     _mnemonic(getTokenEnum(mnemonic, TokenProperty::Mnemonic, InstructionMnemonic::Mul)),
     _condition(getTokenEnum(mnemonic, TokenProperty::ConditionCode, ConditionCode::Al)),
+    _state(State::AfterSeparator),
     _updatesPsr(getTokenFlag(mnemonic, TokenProperty::UpdatePsr, false))
 {
     _expectedRegCount = (_mnemonic == InstructionMnemonic::Mul) ? 3 : 4;
@@ -1073,8 +1073,8 @@ Statement *MoveToStatusRegNode::compile(Messages &output) const
 BkptInstructionNode::BkptInstructionNode(ParseContext &context,
                                        const Token &mnemonic) :
     StatementNode(context, mnemonic),
-    _state(State::AfterMnemonic),
-    _condition(getTokenEnum(mnemonic, TokenProperty::ConditionCode, ConditionCode::Al))
+    _condition(getTokenEnum(mnemonic, TokenProperty::ConditionCode, ConditionCode::Al)),
+    _state(State::AfterMnemonic)
 {
     context.pushLexicalContext(getExpressionLexer());
 }
@@ -1114,6 +1114,8 @@ ISyntaxNode *BkptInstructionNode::applyToken(ParseContext &context,
             result = this;
         }
         break;
+
+    default: break;
     }
 
     return result;
