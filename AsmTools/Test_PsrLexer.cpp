@@ -87,7 +87,7 @@ GTEST_TEST(PsrLexer, ContinuationReturnsNoToken)
 
     EXPECT_TRUE(specimen->tryGetNextToken(input, token));
     EXPECT_EQ(token.getClass(), TokenClass::RegisterStatus);
-    EXPECT_EQ(token.getProperty(TokenProperty::RegisterIndex, CoreRegister::R0), CoreRegister::CPSR);
+    EXPECT_EQ(getTokenEnum(token, TokenProperty::RegisterIndex, CoreRegister::R0), CoreRegister::CPSR);
 }
 
 GTEST_TEST(PsrLexer, ContinuationWarnsOfTrailingCharacters)
@@ -101,7 +101,7 @@ GTEST_TEST(PsrLexer, ContinuationWarnsOfTrailingCharacters)
     EXPECT_EQ(token.getClass(), TokenClass::Warning);
     EXPECT_TRUE(specimen->tryGetNextToken(input, token));
     EXPECT_EQ(token.getClass(), TokenClass::RegisterStatus);
-    EXPECT_EQ(token.getProperty(TokenProperty::RegisterIndex, CoreRegister::R0), CoreRegister::SPSR);
+    EXPECT_EQ(getTokenEnum(token, TokenProperty::RegisterIndex, CoreRegister::R0), CoreRegister::SPSR);
 }
 
 GTEST_TEST(PsrLexer, ContinuationIgnoresCommentsCharacters)
@@ -113,7 +113,7 @@ GTEST_TEST(PsrLexer, ContinuationIgnoresCommentsCharacters)
 
     EXPECT_TRUE(specimen->tryGetNextToken(input, token));
     EXPECT_EQ(token.getClass(), TokenClass::RegisterStatus);
-    EXPECT_EQ(token.getProperty(TokenProperty::RegisterIndex, CoreRegister::R0), CoreRegister::CPSR);
+    EXPECT_EQ(getTokenEnum(token, TokenProperty::RegisterIndex, CoreRegister::R0), CoreRegister::CPSR);
 }
 
 GTEST_TEST(PsrLexer, SuffixIsInvalid)
@@ -136,16 +136,11 @@ GTEST_TEST(PsrLexer, AllSuffixIsValid)
 
     EXPECT_TRUE(specimen->tryGetNextToken(input, token));
     EXPECT_EQ(token.getClass(), TokenClass::RegisterStatus);
-    EXPECT_EQ(token.getProperty(TokenProperty::RegisterIndex, CoreRegister::R0), CoreRegister::SPSR);
+    EXPECT_EQ(getTokenEnum(token, TokenProperty::RegisterIndex, CoreRegister::R0), CoreRegister::SPSR);
 
     PsrComponent component = PsrComponent::None;
-    EXPECT_FALSE(token.tryGetProperty<PsrComponent>(TokenProperty::PsrComponent, component));
+    EXPECT_FALSE(tryGetTokenEnum(token, TokenProperty::PsrComponent, component));
 }
-
-
-
-
-
 
 GTEST_TEST(PsrComponentLexer, NoTextReturnsNoToken)
 {
@@ -186,7 +181,7 @@ GTEST_TEST(PsrComponentLexer, ContinuationReturnsNoToken)
 
     EXPECT_TRUE(specimen->tryGetNextToken(input, token));
     EXPECT_EQ(token.getClass(), TokenClass::RegisterStatus);
-    EXPECT_EQ(token.getProperty(TokenProperty::RegisterIndex, CoreRegister::R0), CoreRegister::CPSR);
+    EXPECT_EQ(getTokenEnum(token, TokenProperty::RegisterIndex, CoreRegister::R0), CoreRegister::CPSR);
 }
 
 GTEST_TEST(PsrComponentLexer, ContinuationWarnsOfTrailingCharacters)
@@ -200,7 +195,7 @@ GTEST_TEST(PsrComponentLexer, ContinuationWarnsOfTrailingCharacters)
     EXPECT_EQ(token.getClass(), TokenClass::Warning);
     EXPECT_TRUE(specimen->tryGetNextToken(input, token));
     EXPECT_EQ(token.getClass(), TokenClass::RegisterStatus);
-    EXPECT_EQ(token.getProperty(TokenProperty::RegisterIndex, CoreRegister::R0), CoreRegister::SPSR);
+    EXPECT_EQ(getTokenEnum(token, TokenProperty::RegisterIndex, CoreRegister::R0), CoreRegister::SPSR);
 }
 
 GTEST_TEST(PsrComponentLexer, ContinuationIgnoresCommentsCharacters)
@@ -212,7 +207,7 @@ GTEST_TEST(PsrComponentLexer, ContinuationIgnoresCommentsCharacters)
 
     EXPECT_TRUE(specimen->tryGetNextToken(input, token));
     EXPECT_EQ(token.getClass(), TokenClass::RegisterStatus);
-    EXPECT_EQ(token.getProperty(TokenProperty::RegisterIndex, CoreRegister::R0), CoreRegister::CPSR);
+    EXPECT_EQ(getTokenEnum(token, TokenProperty::RegisterIndex, CoreRegister::R0), CoreRegister::CPSR);
 }
 
 GTEST_TEST(PsrComponentLexer, AllSuffix)
@@ -224,8 +219,8 @@ GTEST_TEST(PsrComponentLexer, AllSuffix)
 
     EXPECT_TRUE(specimen->tryGetNextToken(input, token));
     EXPECT_EQ(token.getClass(), TokenClass::RegisterStatus);
-    EXPECT_EQ(token.getProperty(TokenProperty::RegisterIndex, CoreRegister::R0), CoreRegister::SPSR);
-    EXPECT_EQ(token.getProperty(TokenProperty::PsrComponent, PsrComponent::None), PsrComponent::All);
+    EXPECT_EQ(getTokenEnum(token, TokenProperty::RegisterIndex, CoreRegister::R0), CoreRegister::SPSR);
+    EXPECT_EQ(getTokenEnum(token, TokenProperty::PsrComponent, PsrComponent::None), PsrComponent::All);
 }
 
 GTEST_TEST(PsrComponentLexer, FlgSuffix)
@@ -237,8 +232,8 @@ GTEST_TEST(PsrComponentLexer, FlgSuffix)
 
     EXPECT_TRUE(specimen->tryGetNextToken(input, token));
     EXPECT_EQ(token.getClass(), TokenClass::RegisterStatus);
-    EXPECT_EQ(token.getProperty(TokenProperty::RegisterIndex, CoreRegister::R0), CoreRegister::CPSR);
-    EXPECT_EQ(token.getProperty(TokenProperty::PsrComponent, PsrComponent::None), PsrComponent::Flags);
+    EXPECT_EQ(getTokenEnum(token, TokenProperty::RegisterIndex, CoreRegister::R0), CoreRegister::CPSR);
+    EXPECT_EQ(getTokenEnum(token, TokenProperty::PsrComponent, PsrComponent::None), PsrComponent::Flags);
 }
 
 GTEST_TEST(PsrComponentLexer, F_Suffix)
@@ -250,8 +245,8 @@ GTEST_TEST(PsrComponentLexer, F_Suffix)
 
     EXPECT_TRUE(specimen->tryGetNextToken(input, token));
     EXPECT_EQ(token.getClass(), TokenClass::RegisterStatus);
-    EXPECT_EQ(token.getProperty(TokenProperty::RegisterIndex, CoreRegister::R0), CoreRegister::CPSR);
-    EXPECT_EQ(token.getProperty(TokenProperty::PsrComponent, PsrComponent::None), PsrComponent::Flags);
+    EXPECT_EQ(getTokenEnum(token, TokenProperty::RegisterIndex, CoreRegister::R0), CoreRegister::CPSR);
+    EXPECT_EQ(getTokenEnum(token, TokenProperty::PsrComponent, PsrComponent::None), PsrComponent::Flags);
 }
 
 GTEST_TEST(PsrComponentLexer, X_Suffix)
@@ -263,8 +258,8 @@ GTEST_TEST(PsrComponentLexer, X_Suffix)
 
     EXPECT_TRUE(specimen->tryGetNextToken(input, token));
     EXPECT_EQ(token.getClass(), TokenClass::RegisterStatus);
-    EXPECT_EQ(token.getProperty(TokenProperty::RegisterIndex, CoreRegister::R0), CoreRegister::SPSR);
-    EXPECT_EQ(token.getProperty(TokenProperty::PsrComponent, PsrComponent::None), PsrComponent::Extension);
+    EXPECT_EQ(getTokenEnum(token, TokenProperty::RegisterIndex, CoreRegister::R0), CoreRegister::SPSR);
+    EXPECT_EQ(getTokenEnum(token, TokenProperty::PsrComponent, PsrComponent::None), PsrComponent::Extension);
 }
 
 GTEST_TEST(PsrComponentLexer, S_Suffix)
@@ -276,8 +271,8 @@ GTEST_TEST(PsrComponentLexer, S_Suffix)
 
     EXPECT_TRUE(specimen->tryGetNextToken(input, token));
     EXPECT_EQ(token.getClass(), TokenClass::RegisterStatus);
-    EXPECT_EQ(token.getProperty(TokenProperty::RegisterIndex, CoreRegister::R0), CoreRegister::CPSR);
-    EXPECT_EQ(token.getProperty(TokenProperty::PsrComponent, PsrComponent::None), PsrComponent::Status);
+    EXPECT_EQ(getTokenEnum(token, TokenProperty::RegisterIndex, CoreRegister::R0), CoreRegister::CPSR);
+    EXPECT_EQ(getTokenEnum(token, TokenProperty::PsrComponent, PsrComponent::None), PsrComponent::Status);
 }
 
 GTEST_TEST(PsrComponentLexer, C_Suffix)
@@ -289,8 +284,8 @@ GTEST_TEST(PsrComponentLexer, C_Suffix)
 
     EXPECT_TRUE(specimen->tryGetNextToken(input, token));
     EXPECT_EQ(token.getClass(), TokenClass::RegisterStatus);
-    EXPECT_EQ(token.getProperty(TokenProperty::RegisterIndex, CoreRegister::R0), CoreRegister::SPSR);
-    EXPECT_EQ(token.getProperty(TokenProperty::PsrComponent, PsrComponent::None), PsrComponent::Control);
+    EXPECT_EQ(getTokenEnum(token, TokenProperty::RegisterIndex, CoreRegister::R0), CoreRegister::SPSR);
+    EXPECT_EQ(getTokenEnum(token, TokenProperty::PsrComponent, PsrComponent::None), PsrComponent::Control);
 }
 
 GTEST_TEST(PsrComponentLexer, MultipleSuffixes)
@@ -305,8 +300,8 @@ GTEST_TEST(PsrComponentLexer, MultipleSuffixes)
 
     EXPECT_TRUE(specimen->tryGetNextToken(input, token));
     EXPECT_EQ(token.getClass(), TokenClass::RegisterStatus);
-    EXPECT_EQ(token.getProperty(TokenProperty::RegisterIndex, CoreRegister::R0), CoreRegister::CPSR);
-    EXPECT_EQ(token.getProperty(TokenProperty::PsrComponent, DefaultSuffix), ExpectedSuffix);
+    EXPECT_EQ(getTokenEnum(token, TokenProperty::RegisterIndex, CoreRegister::R0), CoreRegister::CPSR);
+    EXPECT_EQ(getTokenScalar(token, TokenProperty::PsrComponent, DefaultSuffix), ExpectedSuffix);
 }
 
 GTEST_TEST(PsrComponentLexer, AllSuffixes)
@@ -320,8 +315,8 @@ GTEST_TEST(PsrComponentLexer, AllSuffixes)
 
     EXPECT_TRUE(specimen->tryGetNextToken(input, token));
     EXPECT_EQ(token.getClass(), TokenClass::RegisterStatus);
-    EXPECT_EQ(token.getProperty(TokenProperty::RegisterIndex, CoreRegister::R0), CoreRegister::CPSR);
-    EXPECT_EQ(token.getProperty(TokenProperty::PsrComponent, DefaultSuffix), ExpectedSuffix);
+    EXPECT_EQ(getTokenEnum(token, TokenProperty::RegisterIndex, CoreRegister::R0), CoreRegister::CPSR);
+    EXPECT_EQ(getTokenScalar(token, TokenProperty::PsrComponent, DefaultSuffix), ExpectedSuffix);
 }
 
 GTEST_TEST(PsrComponentLexer, RepeatedSuffixesFail)

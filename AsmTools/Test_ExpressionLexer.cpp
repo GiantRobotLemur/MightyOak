@@ -195,17 +195,17 @@ GTEST_TEST(ExpressionLexer, RecogniseBinaryLiteral)
 
     ASSERT_TRUE(specimen->tryGetNextToken(input, token));
     EXPECT_EQ(token.getClass(), TokenClass::IntegerLiteral);
-    EXPECT_EQ(token.getProperty(TokenProperty::IntRadix, 99), 2);
+    EXPECT_EQ(getTokenScalar(token, TokenProperty::IntRadix, 99), 2);
     EXPECT_STRINGEQC(token.getValue(), "01001");
 
     ASSERT_TRUE(specimen->tryGetNextToken(input, token));
     EXPECT_EQ(token.getClass(), TokenClass::IntegerLiteral);
-    EXPECT_EQ(token.getProperty(TokenProperty::IntRadix, 99), 2);
+    EXPECT_EQ(getTokenScalar(token, TokenProperty::IntRadix, 99), 2);
     EXPECT_STRINGEQC(token.getValue(), "1110");
 
     ASSERT_TRUE(specimen->tryGetNextToken(input, token));
     EXPECT_EQ(token.getClass(), TokenClass::IntegerLiteral);
-    EXPECT_EQ(token.getProperty(TokenProperty::IntRadix, 99), 2);
+    EXPECT_EQ(getTokenScalar(token, TokenProperty::IntRadix, 99), 2);
     EXPECT_STRINGEQC(token.getValue(), "0010");
 
     ASSERT_TRUE(specimen->tryGetNextToken(input, token));
@@ -233,7 +233,7 @@ GTEST_TEST(ExpressionLexer, RecogniseHexLiteral)
 
     ASSERT_TRUE(specimen->tryGetNextToken(input, token));
     EXPECT_EQ(token.getClass(), TokenClass::IntegerLiteral);
-    EXPECT_EQ(token.getProperty(TokenProperty::IntRadix, 99), 16);
+    EXPECT_EQ(getTokenScalar(token, TokenProperty::IntRadix, 99), 16);
     EXPECT_STRINGEQC(token.getValue(), "Dead1");
 
     ASSERT_TRUE(specimen->tryGetNextToken(input, token));
@@ -245,7 +245,7 @@ GTEST_TEST(ExpressionLexer, RecogniseHexLiteral)
 
     ASSERT_TRUE(specimen->tryGetNextToken(input, token));
     EXPECT_EQ(token.getClass(), TokenClass::IntegerLiteral);
-    EXPECT_EQ(token.getProperty(TokenProperty::IntRadix, 99), 16);
+    EXPECT_EQ(getTokenScalar(token, TokenProperty::IntRadix, 99), 16);
     EXPECT_STRINGEQC(token.getValue(), "921BeEf");
 
     ASSERT_TRUE(specimen->tryGetNextToken(input, token));
@@ -257,7 +257,7 @@ GTEST_TEST(ExpressionLexer, RecogniseHexLiteral)
 
     ASSERT_TRUE(specimen->tryGetNextToken(input, token));
     EXPECT_EQ(token.getClass(), TokenClass::IntegerLiteral);
-    EXPECT_EQ(token.getProperty(TokenProperty::IntRadix, 99), 16);
+    EXPECT_EQ(getTokenScalar(token, TokenProperty::IntRadix, 99), 16);
     EXPECT_STRINGEQC(token.getValue(), "0cAfE");
 
     // Verify end of stream.
@@ -274,17 +274,17 @@ GTEST_TEST(ExpressionLexer, RecogniseDecimalLiteral)
 
     ASSERT_TRUE(specimen->tryGetNextToken(input, token));
     EXPECT_EQ(token.getClass(), TokenClass::IntegerLiteral);
-    EXPECT_EQ(token.getProperty(TokenProperty::IntRadix, 99), 10);
+    EXPECT_EQ(getTokenScalar(token, TokenProperty::IntRadix, 99), 10);
     EXPECT_STRINGEQC(token.getValue(), "0000");
 
     ASSERT_TRUE(specimen->tryGetNextToken(input, token));
     EXPECT_EQ(token.getClass(), TokenClass::IntegerLiteral);
-    EXPECT_EQ(token.getProperty(TokenProperty::IntRadix, 99), 10);
+    EXPECT_EQ(getTokenScalar(token, TokenProperty::IntRadix, 99), 10);
     EXPECT_STRINGEQC(token.getValue(), "9876543219876543210");
 
     ASSERT_TRUE(specimen->tryGetNextToken(input, token));
     EXPECT_EQ(token.getClass(), TokenClass::IntegerLiteral);
-    EXPECT_EQ(token.getProperty(TokenProperty::IntRadix, 99), 10);
+    EXPECT_EQ(getTokenScalar(token, TokenProperty::IntRadix, 99), 10);
     EXPECT_STRINGEQC(token.getValue(), "0");
 
     // Verify end of stream.
@@ -389,12 +389,12 @@ GTEST_TEST(ExpressionLexer, RecogniseStringLiteralNoEscpaes)
     ASSERT_TRUE(specimen->tryGetNextToken(input, token));
     EXPECT_EQ(token.getClass(), TokenClass::StringLiteral);
     EXPECT_STRINGEQC(token.getValue(), "Hello World!");
-    EXPECT_FALSE(token.getProperty(TokenProperty::UnterminatedString, false));
+    EXPECT_FALSE(getTokenFlag(token, TokenProperty::UnterminatedString, false));
 
     ASSERT_TRUE(specimen->tryGetNextToken(input, token));
     EXPECT_EQ(token.getClass(), TokenClass::StringLiteral);
     EXPECT_STRINGEQC(token.getValue(), "Unterminated");
-    EXPECT_TRUE(token.getProperty(TokenProperty::UnterminatedString, false));
+    EXPECT_TRUE(getTokenFlag(token, TokenProperty::UnterminatedString, false));
 
     ASSERT_TRUE(specimen->tryGetNextToken(input, token));
     EXPECT_EQ(token.getClass(), TokenClass::StatementTerminator);
@@ -402,12 +402,12 @@ GTEST_TEST(ExpressionLexer, RecogniseStringLiteralNoEscpaes)
     ASSERT_TRUE(specimen->tryGetNextToken(input, token));
     EXPECT_EQ(token.getClass(), TokenClass::StringLiteral);
     EXPECT_STRINGEQC(token.getValue(), "Hi there");
-    EXPECT_FALSE(token.getProperty(TokenProperty::UnterminatedString, false));
+    EXPECT_FALSE(getTokenFlag(token, TokenProperty::UnterminatedString, false));
 
     ASSERT_TRUE(specimen->tryGetNextToken(input, token));
     EXPECT_EQ(token.getClass(), TokenClass::StringLiteral);
     EXPECT_STRINGEQC(token.getValue(), "Not closed");
-    EXPECT_TRUE(token.getProperty(TokenProperty::UnterminatedString, false));
+    EXPECT_TRUE(getTokenFlag(token, TokenProperty::UnterminatedString, false));
 
     // Verify the end of the input stream.
     EXPECT_FALSE(specimen->tryGetNextToken(input, token));
@@ -425,12 +425,12 @@ GTEST_TEST(ExpressionLexer, RecogniseStringLiteralAsciiEscape)
     ASSERT_TRUE(specimen->tryGetNextToken(input, token));
     EXPECT_EQ(token.getClass(), TokenClass::StringLiteral);
     EXPECT_STRINGEQC(token.getValue(), "Hello World!");
-    EXPECT_FALSE(token.getProperty(TokenProperty::UnterminatedString, false));
+    EXPECT_FALSE(getTokenFlag(token, TokenProperty::UnterminatedString, false));
 
     ASSERT_TRUE(specimen->tryGetNextToken(input, token));
     EXPECT_EQ(token.getClass(), TokenClass::StringLiteral);
     EXPECT_STRINGEQC(token.getValue(), "AB43");
-    EXPECT_FALSE(token.getProperty(TokenProperty::UnterminatedString, false));
+    EXPECT_FALSE(getTokenFlag(token, TokenProperty::UnterminatedString, false));
 
     ASSERT_TRUE(specimen->tryGetNextToken(input, token));
     EXPECT_EQ(token.getClass(), TokenClass::Error);
@@ -466,12 +466,12 @@ GTEST_TEST(ExpressionLexer, RecogniseStringLiteralUtf16Escape)
     ASSERT_TRUE(specimen->tryGetNextToken(input, token));
     EXPECT_EQ(token.getClass(), TokenClass::StringLiteral);
     EXPECT_STRINGEQC(token.getValue(), "Hello World!");
-    EXPECT_FALSE(token.getProperty(TokenProperty::UnterminatedString, false));
+    EXPECT_FALSE(getTokenFlag(token, TokenProperty::UnterminatedString, false));
 
     ASSERT_TRUE(specimen->tryGetNextToken(input, token));
     EXPECT_EQ(token.getClass(), TokenClass::StringLiteral);
     EXPECT_STRINGEQC(token.getValue(), "AB43");
-    EXPECT_FALSE(token.getProperty(TokenProperty::UnterminatedString, false));
+    EXPECT_FALSE(getTokenFlag(token, TokenProperty::UnterminatedString, false));
 
     ASSERT_TRUE(specimen->tryGetNextToken(input, token));
     EXPECT_EQ(token.getClass(), TokenClass::Error);
@@ -508,12 +508,12 @@ GTEST_TEST(ExpressionLexer, RecogniseStringLiteralUtf32Escape)
     ASSERT_TRUE(specimen->tryGetNextToken(input, token));
     EXPECT_EQ(token.getClass(), TokenClass::StringLiteral);
     EXPECT_STRINGEQC(token.getValue(), "Hello World!");
-    EXPECT_FALSE(token.getProperty(TokenProperty::UnterminatedString, false));
+    EXPECT_FALSE(getTokenFlag(token, TokenProperty::UnterminatedString, false));
 
     ASSERT_TRUE(specimen->tryGetNextToken(input, token));
     EXPECT_EQ(token.getClass(), TokenClass::StringLiteral);
     EXPECT_STRINGEQC(token.getValue(), "AB43");
-    EXPECT_FALSE(token.getProperty(TokenProperty::UnterminatedString, false));
+    EXPECT_FALSE(getTokenFlag(token, TokenProperty::UnterminatedString, false));
 
     ASSERT_TRUE(specimen->tryGetNextToken(input, token));
     EXPECT_EQ(token.getClass(), TokenClass::Error);

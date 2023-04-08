@@ -271,7 +271,21 @@ struct DescendingEntries
     }
 };
 
-#ifndef _WIN32
+#ifdef _WIN32
+//! @brief A structure which closes a POSIX directory.
+struct DirCloser
+{
+    void operator()(HANDLE findHandle) const
+    {
+        if ((findHandle != nullptr) && (findHandle != INVALID_HANDLE_VALUE))
+        {
+            ::FindClose(findHandle);
+        }
+    }
+};
+
+using DirUPtr = std::unique_ptr<void, DirCloser>;
+#else
 //! @brief A structure which closes a POSIX directory.
 struct DirCloser
 {
@@ -315,7 +329,7 @@ bool filterByQueryFlags(const WIN32_FIND_DATAW &fileInfo, uint32_t flags)
             if (fileInfo.cFileName[1] == L'.')
             {
                 // If it's '..', that isn't allowed.
-                isAllowed = (fileInfo.cFileName[2] == L'\0');
+                isAllowed = (fileInfo.cFileName[2] != L'\0');
             }
             else if (fileInfo.cFileName[1] == L'\0')
             {
@@ -724,6 +738,8 @@ StringCollection Directory::getNames(string_cref_t pattern, uint32_t queryFlags)
     }
     else
     {
+        DirUPtr handleCloser(hFind);
+
         do
         {
             if (filterByQueryFlags(fileInfo, queryFlags))
@@ -731,9 +747,6 @@ StringCollection Directory::getNames(string_cref_t pattern, uint32_t queryFlags)
                 childNames.emplace_back(fileInfo.cFileName);
             }
         } while (::FindNextFileW(hFind, &fileInfo) != FALSE);
-
-        // Close the search handle.
-        ::FindClose(hFind);
     }
 #else
     String fullPath = _dir->getLocation().toString(PathUsage::Kernel);

@@ -237,9 +237,9 @@ MultiTransferInstructionNode::MultiTransferInstructionNode(ParseContext &context
                                                            const Token &mnemonic) :
     StatementNode(context, mnemonic),
     _state(State::AfterMnemonic),
-    _mnemonic(mnemonic.getProperty(TokenProperty::Mnemonic, InstructionMnemonic::Ldm)),
-    _condition(mnemonic.getProperty(TokenProperty::ConditionCode, ConditionCode::Al)),
-    _mode(mnemonic.getProperty(TokenProperty::MultiTransferMode, MultiTransferMode::FullDescending)),
+    _mnemonic(getTokenEnum(mnemonic, TokenProperty::Mnemonic, InstructionMnemonic::Ldm)),
+    _condition(getTokenEnum(mnemonic, TokenProperty::ConditionCode, ConditionCode::Al)),
+    _mode(getTokenEnum(mnemonic, TokenProperty::MultiTransferMode, MultiTransferMode::FullDescending)),
     _flags(0)
 {
     context.pushLexicalContext(getExpressionLexer());

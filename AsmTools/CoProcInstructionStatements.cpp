@@ -183,8 +183,8 @@ public:
 CoProcDataProcInstructionNode::CoProcDataProcInstructionNode(ParseContext &context,
                                                              const Token &mnemonic) :
     StatementNode(context, mnemonic),
-    _mnemonic(mnemonic.getProperty(TokenProperty::Mnemonic, InstructionMnemonic::Cdp)),
-    _condition(mnemonic.getProperty(TokenProperty::ConditionCode, ConditionCode::Al)),
+    _mnemonic(getTokenEnum(mnemonic, TokenProperty::Mnemonic, InstructionMnemonic::Cdp)),
+    _condition(getTokenEnum(mnemonic, TokenProperty::ConditionCode, ConditionCode::Al)),
     _state(State::BeforeProcID)
 {
     context.pushLexicalContext(getExpressionLexer());
@@ -347,9 +347,9 @@ CoProcDataTransferInstructionNode::CoProcDataTransferInstructionNode(ParseContex
                                                                      const Token &mnemonic) :
     StatementNode(context, mnemonic),
     _state(State::BeforeProcID),
-    _mnemonic(mnemonic.getProperty(TokenProperty::Mnemonic, InstructionMnemonic::Ldc)),
-    _condition(mnemonic.getProperty(TokenProperty::ConditionCode, ConditionCode::Al)),
-    _longMode(mnemonic.getProperty(TokenProperty::LongMode, false))
+    _mnemonic(getTokenEnum(mnemonic, TokenProperty::Mnemonic, InstructionMnemonic::Ldc)),
+    _condition(getTokenEnum(mnemonic, TokenProperty::ConditionCode, ConditionCode::Al)),
+    _longMode(getTokenFlag(mnemonic, TokenProperty::LongMode, false))
 {
     context.pushLexicalContext(getExpressionLexer());
 }

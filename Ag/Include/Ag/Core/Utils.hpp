@@ -321,7 +321,7 @@ bool isType(const std::shared_ptr<U> &basePtr)
 //! @param[in] object %A reference to the object to fill.
 template<typename T> void zeroFill(T &object)
 {
-    std::memset(&object, 0, sizeof(T));
+    std::memset(static_cast<void *>(&object), 0, sizeof(T));
 }
 
 //! @brief Gets the size of an array specified at compile time.
@@ -338,20 +338,20 @@ template<typename T, size_t U> constexpr size_t arraySize(const T (&)[U])
 //! @tparam T The data type of the enumeration.
 //! @param[in] value The enumeration value to cast.
 //! @returns The scalar integer value corresponding to the enumeration value.
-template<typename T>
-constexpr typename std::underlying_type<T>::type toScalar(T value) noexcept
+template<typename TEnum, std::enable_if_t<std::is_enum<TEnum>::value, bool> = true>
+constexpr typename std::underlying_type<TEnum>::type toScalar(TEnum value) noexcept
 {
-    return static_cast<typename std::underlying_type<T>::type>(value);
+    return static_cast<typename std::underlying_type<TEnum>::type>(value);
 }
 
 //! @brief Converts an integer value to a scoped enumeration type.
 //! @tparam T The data type of the scoped enumeration to convert to.
 //! @param[in] scalar The integer representation of the value.
 //! @return The same value represented as a scoped enumeration.
-template<typename T>
-constexpr T fromScalar(typename std::underlying_type<T>::type scalar) noexcept
+template<typename TEnum, std::enable_if_t<std::is_enum<TEnum>::value, bool> = true>
+constexpr TEnum fromScalar(typename std::underlying_type<TEnum>::type scalar) noexcept
 {
-    return static_cast<T>(scalar);
+    return static_cast<TEnum>(scalar);
 }
 
 //! @brief Force converts an integer value to a scoped enumeration type.
@@ -359,10 +359,11 @@ constexpr T fromScalar(typename std::underlying_type<T>::type scalar) noexcept
 //! @tparam U The data type of the scalar value to force convert.
 //! @param[in] scalar The integer representation of the value.
 //! @return The same value represented as a scoped enumeration.
-template<typename T, typename U>
-constexpr T forceFromScalar(U scalar) noexcept
+template<typename TEnum, typename U,
+         std::enable_if_t<std::is_enum<TEnum>::value, bool> = true>
+constexpr TEnum forceFromScalar(U scalar) noexcept
 {
-    return static_cast<T>(static_cast<typename std::underlying_type<T>::type>(scalar));
+    return static_cast<TEnum>(static_cast<typename std::underlying_type<TEnum>::type>(scalar));
 }
 
 //! @brief Rounds a real value to the nearest integer.

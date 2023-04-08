@@ -433,7 +433,7 @@ struct MnemonicContext
             {
                 // Annotate the token with the condition code and move past it.
                 Index += 2;
-                instructionToken.addProperty(TokenProperty::ConditionCode, code);
+                addTokenEnum(instructionToken, TokenProperty::ConditionCode, code);
             }
         }
     }
@@ -457,7 +457,7 @@ struct MnemonicContext
 
             if (suffix == suffixChar)
             {
-                instructionToken.addProperty(propId, true);
+                addTokenFlag(instructionToken, propId, true);
                 ++Index;
                 suffixFound = true;
             }
@@ -516,7 +516,7 @@ struct MnemonicContext
             {
                 ++Index;
 
-                instruction.addProperty(TokenProperty::FpaPrecision, precision);
+                addTokenEnum(instruction, TokenProperty::FpaPrecision, precision);
             }
         }
 
@@ -559,7 +559,7 @@ struct MnemonicContext
             if (isValid)
             {
                 ++Index;
-                instruction.addProperty(TokenProperty::FpaRoundMode, roundMode);
+                addTokenEnum(instruction, TokenProperty::FpaRoundMode, roundMode);
             }
         }
 
@@ -629,7 +629,7 @@ struct MnemonicContext
 Token parseAluOp(MnemonicContext &context)
 {
     Token result(context.Position, context.Class);
-    result.addProperty(TokenProperty::Mnemonic, context.Mnemonic);
+    addTokenEnum(result, TokenProperty::Mnemonic, context.Mnemonic);
 
     // Parse condition code.
     context.parseConditionCode(result);
@@ -646,7 +646,7 @@ Token parseAluOp(MnemonicContext &context)
 Token parseAluCmpOp(MnemonicContext &context)
 {
     Token result(context.Position, context.Class);
-    result.addProperty(TokenProperty::Mnemonic, context.Mnemonic);
+    addTokenEnum(result, TokenProperty::Mnemonic, context.Mnemonic);
 
     // Parse condition code.
     context.parseConditionCode(result);
@@ -666,7 +666,7 @@ Token parseLongMulOp(MnemonicContext &context)
 
     if (context.Text.length() >= 5)
     {
-        result.addProperty(TokenProperty::Mnemonic, context.Mnemonic);
+        addTokenEnum(result, TokenProperty::Mnemonic, context.Mnemonic);
         char32_t third = CodePoint::toUpper(context.Text[2]);
 
         if (third == U'U')
@@ -710,7 +710,7 @@ Token parseBreakPoint(MnemonicContext &context)
         // Its a BKPT instruction, which never uses a condition code.
         Token instruction(context.Position, TokenClass::MnemonicBreakPt);
 
-        instruction.addProperty(TokenProperty::Mnemonic, InstructionMnemonic::Bkpt);
+        addTokenEnum(instruction, TokenProperty::Mnemonic, InstructionMnemonic::Bkpt);
 
         // Theoretically a breakpoint instruction is not conditional, it is 
         // encoded with the AL (always) condition code. Let's allow that, but
@@ -736,7 +736,7 @@ Token parseConditionalBranch(MnemonicContext &context)
     context.Index = 1;
 
     Token instruction(context.Position, context.Class);
-    instruction.addProperty(TokenProperty::Mnemonic, InstructionMnemonic::B);
+    addTokenEnum(instruction, TokenProperty::Mnemonic, InstructionMnemonic::B);
 
     context.parseConditionCode(instruction);
 
@@ -756,7 +756,7 @@ Token parseAmbiguousBranch(MnemonicContext &context)
     {
         // It's a branch instruction with a condition code.
         instruction.reset(context.Position, TokenClass::MnemonicBranch);
-        instruction.addProperty(TokenProperty::Mnemonic, InstructionMnemonic::B);
+        addTokenEnum(instruction, TokenProperty::Mnemonic, InstructionMnemonic::B);
 
         context.Index = 1;
 
@@ -767,7 +767,7 @@ Token parseAmbiguousBranch(MnemonicContext &context)
     {
         // It should be a BL instruction with a condition code.
         instruction.reset(context.Position, TokenClass::MnemonicBranch);
-        instruction.addProperty(TokenProperty::Mnemonic, InstructionMnemonic::Bl);
+        addTokenEnum(instruction, TokenProperty::Mnemonic, InstructionMnemonic::Bl);
 
         context.Index = 2;
 
@@ -784,7 +784,7 @@ Token parseAmbiguousBranch(MnemonicContext &context)
 Token parseDataTransfer(MnemonicContext &context)
 {
     Token instruction(context.Position, context.Class);
-    instruction.addProperty(TokenProperty::Mnemonic, context.Mnemonic);
+    addTokenEnum(instruction, TokenProperty::Mnemonic, context.Mnemonic);
 
     context.parseConditionCode(instruction);
 
@@ -797,25 +797,25 @@ Token parseDataTransfer(MnemonicContext &context)
         switch (first)
         {
         case U'B':
-            instruction.addProperty(TokenProperty::TransferDataType,
-                                    TransferDataType::UnsignedByte);
+            addTokenEnum(instruction, TokenProperty::TransferDataType,
+                         TransferDataType::UnsignedByte);
             ++context.Index;
 
             if (context.tryGetChar(0, second) && (second == U'T'))
             {
-                instruction.addProperty(TokenProperty::UserPrivilage, true);
+                addTokenFlag(instruction, TokenProperty::UserPrivilage, true);
                 ++context.Index;
             }
             break;
 
         case U'T':
-            instruction.addProperty(TokenProperty::UserPrivilage, true);
+            addTokenFlag(instruction, TokenProperty::UserPrivilage, true);
             ++context.Index;
             break;
 
         case U'H':
-            instruction.addProperty(TokenProperty::TransferDataType,
-                                    TransferDataType::UnsignedHalfWord);
+            addTokenEnum(instruction, TokenProperty::TransferDataType,
+                        TransferDataType::UnsignedHalfWord);
             ++context.Index;
             break;
 
@@ -824,14 +824,14 @@ Token parseDataTransfer(MnemonicContext &context)
             {
                 if (second == U'B')
                 {
-                    instruction.addProperty(TokenProperty::TransferDataType,
-                                            TransferDataType::SignedByte);
+                    addTokenEnum(instruction, TokenProperty::TransferDataType,
+                                 TransferDataType::SignedByte);
                     context.Index += 2;
                 }
                 else if (second == U'H')
                 {
-                    instruction.addProperty(TokenProperty::TransferDataType,
-                                            TransferDataType::SignedHalfWord);
+                    addTokenEnum(instruction, TokenProperty::TransferDataType,
+                                 TransferDataType::SignedHalfWord);
                     context.Index += 2;
                 }
             }
@@ -848,7 +848,7 @@ Token parseDataTransfer(MnemonicContext &context)
 Token parseMultiDataTransfer(MnemonicContext &context)
 {
     Token instruction(context.Position, context.Class);
-    instruction.addProperty(TokenProperty::Mnemonic, context.Mnemonic);
+    addTokenEnum(instruction, TokenProperty::Mnemonic, context.Mnemonic);
 
     context.parseConditionCode(instruction);
 
@@ -904,7 +904,7 @@ Token parseMultiDataTransfer(MnemonicContext &context)
 
         if (isValid)
         {
-            instruction.addProperty(TokenProperty::MultiTransferMode, mode);
+            addTokenEnum(instruction, TokenProperty::MultiTransferMode, mode);
             context.Index += 2;
         }
         else
@@ -939,7 +939,7 @@ Token parseMultiDataTransfer(MnemonicContext &context)
 Token parseGenericInstruction(MnemonicContext &context)
 {
     Token instruction(context.Position, context.Class);
-    instruction.addProperty(TokenProperty::Mnemonic, context.Mnemonic);
+    addTokenEnum(instruction, TokenProperty::Mnemonic, context.Mnemonic);
 
     context.parseConditionCode(instruction);
 
@@ -962,7 +962,7 @@ Token parseSwapInstruction(MnemonicContext &context)
     if (context.tryGetChar(0, suffix) &&
         (suffix == U'B'))
     {
-        instruction.addProperty(TokenProperty::TransferDataType, TransferDataType::UnsignedByte);
+        addTokenEnum(instruction, TokenProperty::TransferDataType, TransferDataType::UnsignedByte);
         ++context.Index;
     }
 
@@ -976,7 +976,7 @@ Token parseSwapInstruction(MnemonicContext &context)
 Token parseGenericWithLongSuffix(MnemonicContext &context)
 {
     Token instruction(context.Position, context.Class);
-    instruction.addProperty(TokenProperty::Mnemonic, context.Mnemonic);
+    addTokenEnum(instruction, TokenProperty::Mnemonic, context.Mnemonic);
 
     context.parseConditionCode(instruction);
 
@@ -993,7 +993,7 @@ Token parseGenericWithLongSuffix(MnemonicContext &context)
 Token parseFpaDataOp(MnemonicContext &context)
 {
     Token instruction(context.Position, context.Class);
-    instruction.addProperty(TokenProperty::Mnemonic, context.Mnemonic);
+    addTokenEnum(instruction, TokenProperty::Mnemonic, context.Mnemonic);
 
     // Parse condition code
     context.parseConditionCode(instruction);
@@ -1030,7 +1030,7 @@ Token parseFpaCmpOp(MnemonicContext &context)
 
     if (excess == 0)
     {
-        instruction.addProperty(TokenProperty::Mnemonic, context.Mnemonic);
+        addTokenEnum(instruction, TokenProperty::Mnemonic, context.Mnemonic);
     }
     else if ((excess == 1) || (excess == 3))
     {
@@ -1039,12 +1039,12 @@ Token parseFpaCmpOp(MnemonicContext &context)
             if (context.Mnemonic == InstructionMnemonic::Cmf)
             {
                 ++context.Index;
-                instruction.addProperty(TokenProperty::Mnemonic, InstructionMnemonic::Cmfe);
+                addTokenEnum(instruction, TokenProperty::Mnemonic, InstructionMnemonic::Cmfe);
             }
             else if (context.Mnemonic == InstructionMnemonic::Cnf)
             {
                 ++context.Index;
-                instruction.addProperty(TokenProperty::Mnemonic, InstructionMnemonic::Cnfe);
+                addTokenEnum(instruction, TokenProperty::Mnemonic, InstructionMnemonic::Cnfe);
             }
         }
 
@@ -1070,7 +1070,7 @@ Token parseFpaCmpOp(MnemonicContext &context)
 Token parseFpaStoreRegisterMnemonic(MnemonicContext &context)
 {
     Token instruction(context.Position, context.Class);
-    instruction.addProperty(TokenProperty::Mnemonic, context.Mnemonic);
+    addTokenEnum(instruction, TokenProperty::Mnemonic, context.Mnemonic);
 
     // Parse condition code
     context.parseConditionCode(instruction);
@@ -1088,7 +1088,7 @@ Token parseFpaStoreRegisterMnemonic(MnemonicContext &context)
 Token parseFpaDataTransfer(MnemonicContext &context)
 {
     Token instruction(context.Position, context.Class);
-    instruction.addProperty(TokenProperty::Mnemonic, context.Mnemonic);
+    addTokenEnum(instruction, TokenProperty::Mnemonic, context.Mnemonic);
 
     // Parse condition code
     context.parseConditionCode(instruction);
@@ -1110,7 +1110,7 @@ Token parseFpaDataTransfer(MnemonicContext &context)
 Token parseFpaMultiTransfer(MnemonicContext &context)
 {
     Token instruction(context.Position, context.Class);
-    instruction.addProperty(TokenProperty::Mnemonic, context.Mnemonic);
+    addTokenEnum(instruction, TokenProperty::Mnemonic, context.Mnemonic);
 
     // Parse condition code.
     context.parseConditionCode(instruction);
@@ -1123,13 +1123,13 @@ Token parseFpaMultiTransfer(MnemonicContext &context)
         if ((first == U'E') && (second == U'A'))
         {
             context.Index += 2;
-            instruction.addProperty(TokenProperty::MultiTransferMode,
+            addTokenEnum(instruction, TokenProperty::MultiTransferMode,
                                     MultiTransferMode::EmptyAscending);
         }
         else if ((first == U'F') && (second == U'D'))
         {
             context.Index += 2;
-            instruction.addProperty(TokenProperty::MultiTransferMode,
+            addTokenEnum(instruction, TokenProperty::MultiTransferMode,
                                     MultiTransferMode::FullDescending);
         }
     }
@@ -1151,26 +1151,26 @@ Token parseEquDataDirective(MnemonicContext &context)
         switch (next)
         {
         case U'B':
-            directive.addProperty(TokenProperty::DataType,
-                                  DirectiveDataType::Byte);
+            addTokenEnum(directive, TokenProperty::DataType,
+                         DirectiveDataType::Byte);
             ++context.Index;
             break;
 
         case U'W':
-            directive.addProperty(TokenProperty::DataType,
-                                  DirectiveDataType::HalfWord);
+            addTokenEnum(directive, TokenProperty::DataType,
+                         DirectiveDataType::HalfWord);
             ++context.Index;
             break;
 
         case U'D':
-            directive.addProperty(TokenProperty::DataType,
-                                  DirectiveDataType::Word);
+            addTokenEnum(directive, TokenProperty::DataType,
+                         DirectiveDataType::Word);
             ++context.Index;
             break;
 
         case U'Q':
-            directive.addProperty(TokenProperty::DataType,
-                                  DirectiveDataType::LongWord);
+            addTokenEnum(directive, TokenProperty::DataType,
+                         DirectiveDataType::LongWord);
             ++context.Index;
             break;
 
@@ -1185,24 +1185,24 @@ Token parseEquDataDirective(MnemonicContext &context)
                 if ((left == 2) &&
                     (context.Text[context.Index + 1] == U'8'))
                 {
-                    directive.addProperty(TokenProperty::DataType,
-                                          DirectiveDataType::Utf8String);
+                    addTokenEnum(directive, TokenProperty::DataType,
+                                 DirectiveDataType::Utf8String);
                     context.Index += 2;
                 }
                 else if ((left == 3) &&
                          (context.Text[context.Index + 1] == U'1') &&
                          (context.Text[context.Index + 2] == U'6'))
                 {
-                    directive.addProperty(TokenProperty::DataType,
-                                          DirectiveDataType::Utf16String);
+                    addTokenEnum(directive, TokenProperty::DataType,
+                                 DirectiveDataType::Utf16String);
                     context.Index += 2;
                 }
                 else if ((left == 3) &&
                          (context.Text[context.Index + 1] == U'3') &&
                          (context.Text[context.Index + 2] == U'2'))
                 {
-                    directive.addProperty(TokenProperty::DataType,
-                                          DirectiveDataType::Utf32String);
+                    addTokenEnum(directive, TokenProperty::DataType,
+                                 DirectiveDataType::Utf32String);
                     context.Index += 2;
                 }
                 else
@@ -1213,26 +1213,26 @@ Token parseEquDataDirective(MnemonicContext &context)
             }
             else
             {
-                directive.addProperty(TokenProperty::DataType,
-                                      DirectiveDataType::NativeString);
+                addTokenEnum(directive, TokenProperty::DataType,
+                             DirectiveDataType::NativeString);
             }
             break;
 
         case U'F':
-            directive.addProperty(TokenProperty::DataType,
-                                  DirectiveDataType::Real32);
+            addTokenEnum(directive, TokenProperty::DataType,
+                         DirectiveDataType::Real32);
             ++context.Index;
             break;
 
         case U'R':
-            directive.addProperty(TokenProperty::DataType,
-                                  DirectiveDataType::Real64);
+            addTokenEnum(directive, TokenProperty::DataType,
+                         DirectiveDataType::Real64);
             ++context.Index;
             break;
 
         case U'E':
-            directive.addProperty(TokenProperty::DataType,
-                                  DirectiveDataType::Real96);
+            addTokenEnum(directive, TokenProperty::DataType,
+                         DirectiveDataType::Real96);
             ++context.Index;
             break;
 
@@ -1252,7 +1252,7 @@ Token parseEquDataDirective(MnemonicContext &context)
 Token parseDataDirective(MnemonicContext &context)
 {
     Token directive(context.Position, context.Class);
-    directive.addProperty(TokenProperty::DataType, context.DataType);
+    addTokenEnum(directive, TokenProperty::DataType, context.DataType);
 
     return directive;
 }
@@ -1326,50 +1326,50 @@ Token interpretDirective(const Location &position, std::u32string &buffer)
         {
             Location empty;
             Token temp(empty, TokenClass::AssemblyDirective);
-            temp.addProperty(TokenProperty::DirectiveType, AssemblyDirectiveType::Include);
+            addTokenEnum(temp, TokenProperty::DirectiveType, AssemblyDirectiveType::Include);
 
             directiveById["INCLUDE"] = temp;
 
             // Create templates for the processor model directives.
             temp.clearProperties();
-            temp.addProperty(TokenProperty::DirectiveType, AssemblyDirectiveType::InstructionSet);
-            temp.addProperty(TokenProperty::InstructionSet, InstructionSet::ArmV2);
+            addTokenEnum(temp, TokenProperty::DirectiveType, AssemblyDirectiveType::InstructionSet);
+            addTokenEnum(temp, TokenProperty::InstructionSet, InstructionSet::ArmV2);
             directiveById["ARMV2"] = temp;
 
-            temp.addProperty(TokenProperty::InstructionSet, InstructionSet::ArmV2a);
+            addTokenEnum(temp, TokenProperty::InstructionSet, InstructionSet::ArmV2a);
             directiveById["ARMV2A"] = temp;
 
-            temp.addProperty(TokenProperty::InstructionSet, InstructionSet::ArmV3);
+            addTokenEnum(temp, TokenProperty::InstructionSet, InstructionSet::ArmV3);
             directiveById["ARMV3"] = temp;
 
-            temp.addProperty(TokenProperty::InstructionSet, InstructionSet::ArmV4);
+            addTokenEnum(temp, TokenProperty::InstructionSet, InstructionSet::ArmV4);
             directiveById["ARMV4"] = temp;
 
             // Create templates for the processor extensions directives.
             temp.clearProperties();
-            temp.addProperty(TokenProperty::DirectiveType, AssemblyDirectiveType::ProcessorExtension);
-            temp.addProperty(TokenProperty::ProcessorExtension, ArchExtensionEnum::Fpa);
+            addTokenEnum(temp, TokenProperty::DirectiveType, AssemblyDirectiveType::ProcessorExtension);
+            addTokenEnum(temp, TokenProperty::ProcessorExtension, ArchExtensionEnum::Fpa);
             directiveById["FPA"] = temp;
 
-            temp.addProperty(TokenProperty::ProcessorExtension, ArchExtensionEnum::VfpV1);
+            addTokenEnum(temp, TokenProperty::ProcessorExtension, ArchExtensionEnum::VfpV1);
             directiveById["VFPV1"] = temp;
 
             // Create templates for the processor mode directives.
             temp.clearProperties();
-            temp.addProperty(TokenProperty::DirectiveType, AssemblyDirectiveType::ProcessorMode);
-            temp.addProperty(TokenProperty::ProcessorMode, ProcessorMode::Arm);
+            addTokenEnum(temp, TokenProperty::DirectiveType, AssemblyDirectiveType::ProcessorMode);
+            addTokenEnum(temp, TokenProperty::ProcessorMode, ProcessorMode::Arm);
             directiveById["ARM"] = temp;
 
-            temp.addProperty(TokenProperty::ProcessorMode, ProcessorMode::Thumb);
+            addTokenEnum(temp, TokenProperty::ProcessorMode, ProcessorMode::Thumb);
             directiveById["THUMB"] = temp;
 
             // Create templates for the assembly mode directives.
             temp.clearProperties();
-            temp.addProperty(TokenProperty::DirectiveType, AssemblyDirectiveType::AddressMode);
-            temp.addProperty(TokenProperty::AddressMode, AddressMode::Bits26);
+            addTokenEnum(temp, TokenProperty::DirectiveType, AssemblyDirectiveType::AddressMode);
+            addTokenEnum(temp, TokenProperty::AddressMode, AddressMode::Bits26);
             directiveById["26BIT"] = temp;
 
-            temp.addProperty(TokenProperty::AddressMode, AddressMode::Bits32);
+            addTokenEnum(temp, TokenProperty::AddressMode, AddressMode::Bits32);
             directiveById["32BIT"] = temp;
         }
 
@@ -1409,17 +1409,17 @@ Token interpretMnemonic(const Location &position, std::u32string &buffer)
             if (second == U'\0')
             {
                 result.reset(position, TokenClass::MnemonicBranch);
-                result.addProperty(TokenProperty::Mnemonic, InstructionMnemonic::B);
+                addTokenEnum(result, TokenProperty::Mnemonic, InstructionMnemonic::B);
             }
             else if (second == U'L')
             {
                 result.reset(position, TokenClass::MnemonicBranch);
-                result.addProperty(TokenProperty::Mnemonic, InstructionMnemonic::Bl);
+                addTokenEnum(result, TokenProperty::Mnemonic, InstructionMnemonic::Bl);
             }
             else if (second == U'X')
             {
                 result.reset(position, TokenClass::MnemonicBranchExchange);
-                result.addProperty(TokenProperty::Mnemonic, InstructionMnemonic::Bx);
+                addTokenEnum(result, TokenProperty::Mnemonic, InstructionMnemonic::Bx);
             }
         }
     }
@@ -1825,15 +1825,15 @@ public:
         {
         case TokenClass::DataDirective:
             node = new DataDirectiveNode(context,
-                                         token.getProperty(TokenProperty::DataType,
-                                                           DirectiveDataType::Byte),
+                                         getTokenEnum(token, TokenProperty::DataType,
+                                                      DirectiveDataType::Byte),
                                          token.getLocation());
             break;
 
         case TokenClass::AssemblyDirective: {
             AssemblyDirectiveType directiveType;
 
-            if (token.tryGetProperty(TokenProperty::DirectiveType, directiveType))
+            if (tryGetTokenEnum(token, TokenProperty::DirectiveType, directiveType))
             {
                 switch (directiveType)
                 {
@@ -2007,7 +2007,7 @@ private:
 
                 // Construct a token from the digits.
                 token.reset(position, TokenClass::IntegerLiteral, buffer);
-                token.addProperty(TokenProperty::IntRadix, 2);
+                addTokenScalar(token, TokenProperty::IntRadix, 2);
             }
             else
             {
@@ -2064,7 +2064,7 @@ private:
 
                 // Construct a token.
                 token.reset(position, TokenClass::IntegerLiteral, buffer);
-                token.addProperty(TokenProperty::IntRadix, 16);
+                addTokenScalar(token, TokenProperty::IntRadix, 16);
             }
             else
             {
@@ -2250,7 +2250,7 @@ private:
 
         if (tokenClass == TokenClass::IntegerLiteral)
         {
-            literal.addProperty(TokenProperty::IntRadix, 10);
+            addTokenScalar(literal, TokenProperty::IntRadix, 10);
         }
 
         return literal;
@@ -2296,7 +2296,7 @@ private:
                     input.ungetCharacter();
 
                     Token zero(position, TokenClass::IntegerLiteral, "0");
-                    zero.addProperty(TokenProperty::IntRadix, 10);
+                    addTokenScalar(zero, TokenProperty::IntRadix, 10);
 
                     return zero;
                 }
@@ -2305,7 +2305,7 @@ private:
             {
                 // The zero was at the end of the input stream.
                 Token zero(position, TokenClass::IntegerLiteral, "0");
-                zero.addProperty(TokenProperty::IntRadix, 10);
+                addTokenScalar(zero, TokenProperty::IntRadix, 10);
 
                 return zero;
             }
@@ -2531,7 +2531,7 @@ private:
 
         if (isClosed == false)
         {
-            stringLiteral.addProperty(TokenProperty::UnterminatedString, true);
+            addTokenFlag(stringLiteral, TokenProperty::UnterminatedString, true);
         }
 
         return stringLiteral;
@@ -2705,7 +2705,7 @@ public:
         {
         case TokenClass::IntegerLiteral:
             node = new IntegerLiteralNode(token.getLocation(), token.getValue(),
-                                          token.getProperty(TokenProperty::IntRadix, 10));
+                                          getTokenScalar(token, TokenProperty::IntRadix, 10));
             break;
 
         case TokenClass::RealLiteral:
@@ -2714,7 +2714,7 @@ public:
 
         case TokenClass::StringLiteral:
             node = new StringLiteralNode(token.getLocation(), token.getValue(),
-                                         token.getProperty(TokenProperty::UnterminatedString, false));
+                                         getTokenFlag(token, TokenProperty::UnterminatedString, false));
             break;
 
         case TokenClass::Dollar:
@@ -3004,15 +3004,15 @@ public:
                     if (startsWith(key, cpsr))
                     {
                         token.reset(position, TokenClass::RegisterStatus);
-                        token.addProperty(TokenProperty::RegisterIndex,
-                                          CoreRegister::CPSR);
+                        addTokenEnum(token, TokenProperty::RegisterIndex,
+                                     CoreRegister::CPSR);
                         hasToken = true;
                     }
                     else if (startsWith(key, spsr))
                     {
                         token.reset(position, TokenClass::RegisterStatus);
-                        token.addProperty(TokenProperty::RegisterIndex,
-                                          CoreRegister::SPSR);
+                        addTokenEnum(token, TokenProperty::RegisterIndex,
+                                     CoreRegister::SPSR);
                         hasToken = true;
                     }
 

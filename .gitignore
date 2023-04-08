@@ -34,4 +34,4 @@
 # MSVC/vscode stuff
 .vs
 .vscode
-build
+build*

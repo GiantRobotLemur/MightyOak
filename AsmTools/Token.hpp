@@ -161,46 +161,6 @@ public:
     bool tryGetScalarProperty(TokenProperty propId, uint8_t &value) const;
     void addScalarProperty(TokenProperty propId, uint8_t value);
 
-    template<typename T> bool tryGetProperty(TokenProperty prop, T &value) const
-    {
-        uint8_t rawValue;
-        bool hasValue = false;
-
-        if (tryGetScalarProperty(prop, rawValue))
-        {
-            value = static_cast<T>(rawValue);
-            hasValue = true;
-        }
-
-        return hasValue;
-    }
-
-    template<typename T> T getProperty(TokenProperty prop, T defaultValue) const
-    {
-        uint8_t rawValue;
-        T result = defaultValue;
-
-        if (tryGetScalarProperty(prop, rawValue))
-        {
-            result = static_cast<T>(rawValue);
-        }
-
-        return result;
-    }
-
-    template<> bool getProperty(TokenProperty prop, bool defaultValue) const
-    {
-        uint8_t rawValue;
-        bool result = defaultValue;
-
-        if (tryGetScalarProperty(prop, rawValue))
-        {
-            result = rawValue != 0;
-        }
-
-        return result;
-    }
-
     // Operations
     void clear();
     void clearProperties();
@@ -208,31 +168,12 @@ public:
     void reset(const Location &at, TokenClass classification);
     void reset(const Location &at, TokenClass classification, const String &value);
 
-    template<typename T> void addProperty(TokenProperty prop, T value)
-    {
-        typedef typename std::underlying_type<T>::type RawType;
-
-        addScalarProperty(prop, static_cast<uint8_t>(static_cast<RawType>(value)));
-    }
-
-    template<> void addProperty(TokenProperty prop, int value)
-    {
-        addScalarProperty(prop, static_cast<uint8_t>(value));
-    }
-
-    template<> void addProperty(TokenProperty prop, bool value)
-    {
-        addScalarProperty(prop, value ? 0xFF : 0x00);
-    }
-
 private:
     // Internal Constants
     static const size_t MaxPropCount = 4;
 
     // Internal Types
     using PropValue = std::pair<uint8_t, uint8_t>;
-
-    // Internal Functions
 
     // Internal Fields
     Location _location;
@@ -244,10 +185,91 @@ private:
 ////////////////////////////////////////////////////////////////////////////////
 // Function Declarations
 ////////////////////////////////////////////////////////////////////////////////
+// NOTE: The following would be member function specialisations of Token, but
+// gcc has a bug where it doesn't like them, so global function templates here:
+bool getTokenFlag(const Token &token, TokenProperty propId, bool defaultValue);
+void addTokenFlag(Token &token, TokenProperty propId, bool value);
 
 ////////////////////////////////////////////////////////////////////////////////
 // Templates
 ////////////////////////////////////////////////////////////////////////////////
+//! @brief Attempts to get an enumeration property from a token.
+//! @tparam TEnum The data type of the property to get, must be an enumeration.
+//! @param[in] token The token to query.
+//! @param[in] propId The identifier of the property to get the value of.
+//! @param[out] value Receives the value of the property if defined.
+//! @retval true The property was defined and the value returned.
+//! @retval false The property was not defined in the token.
+template<typename TEnum, std::enable_if_t<std::is_enum<TEnum>::value, bool> = true>
+bool tryGetTokenEnum(const Token &token, TokenProperty propId, TEnum &value)
+{
+    uint8_t rawValue;
+
+    if (token.tryGetScalarProperty(propId, rawValue))
+    {
+        value = static_cast<TEnum>(static_cast<std::underlying_type_t<TEnum>>(rawValue));
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+//! @brief Gets an enumeration property from a token.
+//! @tparam TEnum The data type of the property to get, must be an enumeration.
+//! @param[in] token The token to query.
+//! @param[in] propId The identifier of the property to get the value of.
+//! @param[in] defaultValue The value to return if the property is not defined.
+//! @returns Either the value embedded in the token or defaultValue.
+template<typename TEnum, std::enable_if_t<std::is_enum<TEnum>::value, bool> = true>
+TEnum getTokenEnum(const Token &token, TokenProperty propId, TEnum defaultValue)
+{
+    uint8_t rawValue;
+
+    return token.tryGetScalarProperty(propId, rawValue) ?
+        static_cast<TEnum>(static_cast<std::underlying_type_t<TEnum>>(rawValue)) :
+        defaultValue;
+}
+
+//! @brief Gets an enumeration property from a token.
+//! @tparam TEnum The data type of the property to get, must be an enumeration.
+//! @param[in] token The token to query.
+//! @param[in] propId The identifier of the property to get the value of.
+//! @param[in] defaultValue The value to return if the property is not defined.
+//! @returns Either the value embedded in the token or defaultValue.
+template<typename TScalar, std::enable_if_t<std::is_scalar<TScalar>::value, bool> = true >
+TScalar getTokenScalar(const Token &token, TokenProperty propId, TScalar defaultValue)
+{
+    uint8_t rawValue;
+
+    return token.tryGetScalarProperty(propId, rawValue) ?
+        static_cast<TScalar>(rawValue) :
+        defaultValue;
+}
+
+//! @brief Annotates a token with a scalar property value.
+//! @tparam TScalar The data type of the scalar, should be castable uint8_t.
+//! @param[in] token The token to annotate.
+//! @param[in] propId The identifier of the property to set.
+//! @param[in] value The new property value.
+template<typename TScalar, std::enable_if_t<std::is_scalar<TScalar>::value, bool> = true >
+void addTokenScalar(Token &token, TokenProperty propId, TScalar value)
+{
+    token.addScalarProperty(propId, static_cast<uint8_t>(value));
+}
+
+//! @brief Annotates a token with an enumeration value.
+//! @tparam TEnum The data type of the value to set, must be an enumeration.
+//! @param[in] token The token to annotate.
+//! @param[in] propId The identifier of the property to set.
+//! @param[in] value The new property value.
+template<typename TEnum, std::enable_if_t<std::is_enum<TEnum>::value, bool> = true>
+void addTokenEnum(Token &token, TokenProperty propId, TEnum value)
+{
+    token.addScalarProperty(propId,
+                            static_cast<uint8_t>(static_cast<std::underlying_type_t<TEnum>>(value)));
+}
 
 }} // namespace Ag::Asm
 

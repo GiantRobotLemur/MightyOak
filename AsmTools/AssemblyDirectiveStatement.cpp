@@ -247,16 +247,16 @@ public:
 AssemblyDirectiveNode::AssemblyDirectiveNode(ParseContext &context,
                                              const Token &directive) :
     StatementNode(context, directive),
-    _type(directive.getProperty(TokenProperty::DirectiveType,
-                                AssemblyDirectiveType::Include)),
-    _instructionSet(directive.getProperty(TokenProperty::InstructionSet,
-                                          InstructionSet::Max)),
-    _extension(directive.getProperty(TokenProperty::ProcessorExtension,
-                                     ArchExtensionEnum::None)),
-    _processorMode(directive.getProperty(TokenProperty::ProcessorMode,
-                                         ProcessorMode::Max)),
-    _addressMode(directive.getProperty(TokenProperty::AddressMode,
-                                       AddressMode::Bits26)),
+    _type(getTokenEnum(directive, TokenProperty::DirectiveType,
+                       AssemblyDirectiveType::Include)),
+    _instructionSet(getTokenEnum(directive, TokenProperty::InstructionSet,
+                                 InstructionSet::Max)),
+    _extension(getTokenEnum(directive, TokenProperty::ProcessorExtension,
+                            ArchExtensionEnum::None)),
+    _processorMode(getTokenEnum(directive, TokenProperty::ProcessorMode,
+                                ProcessorMode::Max)),
+    _addressMode(getTokenEnum(directive, TokenProperty::AddressMode,
+                              AddressMode::Bits26)),
     _isComplete(false)
 {
 }

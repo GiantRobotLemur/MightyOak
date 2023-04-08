@@ -189,7 +189,48 @@ template<> bool innerBitScanReverse(uint64_t value, int32_t &msb)
 }
 #endif // if x86
 
-#endif // if MSVC
+// ifdef _MSC_VER
+#else if defined __GNUC__
+template<> bool innerBitScanForward<uint32_t>(uint32_t value, int32_t &msb)
+{
+    if (value != 0)
+    {
+        msb = __builtin_ctz(value);
+    }
+
+    return value != 0;
+}
+
+template<> bool innerBitScanForward<uint64_t>(uint64_t value, int32_t &msb)
+{
+    if (value != 0)
+    {
+        msb = __builtin_ctzl(value);
+    }
+
+    return value != 0;
+}
+
+template<> bool innerBitScanReverse<uint32_t>(uint32_t value, int32_t &msb)
+{
+    if (value != 0)
+    {
+        msb = ((sizeof(value) * 8) - 1) - __builtin_clz(value);
+    }
+
+    return value != 0;
+}
+
+template<> bool innerBitScanReverse<uint64_t>(uint64_t value, int32_t &msb)
+{
+    if (value != 0)
+    {
+        msb = ((sizeof(value) * 8) - 1) - __builtin_clzl(value);
+    }
+
+    return value != 0;
+}
+#endif // if defined __GNUC__
 
 //! @brief Calculates the integer logarithm of value in base 2.
 //! @param[in] value The value to take the logarithm of.

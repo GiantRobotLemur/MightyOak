@@ -101,18 +101,18 @@ GTEST_TEST(Token, AddProperty)
     Location here(__FILE__);
     Token specimen(here, TokenClass::OpenBrace);
 
-    specimen.addProperty(TokenProperty::IntRadix, 10);
-    specimen.addProperty(TokenProperty::DirectiveType, AssemblyDirectiveType::AddressMode);
+    addTokenScalar(specimen, TokenProperty::IntRadix, 10);
+    addTokenEnum(specimen, TokenProperty::DirectiveType, AssemblyDirectiveType::AddressMode);
 
-    int radix = -1;
-    ASSERT_TRUE(specimen.tryGetProperty(TokenProperty::IntRadix, radix));
+    int radix = getTokenScalar(specimen, TokenProperty::IntRadix, 16);
     EXPECT_EQ(radix, 10);
 
     AssemblyDirectiveType directiveType = AssemblyDirectiveType::Include;
-    ASSERT_TRUE(specimen.tryGetProperty(TokenProperty::DirectiveType, directiveType));
+    ASSERT_TRUE(tryGetTokenEnum(specimen, TokenProperty::DirectiveType, directiveType));
     EXPECT_EQ(directiveType, AssemblyDirectiveType::AddressMode);
 
-    EXPECT_FALSE(specimen.tryGetProperty(TokenProperty::RegisterIndex, radix));
+    CoreRegister reg = getTokenEnum(specimen, TokenProperty::RegisterIndex, CoreRegister::SPSR);
+    EXPECT_EQ(reg, CoreRegister::SPSR);
 }
 
 GTEST_TEST(Token, AddBooleanProperty)
@@ -120,22 +120,18 @@ GTEST_TEST(Token, AddBooleanProperty)
     Location here(__FILE__);
     Token specimen(here, TokenClass::MnemonicAluOp);
 
-    specimen.addProperty(TokenProperty::UserPrivilage, true);
-    specimen.addProperty(TokenProperty::UpdatePsr, false);
+    addTokenFlag(specimen, TokenProperty::UserPrivilage, true);
+    addTokenFlag(specimen, TokenProperty::UpdatePsr, false);
 
-    bool value;
-    ASSERT_TRUE(specimen.tryGetProperty(TokenProperty::UserPrivilage, value));
-    EXPECT_TRUE(value);
-    ASSERT_TRUE(specimen.tryGetProperty(TokenProperty::UpdatePsr, value));
-    EXPECT_FALSE(value);
-    EXPECT_FALSE(specimen.tryGetProperty(TokenProperty::DataType, value));
+    EXPECT_TRUE(getTokenFlag(specimen, TokenProperty::UserPrivilage, false));
+    EXPECT_FALSE(getTokenFlag(specimen, TokenProperty::UpdatePsr, true));
 
-    EXPECT_TRUE(specimen.getProperty(TokenProperty::ConditionCode, true));
-    EXPECT_FALSE(specimen.getProperty(TokenProperty::ConditionCode, false));
-    EXPECT_TRUE(specimen.getProperty(TokenProperty::UserPrivilage, false));
-    EXPECT_TRUE(specimen.getProperty(TokenProperty::UserPrivilage, true));
-    EXPECT_FALSE(specimen.getProperty(TokenProperty::UpdatePsr, true));
-    EXPECT_FALSE(specimen.getProperty(TokenProperty::UpdatePsr, false));
+    EXPECT_TRUE(getTokenFlag(specimen, TokenProperty::ConditionCode, true));
+    EXPECT_FALSE(getTokenFlag(specimen, TokenProperty::ConditionCode, false));
+    EXPECT_TRUE(getTokenFlag(specimen, TokenProperty::UserPrivilage, false));
+    EXPECT_TRUE(getTokenFlag(specimen, TokenProperty::UserPrivilage, true));
+    EXPECT_FALSE(getTokenFlag(specimen, TokenProperty::UpdatePsr, true));
+    EXPECT_FALSE(getTokenFlag(specimen, TokenProperty::UpdatePsr, false));
 }
 
 GTEST_TEST(Token, OverwriteProperty)
@@ -143,14 +139,14 @@ GTEST_TEST(Token, OverwriteProperty)
     Location here(__FILE__);
     Token specimen(here, TokenClass::OpenBrace);
 
-    specimen.addProperty(TokenProperty::DirectiveType, AssemblyDirectiveType::AddressMode);
+    addTokenEnum(specimen, TokenProperty::DirectiveType, AssemblyDirectiveType::AddressMode);
 
     AssemblyDirectiveType directiveType = AssemblyDirectiveType::Include;
-    ASSERT_TRUE(specimen.tryGetProperty(TokenProperty::DirectiveType, directiveType));
+    ASSERT_TRUE(tryGetTokenEnum(specimen, TokenProperty::DirectiveType, directiveType));
     EXPECT_EQ(directiveType, AssemblyDirectiveType::AddressMode);
 
-    specimen.addProperty(TokenProperty::DirectiveType, AssemblyDirectiveType::InstructionSet);
-    ASSERT_TRUE(specimen.tryGetProperty(TokenProperty::DirectiveType, directiveType));
+    addTokenEnum(specimen, TokenProperty::DirectiveType, AssemblyDirectiveType::InstructionSet);
+    ASSERT_TRUE(tryGetTokenEnum(specimen, TokenProperty::DirectiveType, directiveType));
     EXPECT_EQ(directiveType, AssemblyDirectiveType::InstructionSet);
 }
 
