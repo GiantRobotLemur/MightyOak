@@ -17,6 +17,7 @@
 #include "Ag/Core/FsDirectory.hpp"
 #include "Ag/Core/FsPath.hpp"
 #include "Ag/Core/FsSearchPathList.hpp"
+#include "Platform.hpp"
 
 ////////////////////////////////////////////////////////////////////////////////
 // Macro Definitions
@@ -1464,8 +1465,7 @@ GTEST_TEST(FsEntry, ConstructFromDirectory)
 
 GTEST_TEST(FsEntry, ConstructFromMissing)
 {
-    Path specimenPath("{ADA4DCC8-6C43-4B59-9F9D-1865067619E7}.dat",
-                      getWin32Schema());
+    Path specimenPath("{ADA4DCC8-6C43-4B59-9F9D-1865067619E7}.dat");
 
     Entry specimen(specimenPath);
 
@@ -1492,18 +1492,32 @@ GTEST_TEST(FsDirectory, BaseState)
 
     ASSERT_GT(names.size(), 0u);
 
+    String dot(".");
+    String dotdot("..");
+
     bool hasProgramFile = false;
+    bool containsDot = false;
+    bool containsDotDot = false;
 
     for (string_cref_t fileName : names)
     {
         if (fileName == programFileName)
         {
             hasProgramFile = true;
-            break;
+        }
+        else if (fileName == dot)
+        {
+            containsDot = true;
+        }
+        else if (fileName == dotdot)
+        {
+            containsDotDot = true;
         }
     }
 
     EXPECT_TRUE(hasProgramFile);
+    EXPECT_FALSE(containsDot);
+    EXPECT_FALSE(containsDotDot);
 
     hasProgramFile = false;
 

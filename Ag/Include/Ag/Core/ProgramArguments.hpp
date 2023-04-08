@@ -40,7 +40,7 @@ public:
 
     // Operations
     bool tryParse(wchar_cptr_t win32CommandLine, String &error);
-    bool tryParse(int argc, const char **argv, String &error);
+    bool tryParse(int argc, const char * const *argv, String &error);
     bool tryParse(int argc, const wchar_t * const *argv, String &error);
 
     // Overrides

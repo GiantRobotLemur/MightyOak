@@ -183,17 +183,17 @@ AluInstructionNode::AluInstructionNode(ParseContext &context, const Token &mnemo
     StatementNode(context, mnemonic),
     _state(State::AfterMnemonic),
     _flags(0),
-    _mnemonic(mnemonic.getProperty(TokenProperty::Mnemonic, InstructionMnemonic::Adc)),
-    _condition(mnemonic.getProperty(TokenProperty::ConditionCode, ConditionCode::Al))
+    _mnemonic(getTokenEnum(mnemonic, TokenProperty::Mnemonic, InstructionMnemonic::Adc)),
+    _condition(getTokenEnum(mnemonic, TokenProperty::ConditionCode, ConditionCode::Al))
 {
     context.pushLexicalContext(getExpressionLexer());
 
-    if (mnemonic.getProperty(TokenProperty::OverwritePsr, false))
+    if (getTokenFlag(mnemonic, TokenProperty::OverwritePsr, false))
     {
         _flags |= OverwritesPsr;
     }
 
-    if (mnemonic.getProperty(TokenProperty::UpdatePsr, false))
+    if (getTokenFlag(mnemonic, TokenProperty::UpdatePsr, false))
     {
         _flags |= UpdatesPsr;
     }
@@ -213,6 +213,9 @@ AluInstructionNode::AluInstructionNode(ParseContext &context, const Token &mnemo
     case InstructionMnemonic::Mvn:
         // Ensure the first operand is skipped for these instruction types.
         _flags |= NoRn;
+        break;
+
+    default:
         break;
     }
 }

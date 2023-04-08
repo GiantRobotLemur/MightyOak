@@ -121,7 +121,7 @@ AddressDirectiveNode::AddressDirectiveNode(ParseContext &context,
                                            const Token &mnemonic) :
     StatementNode(context, mnemonic),
     _oldLexerState(context.pushLexicalContext(getExpressionLexer())),
-    _condtion(mnemonic.getProperty(TokenProperty::ConditionCode, ConditionCode::Al)),
+    _condtion(getTokenEnum(mnemonic, TokenProperty::ConditionCode, ConditionCode::Al)),
     _state(State::AfterMnemonic)
 {
 }

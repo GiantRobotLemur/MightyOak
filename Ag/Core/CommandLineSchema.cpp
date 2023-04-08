@@ -11,10 +11,13 @@
 ////////////////////////////////////////////////////////////////////////////////
 // Header File Includes
 ////////////////////////////////////////////////////////////////////////////////
+#include <cwctype>
+
 #include <algorithm>
 #include <map>
 #include <unordered_map>
 
+#include "Platform.hpp"
 #include "Ag/Core/CodePoint.hpp"
 #include "Ag/Core/CommandLineSchema.hpp"
 #include "Ag/Core/Exception.hpp"
@@ -24,12 +27,6 @@
 #include "Ag/Core/LinearSortedMap.hpp"
 #include "Ag/Core/Utils.hpp"
 #include "Ag/Core/Variant.hpp"
-
-#ifdef _WIN32
-#include "Win32API.hpp"
-#else
-#include "PosixAPI.hpp"
-#endif
 
 ////////////////////////////////////////////////////////////////////////////////
 // Macro Definitions
@@ -896,7 +893,7 @@ void SchemaBuilder::defineOption(uint32_t id, utf8_cptr_t description,
 //! @param[in] isCaseSensitive True to register the character as is, false to
 //! register both upper and lower-case forms of the character, if they exist.
 void SchemaBuilder::defineAlias(uint32_t id, char32_t shortForm,
-                                           bool isCaseSensitive /* = true */)
+                                bool isCaseSensitive /* = true */)
 {
     if (isCaseSensitive)
     {

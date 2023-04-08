@@ -154,10 +154,10 @@ DataTransferInstructionNode::DataTransferInstructionNode(ParseContext &context,
                                                          const Token &mnemonic) :
     StatementNode(context, mnemonic),
     _state(State::AfterMnemonic),
-    _mnemonic(mnemonic.getProperty(TokenProperty::Mnemonic, InstructionMnemonic::Ldr)),
-    _condition(mnemonic.getProperty(TokenProperty::ConditionCode, ConditionCode::Al)),
-    _dataType(mnemonic.getProperty(TokenProperty::TransferDataType, TransferDataType::Word)),
-    _userPrivilages(mnemonic.getProperty(TokenProperty::UserPrivilage, false))
+    _mnemonic(getTokenEnum(mnemonic, TokenProperty::Mnemonic, InstructionMnemonic::Ldr)),
+    _condition(getTokenEnum(mnemonic, TokenProperty::ConditionCode, ConditionCode::Al)),
+    _dataType(getTokenEnum(mnemonic, TokenProperty::TransferDataType, TransferDataType::Word)),
+    _userPrivilages(getTokenFlag(mnemonic, TokenProperty::UserPrivilage, false))
 {
     context.pushLexicalContext(getExpressionLexer());
 }

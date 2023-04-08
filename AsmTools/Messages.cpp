@@ -120,6 +120,9 @@ String Message::toString() const
     case MessageSeverity::Fatal:
         builder.append("Fatal: ");
         break;
+
+    default:
+        break;
     }
 
     builder.append(_location.FileName.getUtf8Bytes(),

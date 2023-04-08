@@ -129,8 +129,8 @@ AtomicSwapInstructionNode::AtomicSwapInstructionNode(ParseContext &context,
                                                      const Token &mnemonic) :
     StatementNode(context, mnemonic),
     _state(State::AfterMnemonic),
-    _condition(mnemonic.getProperty(TokenProperty::ConditionCode, ConditionCode::Al)),
-    _isByte(mnemonic.getProperty(TokenProperty::TransferDataType,
+    _condition(getTokenEnum(mnemonic, TokenProperty::ConditionCode, ConditionCode::Al)),
+    _isByte(getTokenEnum(mnemonic, TokenProperty::TransferDataType,
                                  TransferDataType::Word) == TransferDataType::UnsignedByte)
 {
     context.pushLexicalContext(getExpressionLexer());

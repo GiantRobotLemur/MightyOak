@@ -110,9 +110,9 @@ TEST_P(AddOperation, Add)
 }
 
 INSTANTIATE_TEST_SUITE_P(ALU_Add, AddOperation, ::testing::ValuesIn(addTestParams),
-                         [](const ::testing::TestParamInfo<AluOpParams> &info) {
-                             // Can use info.param here to generate the test suffix
-                             return info.param.OpName;
+                         [](const ::testing::TestParamInfo<AluOpParams> &test) {
+                             // Can use test.param here to generate the test suffix
+                             return test.param.OpName;
                          });
 
 AluOpParams subTestParams[] = {
@@ -137,9 +137,9 @@ TEST_P(SubOperation, Sub)
 }
 
 INSTANTIATE_TEST_SUITE_P(ALU_Sub, SubOperation, ::testing::ValuesIn(subTestParams),
-                         [](const ::testing::TestParamInfo<AluOpParams> &info) {
-                             // Can use info.param here to generate the test suffix
-                             return info.param.OpName;
+                         [](const ::testing::TestParamInfo<AluOpParams> &test) {
+                             // Can use test.param here to generate the test suffix
+                             return test.param.OpName;
                          });
 
 AluFlagOpParams adcTestParams[] = {
@@ -168,9 +168,9 @@ TEST_P(AdcOperation, Adc)
 }
 
 INSTANTIATE_TEST_SUITE_P(ALU_Adc, AdcOperation, ::testing::ValuesIn(adcTestParams),
-                         [](const ::testing::TestParamInfo<AluFlagOpParams> &info) {
-                             // Can use info.param here to generate the test suffix
-                             return info.param.OpName;
+                         [](const ::testing::TestParamInfo<AluFlagOpParams> &test) {
+                             // Can use test.param here to generate the test suffix
+                             return test.param.OpName;
                          });
 
 AluFlagOpParams sbcTestParams[] = {
@@ -199,9 +199,9 @@ TEST_P(SbcOperation, Sbc)
 }
 
 INSTANTIATE_TEST_SUITE_P(ALU_Sbc, SbcOperation, ::testing::ValuesIn(sbcTestParams),
-                         [](const ::testing::TestParamInfo<AluFlagOpParams> &info) {
-                             // Can use info.param here to generate the test suffix
-                             return info.param.OpName;
+                         [](const ::testing::TestParamInfo<AluFlagOpParams> &test) {
+                             // Can use test.param here to generate the test suffix
+                             return test.param.OpName;
                          });
 
 
@@ -231,9 +231,9 @@ TEST_P(RscOperation, Rsc)
 }
 
 INSTANTIATE_TEST_SUITE_P(ALU_Rsc, RscOperation, ::testing::ValuesIn(rscTestParams),
-                         [](const ::testing::TestParamInfo<AluFlagOpParams> &info) {
-                             // Can use info.param here to generate the test suffix
-                             return info.param.OpName;
+                         [](const ::testing::TestParamInfo<AluFlagOpParams> &test) {
+                             // Can use test.param here to generate the test suffix
+                             return test.param.OpName;
                          });
 
 } // TED

@@ -63,7 +63,7 @@ bool name ## VariantType::tryParse(const LocaleInfo &format, utf8_cptr_t source,
     return parser.tryGetValue(value. name); }
 
 #define DECLARE_VARIANT_TYPE(name) \
-const name ## VariantType *VariantTypes:: ## name = name ## VariantType::getInstance()
+const name ## VariantType *VariantTypes::name = name ## VariantType::getInstance()
 
 #define DEFINE_TO_STRING_CONVERSION(source) \
 bool convert ## source ## ToString(const VariantData &sourceValue, \

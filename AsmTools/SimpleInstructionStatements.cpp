@@ -470,8 +470,8 @@ protected:
 SwiInstructionNode::SwiInstructionNode(ParseContext &context,
                                        const Token &mnemonic) :
     StatementNode(context, mnemonic),
-    _state(State::AfterMnemonic),
-    _condition(mnemonic.getProperty(TokenProperty::ConditionCode, ConditionCode::Al))
+    _condition(getTokenEnum(mnemonic, TokenProperty::ConditionCode, ConditionCode::Al)),
+    _state(State::AfterMnemonic)
 {
     context.pushLexicalContext(getExpressionLexer());
 }
@@ -562,9 +562,9 @@ Statement *SwiInstructionNode::compile(Messages &output) const
 BranchInstructionNode::BranchInstructionNode(ParseContext &context,
                                        const Token &mnemonic) :
     StatementNode(context, mnemonic),
-    _state(State::AfterMnemonic),
-    _mnemonic(mnemonic.getProperty(TokenProperty::Mnemonic, InstructionMnemonic::B)),
-    _condition(mnemonic.getProperty(TokenProperty::ConditionCode, ConditionCode::Al))
+    _mnemonic(getTokenEnum(mnemonic, TokenProperty::Mnemonic, InstructionMnemonic::B)),
+    _condition(getTokenEnum(mnemonic, TokenProperty::ConditionCode, ConditionCode::Al)),
+    _state(State::AfterMnemonic)
 {
     context.pushLexicalContext(getExpressionLexer());
 }
@@ -657,10 +657,10 @@ MultiplyInstructionNode::MultiplyInstructionNode(ParseContext &context,
     StatementNode(context, mnemonic),
     _expectedRegCount(0),
     _regCount(0),
+    _mnemonic(getTokenEnum(mnemonic, TokenProperty::Mnemonic, InstructionMnemonic::Mul)),
+    _condition(getTokenEnum(mnemonic, TokenProperty::ConditionCode, ConditionCode::Al)),
     _state(State::AfterSeparator),
-    _mnemonic(mnemonic.getProperty(TokenProperty::Mnemonic, InstructionMnemonic::Mul)),
-    _condition(mnemonic.getProperty(TokenProperty::ConditionCode, ConditionCode::Al)),
-    _updatesPsr(mnemonic.getProperty(TokenProperty::UpdatePsr, false))
+    _updatesPsr(getTokenFlag(mnemonic, TokenProperty::UpdatePsr, false))
 {
     _expectedRegCount = (_mnemonic == InstructionMnemonic::Mul) ? 3 : 4;
 
@@ -787,8 +787,8 @@ Statement *MultiplyInstructionNode::compile(Messages &output) const
 ////////////////////////////////////////////////////////////////////////////////
 MoveFromStatusRegNode::MoveFromStatusRegNode(ParseContext &context, const Token &mnemonic) :
     StatementNode(context, mnemonic),
-    _mnemonic(mnemonic.getProperty(TokenProperty::Mnemonic, InstructionMnemonic::Mrs)),
-    _condition(mnemonic.getProperty(TokenProperty::ConditionCode, ConditionCode::Al)),
+    _mnemonic(getTokenEnum(mnemonic, TokenProperty::Mnemonic, InstructionMnemonic::Mrs)),
+    _condition(getTokenEnum(mnemonic, TokenProperty::ConditionCode, ConditionCode::Al)),
     _state(State::AfterMnemonic),
     _source(CoreRegister::R0)
 {
@@ -829,7 +829,7 @@ ISyntaxNode *MoveFromStatusRegNode::applyToken(ParseContext &context,
         if (token.getClass() == TokenClass::RegisterStatus)
         {
             restoreLexicalState(context);
-            _source = token.getProperty(TokenProperty::RegisterIndex, CoreRegister::R0);
+            _source = getTokenEnum(token, TokenProperty::RegisterIndex, CoreRegister::R0);
             _state = State::Complete;
             result = this;
         }
@@ -904,8 +904,8 @@ Statement *MoveFromStatusRegNode::compile(Messages &output) const
 ////////////////////////////////////////////////////////////////////////////////
 MoveToStatusRegNode::MoveToStatusRegNode(ParseContext &context, const Token &mnemonic) :
     StatementNode(context, mnemonic),
-    _mnemonic(mnemonic.getProperty(TokenProperty::Mnemonic, InstructionMnemonic::Msr)),
-    _condition(mnemonic.getProperty(TokenProperty::ConditionCode, ConditionCode::Al)),
+    _mnemonic(getTokenEnum(mnemonic, TokenProperty::Mnemonic, InstructionMnemonic::Msr)),
+    _condition(getTokenEnum(mnemonic, TokenProperty::ConditionCode, ConditionCode::Al)),
     _state(State::AfterMnemonic),
     _rd(CoreRegister::R0),
     _psrComponents(0)
@@ -933,7 +933,7 @@ ISyntaxNode *MoveToStatusRegNode::applyToken(ParseContext &context,
     case State::AfterMnemonic:
         if (token.getClass() == TokenClass::RegisterStatus)
         {
-            _rd = token.getProperty(TokenProperty::RegisterIndex, CoreRegister::R0);
+            _rd = getTokenEnum(token, TokenProperty::RegisterIndex, CoreRegister::R0);
 
             if (token.tryGetScalarProperty(TokenProperty::PsrComponent,
                                            _psrComponents) == false)
@@ -1073,8 +1073,8 @@ Statement *MoveToStatusRegNode::compile(Messages &output) const
 BkptInstructionNode::BkptInstructionNode(ParseContext &context,
                                        const Token &mnemonic) :
     StatementNode(context, mnemonic),
-    _state(State::AfterMnemonic),
-    _condition(mnemonic.getProperty(TokenProperty::ConditionCode, ConditionCode::Al))
+    _condition(getTokenEnum(mnemonic, TokenProperty::ConditionCode, ConditionCode::Al)),
+    _state(State::AfterMnemonic)
 {
     context.pushLexicalContext(getExpressionLexer());
 }
@@ -1114,6 +1114,8 @@ ISyntaxNode *BkptInstructionNode::applyToken(ParseContext &context,
             result = this;
         }
         break;
+
+    default: break;
     }
 
     return result;

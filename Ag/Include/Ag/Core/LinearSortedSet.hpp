@@ -338,7 +338,7 @@ public:
     TValue &emplace(TArgs&&... args)
     {
         size_t originalSize = _index.size();
-        TValue &emplacedValue = _index.emplace_back(std::forward(args));
+        TValue &emplacedValue = _index.emplace_back(std::forward(args)...);
 
         if (originalSize < 1)
         {
@@ -436,7 +436,7 @@ public:
         if (first != _index.end())
         {
             size_t offsetStart = std::distance(_index.begin(), first);
-            ptrdiff_t count = std::distance(first, end);
+            auto count = std::distance(first, end);
 
             if (count > 0)
             {

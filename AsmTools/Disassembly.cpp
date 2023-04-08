@@ -939,6 +939,9 @@ void fixDisasmShifterMode(ShifterOperand &shiftOperand)
             shiftOperand.Mode = ShifterMode::RotateWithExtend;
             shiftOperand.Shift = ShiftType::Rrx;
             break;
+
+        default:
+            break;
         }
     }
 }

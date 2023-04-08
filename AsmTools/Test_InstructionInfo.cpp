@@ -948,7 +948,6 @@ GTEST_TEST(InstructionInfo, CannotAccessWrongParameters)
     // Define short hands for convenience.
     using II = InstructionInfo;
     using IM = InstructionMnemonic;
-    using OC = OperationClass;
 
     constexpr uint8_t c = 10;  toScalar(OperationClass::Max);
 

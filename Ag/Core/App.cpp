@@ -19,7 +19,7 @@
 #include "Ag/Core/Exception.hpp"
 #include "Ag/Core/Utf.hpp"
 #include "CoreInternal.hpp"
-#include "Win32API.hpp"
+#include "Platform.hpp"
 
 namespace Ag {
 
@@ -42,7 +42,7 @@ struct CommandLineInfo
     int ArgCount;
 
     //! @brief The main() command line arguments to parse.
-    const char **Args;
+    const char * const *Args;
 
     //! @brief The wmain() command line arguments to parse.
     const wchar_t * const *WideArgs;
@@ -51,7 +51,7 @@ struct CommandLineInfo
     bool Success;
 
     //! @brief Constructs an object describing a console of POSIX command line.
-    CommandLineInfo(Ag::CommandLineUPtr &&processor, int argc, const char **argv) :
+    CommandLineInfo(Ag::CommandLineUPtr &&processor, int argc, const char * const *argv) :
         Manager(std::move(processor)),
         CommandLine(nullptr),
         ArgCount(argc),
@@ -171,7 +171,14 @@ int App::exec()
 #ifdef _WIN32
     CommandLineInfo cliInfo(createCommandLineArguments(), ::GetCommandLineW());
 #else
-#error Implement default command line for Linux.
+    // Read /proc/self/cmdline and parse into tokens.
+    std::vector<utf8_cptr_t> args;
+    std::vector<char> buffer;
+
+    getProgramArgs(buffer, args);
+    CommandLineInfo cliInfo(createCommandLineArguments(),
+                            static_cast<int>(args.size()),
+                            args.data());
 #endif
 
     return innerExec(cliInfo);
@@ -184,7 +191,7 @@ int App::exec()
 //! @returns The global process result value to return from main().
 //! @details This function is intended to run a traditional POSIX application
 //! or a Win32 ANSI console application.
-int App::exec(int argc, const char **argv)
+int App::exec(int argc, const char * const *argv)
 {
     CommandLineInfo commandLineInfo(createCommandLineArguments(), argc, argv);
 

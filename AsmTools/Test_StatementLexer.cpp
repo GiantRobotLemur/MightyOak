@@ -330,7 +330,7 @@ GTEST_TEST(StatementLexer, RecogniseIncludeDirective)
     EXPECT_EQ(next.getLocation().Offset, 3);
     AssemblyDirectiveType directiveType;
 
-    ASSERT_TRUE(next.tryGetProperty(TokenProperty::DirectiveType, directiveType));
+    ASSERT_TRUE(tryGetTokenEnum(next, TokenProperty::DirectiveType, directiveType));
     EXPECT_EQ(directiveType, AssemblyDirectiveType::Include);
 
     // Verify end of stream.
@@ -362,10 +362,10 @@ GTEST_TEST(StatementLexer, RecogniseCpuModelDirective)
         ASSERT_TRUE(specimen->tryGetNextToken(input, next));
         EXPECT_EQ(next.getClass(), TokenClass::AssemblyDirective);
 
-        ASSERT_TRUE(next.tryGetProperty(TokenProperty::DirectiveType, directiveType));
+        ASSERT_TRUE(tryGetTokenEnum(next, TokenProperty::DirectiveType, directiveType));
         EXPECT_EQ(directiveType, AssemblyDirectiveType::InstructionSet);
 
-        ASSERT_TRUE(next.tryGetProperty(TokenProperty::InstructionSet, model));
+        ASSERT_TRUE(tryGetTokenEnum(next, TokenProperty::InstructionSet, model));
         EXPECT_EQ(model, expectedModel);
 
         // Get the statement terminator.
@@ -417,10 +417,10 @@ GTEST_TEST(StatementLexer, RecogniseCpuExtensionDirective)
         ASSERT_TRUE(specimen->tryGetNextToken(input, next));
         EXPECT_EQ(next.getClass(), TokenClass::AssemblyDirective);
 
-        ASSERT_TRUE(next.tryGetProperty(TokenProperty::DirectiveType, directiveType));
+        ASSERT_TRUE(tryGetTokenEnum(next, TokenProperty::DirectiveType, directiveType));
         EXPECT_EQ(directiveType, AssemblyDirectiveType::ProcessorExtension);
 
-        ASSERT_TRUE(next.tryGetProperty(TokenProperty::ProcessorExtension, extension));
+        ASSERT_TRUE(tryGetTokenEnum(next, TokenProperty::ProcessorExtension, extension));
         EXPECT_EQ(extension, expectedExtenstion);
 
         // Get the statement terminator.
@@ -454,10 +454,10 @@ GTEST_TEST(StatementLexer, RecogniseCpuModeDirective)
         ASSERT_TRUE(specimen->tryGetNextToken(input, next));
         EXPECT_EQ(next.getClass(), TokenClass::AssemblyDirective);
 
-        ASSERT_TRUE(next.tryGetProperty(TokenProperty::DirectiveType, directiveType));
+        ASSERT_TRUE(tryGetTokenEnum(next, TokenProperty::DirectiveType, directiveType));
         EXPECT_EQ(directiveType, AssemblyDirectiveType::ProcessorMode);
 
-        ASSERT_TRUE(next.tryGetProperty(TokenProperty::ProcessorMode, mode));
+        ASSERT_TRUE(tryGetTokenEnum(next, TokenProperty::ProcessorMode, mode));
         EXPECT_EQ(mode, expectedMode);
 
         // Get the statement terminator.
@@ -491,10 +491,10 @@ GTEST_TEST(StatementLexer, RecogniseAssemblyModeDirective)
         ASSERT_TRUE(specimen->tryGetNextToken(input, next));
         EXPECT_EQ(next.getClass(), TokenClass::AssemblyDirective);
 
-        ASSERT_TRUE(next.tryGetProperty(TokenProperty::DirectiveType, directiveType));
+        ASSERT_TRUE(tryGetTokenEnum(next, TokenProperty::DirectiveType, directiveType));
         EXPECT_EQ(directiveType, AssemblyDirectiveType::AddressMode);
 
-        ASSERT_TRUE(next.tryGetProperty(TokenProperty::AddressMode, mode));
+        ASSERT_TRUE(tryGetTokenEnum(next, TokenProperty::AddressMode, mode));
         EXPECT_EQ(mode, expectedMode);
 
         // Get the statement terminator.
@@ -542,7 +542,7 @@ GTEST_TEST(StatementLexer, RecogniseAluInstructions)
     Token next;
     InstructionMnemonic mnemonic;
 
-    for (const auto expectedInstruction : mnemonics)
+    for (const auto &expectedInstruction : mnemonics)
     {
         String instruction = String::format("InstructionMnemonic: {0}",
                                             { static_cast<uint32_t>(expectedInstruction.second) });
@@ -552,7 +552,7 @@ GTEST_TEST(StatementLexer, RecogniseAluInstructions)
         ASSERT_TRUE(specimen->tryGetNextToken(input, next));
         EXPECT_EQ(next.getClass(), expectedInstruction.first);
 
-        ASSERT_TRUE(next.tryGetProperty(TokenProperty::Mnemonic, mnemonic));
+        ASSERT_TRUE(tryGetTokenEnum(next, TokenProperty::Mnemonic, mnemonic));
         EXPECT_EQ(expectedInstruction.second, mnemonic);
 
         // Get the statement terminator.
@@ -588,7 +588,7 @@ GTEST_TEST(StatementLexer, RecogniseBranchInstructions)
     InstructionMnemonic mnemonic;
     ConditionCode cond;
 
-    for (const auto expected : mnemonics)
+    for (const auto &expected : mnemonics)
     {
         String instruction = String::format("InstructionMnemonic: {0}, Cond: {1}",
                                             { static_cast<uint32_t>(std::get<1>(expected)),
@@ -599,10 +599,10 @@ GTEST_TEST(StatementLexer, RecogniseBranchInstructions)
         ASSERT_TRUE(specimen->tryGetNextToken(input, next));
         EXPECT_EQ(next.getClass(), std::get<0>(expected));
 
-        ASSERT_TRUE(next.tryGetProperty(TokenProperty::Mnemonic, mnemonic));
+        ASSERT_TRUE(tryGetTokenEnum(next, TokenProperty::Mnemonic, mnemonic));
         EXPECT_EQ(std::get<1>(expected), mnemonic);
 
-        if (next.tryGetProperty(TokenProperty::ConditionCode, cond))
+        if (tryGetTokenEnum(next, TokenProperty::ConditionCode, cond))
         {
             EXPECT_EQ(cond, std::get<2>(expected));
         }
@@ -661,7 +661,7 @@ GTEST_TEST(StatementLexer, RecogniseConditionCodes)
     InstructionMnemonic mnemonic;
     ConditionCode cond;
 
-    for (const auto expected : mnemonics)
+    for (const auto &expected : mnemonics)
     {
         String instruction = String::format("InstructionMnemonic: {0}, Cond: {1}",
                                             { static_cast<uint32_t>(std::get<1>(expected)),
@@ -672,10 +672,10 @@ GTEST_TEST(StatementLexer, RecogniseConditionCodes)
         ASSERT_TRUE(specimen->tryGetNextToken(input, next));
         EXPECT_EQ(next.getClass(), std::get<0>(expected));
 
-        ASSERT_TRUE(next.tryGetProperty(TokenProperty::Mnemonic, mnemonic));
+        ASSERT_TRUE(tryGetTokenEnum(next, TokenProperty::Mnemonic, mnemonic));
         EXPECT_EQ(std::get<1>(expected), mnemonic);
 
-        if (next.tryGetProperty(TokenProperty::ConditionCode, cond))
+        if (tryGetTokenEnum(next, TokenProperty::ConditionCode, cond))
         {
             EXPECT_EQ(cond, std::get<2>(expected));
         }
@@ -705,39 +705,39 @@ GTEST_TEST(StatementLexer, RecogniseAluInstructionSuffixes)
     // Recognise MOV.
     ASSERT_TRUE(specimen->tryGetNextToken(input, next));
     EXPECT_EQ(next.getClass(), TokenClass::MnemonicAluOp);
-    EXPECT_EQ(next.getProperty(TokenProperty::Mnemonic, InstructionMnemonic::MaxMnemonic),
+    EXPECT_EQ(getTokenEnum(next, TokenProperty::Mnemonic, InstructionMnemonic::MaxMnemonic),
               InstructionMnemonic::Mov);
-    EXPECT_EQ(next.getProperty(TokenProperty::ConditionCode, ConditionCode::Al),
+    EXPECT_EQ(getTokenEnum(next, TokenProperty::ConditionCode, ConditionCode::Al),
               ConditionCode::Eq);
-    EXPECT_EQ(next.getProperty(TokenProperty::UpdatePsr, false), false);
+    EXPECT_EQ(getTokenFlag(next, TokenProperty::UpdatePsr, false), false);
 
     // Recognise AND.
     ASSERT_TRUE(specimen->tryGetNextToken(input, next));
     EXPECT_EQ(next.getClass(), TokenClass::MnemonicAluOp);
-    EXPECT_EQ(next.getProperty(TokenProperty::Mnemonic, InstructionMnemonic::MaxMnemonic),
+    EXPECT_EQ(getTokenEnum(next, TokenProperty::Mnemonic, InstructionMnemonic::MaxMnemonic),
               InstructionMnemonic::And);
-    EXPECT_EQ(next.getProperty(TokenProperty::ConditionCode, ConditionCode::Al),
+    EXPECT_EQ(getTokenEnum(next, TokenProperty::ConditionCode, ConditionCode::Al),
               ConditionCode::Al);
-    EXPECT_EQ(next.getProperty(TokenProperty::UpdatePsr, false), true);
+    EXPECT_EQ(getTokenFlag(next, TokenProperty::UpdatePsr, false), true);
 
     // Recognise ORR.
     ASSERT_TRUE(specimen->tryGetNextToken(input, next));
     EXPECT_EQ(next.getClass(), TokenClass::MnemonicAluOp);
-    EXPECT_EQ(next.getProperty(TokenProperty::Mnemonic, InstructionMnemonic::MaxMnemonic),
+    EXPECT_EQ(getTokenEnum(next, TokenProperty::Mnemonic, InstructionMnemonic::MaxMnemonic),
               InstructionMnemonic::Orr);
-    EXPECT_EQ(next.getProperty(TokenProperty::ConditionCode, ConditionCode::Al),
+    EXPECT_EQ(getTokenEnum(next, TokenProperty::ConditionCode, ConditionCode::Al),
               ConditionCode::Cs);
-    EXPECT_EQ(next.getProperty(TokenProperty::UpdatePsr, false), true);
+    EXPECT_EQ(getTokenFlag(next, TokenProperty::UpdatePsr, false), true);
 
     // Recognise TST.
     ASSERT_TRUE(specimen->tryGetNextToken(input, next));
     EXPECT_EQ(next.getClass(), TokenClass::MnemonicAluOp);
-    EXPECT_EQ(next.getProperty(TokenProperty::Mnemonic, InstructionMnemonic::MaxMnemonic),
+    EXPECT_EQ(getTokenEnum(next, TokenProperty::Mnemonic, InstructionMnemonic::MaxMnemonic),
               InstructionMnemonic::Tst);
-    EXPECT_EQ(next.getProperty(TokenProperty::ConditionCode, ConditionCode::Al),
+    EXPECT_EQ(getTokenEnum(next, TokenProperty::ConditionCode, ConditionCode::Al),
               ConditionCode::Al);
-    EXPECT_EQ(next.getProperty(TokenProperty::UpdatePsr, false), false);
-    EXPECT_EQ(next.getProperty(TokenProperty::OverwritePsr, false), true);
+    EXPECT_EQ(getTokenFlag(next, TokenProperty::UpdatePsr, false), false);
+    EXPECT_EQ(getTokenFlag(next, TokenProperty::OverwritePsr, false), true);
 }
 
 } // TED

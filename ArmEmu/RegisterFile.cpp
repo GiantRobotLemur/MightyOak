@@ -103,6 +103,9 @@ constexpr bool RegisterFile::changeMode(ProcessorMode newMode) noexcept
             std::copy_n(_coreRegisters + 8, 5, _userModeRegBank);
             std::copy_n(_coreRegisters + 13, 2, _svcModeRegBank);
             break;
+
+        default:
+            break;
         }
 
         // Unpack the banked registers for the new mode.
@@ -128,6 +131,9 @@ constexpr bool RegisterFile::changeMode(ProcessorMode newMode) noexcept
             // Copy R8-R12 to the User bank and R13-R14 to SVC bank.
             std::copy_n(_userModeRegBank, 5, _coreRegisters + 8);
             std::copy_n(_svcModeRegBank, 2, _coreRegisters + 13);
+            break;
+
+        default:
             break;
         }
 

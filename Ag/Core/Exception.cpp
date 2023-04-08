@@ -11,19 +11,21 @@
 ////////////////////////////////////////////////////////////////////////////////
 // Header File Includes
 ////////////////////////////////////////////////////////////////////////////////
-#include <algorithm>
 #include <cstdlib>
+#include <cstring>
+
+#include <algorithm>
 #include <deque>
 #include <set>
 #include <vector>
 
 #include "CoreInternal.hpp"
+#include "Platform.hpp"
 #include "Ag/Core/Exception.hpp"
 #include "Ag/Core/InlineMemory.hpp"
 #include "Ag/Core/String.hpp"
 #include "Ag/Core/Utf.hpp"
 #include "Ag/Core/Utils.hpp"
-#include "Win32API.hpp"
 
 namespace Ag {
 
@@ -268,9 +270,10 @@ const Exception &Exception::getInnerException() const
 
 //! @brief A member function which renders exceptions compatible with STL
 //! exceptions by producing a summary of the information contained.
-const char *Exception::what() const
+const char *Exception::what() const noexcept
 {
-    return _data ? _data->what().data() : Utf::getEmpty().data();
+    static const char dummy = '\0';
+    return _data ? _data->what().data() : &dummy;
 }
 
 //! @brief Copies and packages information about the exception.
@@ -563,7 +566,6 @@ BadCastException::BadCastException(const char *targetTypeName)
     initialise(Domain, badCastMessage, detail);
 }
 
-
 ////////////////////////////////////////////////////////////////////////////////
 // ObjectNotBoundException Members
 ////////////////////////////////////////////////////////////////////////////////
@@ -660,9 +662,62 @@ Win32Exception::Win32Exception(const char *fnName, uint32_t win32ErrorCode)
         detail.push_back('.');
     }
 
-    initialise(Domain, argumentMessage, detail);
+    initialise(Domain, win32Message, detail);
 }
 #endif // ifdef _WIN32
+
+////////////////////////////////////////////////////////////////////////////////
+// Win32Exception Members
+////////////////////////////////////////////////////////////////////////////////
+const char *RuntimeLibraryException::Domain = "RuntimeLibraryException";
+static const char *rtErrorMessage =
+"A C runtime library function returned an unexpected error condition.";
+
+//! @brief Constructs an exception object documenting the failure of a function
+//! from the platform C runtime library.
+//! @param[in] fnName The name of the function including parenthesis and
+//! optionally a summary of pertinent parameters.
+//! @param[in] runtimeErrorCode The error code returned by the function or
+//! extracted via errno.
+RuntimeLibraryException::RuntimeLibraryException(const char *fnName,
+                                                 RuntimeLibraryException::ErrorCode runtimeErrorCode)
+{
+    std::string detail;
+    appendPrintf(detail, "The function '%s' returned an error", fnName);
+
+#ifdef _MSC_VER
+    std::vector<wchar_t> buffer;
+    buffer.resize(256, L'\0');
+
+    if (_wcserror_s(buffer.data(), buffer.size(), runtimeErrorCode) == 0)
+    {
+        // Append the error message text encoded as UTF-8 bytes.
+        detail.push_back(':');
+        detail.push_back(' ');
+        Utf::appendWide(detail, buffer.data(), wcslen(buffer.data()));
+    }
+#else
+    // Create a temporary buffer to hold a thread-safe copy of the system
+    // error message.
+    std::vector<char> buffer;
+    buffer.resize(256, '\0');
+
+    char *result = strerror_r(runtimeErrorCode, buffer.data(), buffer.size());
+
+    if (result != nullptr)
+    {
+        detail.push_back(':');
+        detail.push_back(' ');
+        detail.append(result);
+    }
+#endif
+    else
+    {
+        detail.push_back('.');
+    }
+
+    initialise(Domain, rtErrorMessage, detail);
+}
 
 } // namespace Ag
 ////////////////////////////////////////////////////////////////////////////////

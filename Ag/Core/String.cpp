@@ -1131,11 +1131,11 @@ String String::format(const FormatInfo &format, const String &spec,
 //! @return A string representing the character in a printable form.
 String String::formatUcsNonPrintable(char32_t ch)
 {
-#ifdef WCHAR_IS_32BIT
-    if (iswprint(static_cast<wchar_t>(ch) == 0)
-#else
     uint32_t code = static_cast<uint32_t>(ch);
 
+#ifdef WCHAR_IS_32BIT
+    if (iswprint(static_cast<wchar_t>(ch) == 0))
+#else
     if ((code < 32) ||
         ((code >= 0x80) && (code < 0xA0)) ||
         (code > 0x10FFFF))
@@ -1722,7 +1722,7 @@ String getRuntimeLibraryErrorMessage(int errorCode)
         {
             // Make the buffer bigger and try again.
             bufferSize *= 2;
-            buffer.reseize(bufferSize);
+            buffer.resize(bufferSize);
 
             strerror_r(errorCode, buffer.data(), bufferSize);
             length = strlen(buffer.data());

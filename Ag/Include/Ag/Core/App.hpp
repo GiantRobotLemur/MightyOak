@@ -31,7 +31,7 @@ LPWSTR cmdLine, int) { AppType theApp; return theApp.exec(cmdLine); }
 { AppType theApp; return theApp.exec(argc, argv); }
 #endif
 #else // !defined _WIN32
-#define IMPLEMENT_MAIN(AppType) int main(int argc, char_t *argv[]) \
+#define IMPLEMENT_MAIN(AppType) int main(int argc, char *argv[]) \
 { AppType theApp; return theApp.exec(argc, argv); }
 #endif
 
@@ -65,7 +65,7 @@ public:
 
     // Operations
     int exec();
-    int exec(int argc, const char **argv);
+    int exec(int argc, const char * const *argv);
     int exec(int argc, const wchar_t * const *argv);
     int exec(wchar_cptr_t commandLine);
 

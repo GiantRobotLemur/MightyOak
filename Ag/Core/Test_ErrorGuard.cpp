@@ -16,6 +16,12 @@
 
 #include "Ag/Core/ErrorGuard.hpp"
 
+#ifdef __GNUC__
+// Disable warnings for code which is intended to induce runtime errors.
+#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
+#pragma GCC diagnostic ignored "-Wtype-limits"
+#endif
+
 namespace Ag {
 
 namespace {
@@ -142,12 +148,12 @@ void integerDivide(int denominator)
     result = 0;
 }
 
-void floatingPointDivide(double denominator)
-{
-    double result = 4242.42 / denominator;
+// void floatingPointDivide(double denominator)
+// {
+//     double result = 4242.42 / denominator;
 
-    result += 1.0;
-}
+//     result += 1.0;
+// }
 
 void throwProcedure(uintptr_t errorCode)
 {
@@ -396,17 +402,17 @@ GTEST_TEST(ErrorGuard, CatchIntDivisionByZeroException)
                  DivisionByZeroException::Domain);
 }
 
-// On x64 Windows, the double division by zero produces an inf result.
-//GTEST_TEST(ErrorGuard, CatchFloatDivisionByZeroException)
-//{
+// On x64 Windows and Linux, the double division by zero produces an inf result.
+// GTEST_TEST(ErrorGuard, CatchFloatDivisionByZeroException)
+// {
 //    ErrorGuard guard;
-//
+
 //    // Test error path.
 //    EXPECT_FALSE(guard.tryExecProcedure(floatingPointDivide, 0.0));
 //    EXPECT_TRUE(guard.hasError());
 //    EXPECT_STREQ(guard.getError().getDomain().data(),
 //                 DivisionByZeroException::Domain);
-//}
+// }
 
 } // TED
 

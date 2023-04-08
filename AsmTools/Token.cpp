@@ -201,6 +201,26 @@ void Token::reset(const Location &at, TokenClass classification, const String &v
 ////////////////////////////////////////////////////////////////////////////////
 // Global Function Definitions
 ////////////////////////////////////////////////////////////////////////////////
+//! @brief Gets a boolean property from a token.
+//! @param[in] token The token to query.
+//! @param[in] propId The identifier of the property to get the value of.
+//! @param[in] defaultValue The value to return if the property is not defined.
+//! @returns Either the value embedded in the token or defaultValue.
+bool getTokenFlag(const Token &token, TokenProperty propId, bool defaultValue)
+{
+    uint8_t rawValue;
+
+    return token.tryGetScalarProperty(propId, rawValue) ? (rawValue != 0) : defaultValue;
+}
+
+//! @brief Sets the value of a property with a boolean value.
+//! @param[in] token The token to annotate.
+//! @param[in] propId The identifier of the property to set.
+//! @param[in] value The new boolean property value.
+void addTokenFlag(Token &token, TokenProperty propId, bool value)
+{
+    token.addScalarProperty(propId, value ? 0xFF : 0x00);
+}
 
 }} // namespace Ag::Asm
 ////////////////////////////////////////////////////////////////////////////////

@@ -25,11 +25,7 @@
 #include "Ag/Core/Utils.hpp"
 #include "Ag/Core/Variant.hpp"
 
-#ifdef _WIN32
-#include "Win32API.hpp"
-#else
-#include "PosixAPI.h"
-#endif
+#include "Platform.hpp"
 
 namespace Ag {
 namespace Cli {
@@ -370,7 +366,7 @@ bool ProgramArguments::tryParse(wchar_cptr_t win32CommandLine, String &error)
 //! @retval true The command line was successfully processed.
 //! @retval false Command line processing failed, the error string should describe
 //! the exact nature of the failure.
-bool ProgramArguments::tryParse(int argc, const char **argv, String &error)
+bool ProgramArguments::tryParse(int argc, const char * const *argv, String &error)
 {
     if (argc > 0)
     {

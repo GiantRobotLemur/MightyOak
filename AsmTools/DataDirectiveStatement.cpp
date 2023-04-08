@@ -742,6 +742,8 @@ ISyntaxNode *DataDirectiveNode::applyToken(ParseContext &context,
                                               "Missing data expression.");
             result = this;
             break;
+
+        default: break;
         }
     }
     else if (_state == State::BeforeSeparator)
@@ -760,6 +762,8 @@ ISyntaxNode *DataDirectiveNode::applyToken(ParseContext &context,
             _state = State::Complete;
             result = this;
             break;
+
+        default: break;
         }
     }
     else if (_state == State::AfterSeparator)
@@ -780,6 +784,8 @@ ISyntaxNode *DataDirectiveNode::applyToken(ParseContext &context,
             _state = State::Complete;
             result = this;
             break;
+
+        default: break;
         }
     }
 
