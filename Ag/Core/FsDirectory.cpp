@@ -15,6 +15,7 @@
 #include <algorithm>
 #include <memory>
 
+#include "Platform.hpp"
 #include "Ag/Core/CodePoint.hpp"
 #include "Ag/Core/FsDirectory.hpp"
 #include "Ag/Core/Format.hpp"
@@ -22,7 +23,6 @@
 #include "Ag/Core/Utf.hpp"
 #include "Ag/Core/Utils.hpp"
 #include "Ag/Core/Variant.hpp"
-#include "Win32API.hpp"
 
 ////////////////////////////////////////////////////////////////////////////////
 // Macro Definitions
@@ -52,7 +52,9 @@ private:
     int64_t _size;
     uint32_t _flags;
 public:
+#ifdef _WIN32
     static const uint32_t Win32NotFile = FILE_ATTRIBUTE_DIRECTORY | FILE_ATTRIBUTE_DEVICE;
+#endif
 
     // Public Types
     enum class Flags : uint32_t
@@ -97,20 +99,56 @@ public:
     EntryPrivate(const Path &parent, const WIN32_FIND_DATAW &fileInfo) :
         _location(parent, String(fileInfo.cFileName)),
         _size(-1),
-        _flags(static_cast<std::underlying_type_t<Flags>>(Flags::Exists))
+        _flags(toScalar(Flags::Exists))
     {
         if (fileInfo.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
         {
-            _flags |= static_cast<std::underlying_type_t<Flags>>(Flags::IsDirectory);
+            _flags |= toScalar(Flags::IsDirectory);
         }
         else if ((fileInfo.dwFileAttributes & Win32NotFile) == 0)
         {
-            _flags |= static_cast<std::underlying_type_t<Flags>>(Flags::IsFile);
+            _flags |= toScalar(Flags::IsFile);
             LARGE_INTEGER size;
             size.LowPart = fileInfo.nFileSizeLow;
             size.HighPart = static_cast<LONG>(fileInfo.nFileSizeHigh);
 
             _size = size.QuadPart;
+        }
+    }
+#else
+    EntryPrivate(const Path &parent, const struct dirent *fileInfo) :
+        _location(parent, String(fileInfo->d_name)),
+        _size(-1),
+        _flags(toScalar(Flags::Exists))
+    {
+        if (fileInfo->d_type & DT_DIR)
+        {
+            _flags |= toScalar(Flags::IsDirectory);
+        }
+        else if (fileInfo->d_type & DT_REG)
+        {
+            _flags |= toScalar(Flags::IsFile);
+
+            struct stat fileStats;
+            String fullPath = _location.toString(PathUsage::Kernel);
+
+            if (stat(fullPath.getUtf8Bytes(), &fileStats) == 0)
+            {
+                _size = fileStats.st_size;
+            }
+            else
+            {
+                // The call to stat() failed. It shouldn't have, so report it.
+                std::string fnName;
+                fnName.reserve(fullPath.getUtf8Length() + 8);
+
+                fnName.assign("stat('");
+                appendAgString(fnName, fullPath);
+                fnName.push_back('\'');
+                fnName.push_back(')');
+
+                throw RuntimeLibraryException(fnName.c_str(), errno);
+            }
         }
     }
 #endif
@@ -138,7 +176,7 @@ public:
     void refresh()
     {
         _flags = 0;
-        _size = 0;
+        _size = -1;
 
         if (_location.isEmpty())
             return;
@@ -164,15 +202,15 @@ public:
         }
         else
         {
-            _flags |= static_cast<std::underlying_type_t<Flags>>(Flags::Exists);
+            _flags |= toScalar(Flags::Exists);
 
             if (attribData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
             {
-                _flags |= static_cast<std::underlying_type_t<Flags>>(Flags::IsDirectory);
+                _flags |= toScalar(Flags::IsDirectory);
             }
             else if ((attribData.dwFileAttributes & Win32NotFile) == 0)
             {
-                _flags |= static_cast<std::underlying_type_t<Flags>>(Flags::IsFile);
+                _flags |= toScalar(Flags::IsFile);
 
                 LARGE_INTEGER size;
                 size.LowPart = attribData.nFileSizeLow;
@@ -182,10 +220,38 @@ public:
             }
         }
 #else
-#error Implement something POSIX-compatible here.
+        String fullPath = _location.toString(PathUsage::Kernel);
+        struct stat fileInfo;
+
+        if (stat(fullPath.getUtf8Bytes(), &fileInfo) == 0)
+        {
+            _flags |= toScalar(Flags::Exists);
+
+            if (S_ISREG(fileInfo.st_mode))
+            {
+                _flags |= toScalar(Flags::IsFile);
+                _size = fileInfo.st_size;
+            }
+            else if (S_ISDIR(fileInfo.st_mode))
+            {
+                _flags |= toScalar(Flags::IsDirectory);
+            }
+        }
+        else if (errno != ENOENT)
+        {
+            // Throw and exception using the error code and file path.
+            std::string fnName;
+            fnName.assign("stat('");
+            appendAgString(fnName, fullPath);
+            fnName.push_back('\'');
+            fnName.push_back(')');
+            throw RuntimeLibraryException(fnName.c_str(), errno);
+        }
 #endif
     }
 };
+
+using EntryPrivateSPtr = std::shared_ptr<EntryPrivate>;
 
 namespace {
 
@@ -204,6 +270,23 @@ struct DescendingEntries
         return rhs.getName() < lhs.getName();
     }
 };
+
+#ifndef _WIN32
+//! @brief A structure which closes a POSIX directory.
+struct DirCloser
+{
+    void operator()(DIR *dirInfo) const
+    {
+        if (dirInfo != nullptr)
+        {
+            closedir(dirInfo);
+        }
+    }
+};
+
+//! @brief An alias for a managed POSIX DIR pointer.
+using DirUPtr = std::unique_ptr<DIR, DirCloser>;
+#endif
 
 ////////////////////////////////////////////////////////////////////////////////
 // Local Data
@@ -256,8 +339,139 @@ bool filterByQueryFlags(const WIN32_FIND_DATAW &fileInfo, uint32_t flags)
     }
 
     return isAllowed;
-
 }
+#else
+
+//! @brief Attempts to decode the next Unicode character from a UTF-8 encoded
+//! null-terminated string.
+//! @param[in] str The array of bytes to decode.
+//! @param[in,out] offeset The offset into str of the next byte to interpret,
+//! updated to point to the next uninterpreted byte.
+//! @param[out] next Receives the next Unicode character interpreted from the
+//! string
+//! @retval true A Unicode character was decoded.
+//! @retval false There were no more characters or the encoding was invalid.
+bool tryGetNextChar(const char *str, size_t &offset, char32_t &next)
+{
+    Utf::FromUtf8Converter converter;
+    uint8_t nextByte = static_cast<uint8_t>(str[offset]);
+    bool hasChar = false;
+    bool hasError = false;
+    next = U'\0';
+
+    while (nextByte != 0)
+    {
+        ++offset;
+
+        if (converter.tryConvert(nextByte, next, hasError))
+        {
+            hasChar = true;
+            break;
+        }
+        else if (hasError)
+        {
+            // The encoding is invalid.
+            converter.reset();
+            next = U'\0';
+            break;
+        }
+        else
+        {
+            // Get the next byte.
+            nextByte = static_cast<uint8_t>(str[offset]);
+        }
+    }
+
+    return hasChar;
+}
+
+//! @brief Filters the name of a POSIX directory entry.
+//! @param[in] entry The entry to examine.
+//! @param[in] pattern The wildcard pattern used to match the string.
+//! The asterisk character '*' will match zero or more characters and the
+//! question mark character '?' will match exactly one character.
+//! @param[in] queryFlags A bit field defined using values from the
+//! Fs::Directory::Query enumeration.
+//! @retval true The entry passed the filter.
+//! @retval false The entry did not fit the filter.
+bool filterDirEntry(const dirent *entry, string_cref_t pattern, uint32_t queryFlags)
+{
+    if ((queryFlags & Directory::IncludeVirtualEntries) == 0)
+    {
+        // Reject virtual entries before attepting matching.
+        if (entry->d_name[0] == '.')
+        {
+            if (entry->d_name[1] == '.')
+            {
+                if (entry->d_name[2] == '\0')
+                {
+                    // It's the parent directory virtual entry.
+                    return false;
+                }
+            }
+            else if (entry->d_name[1] == '\0')
+            {
+                // It's the current directory virtual entry.
+                return false;
+            }
+        }
+    }
+
+    size_t offset = 0;
+    bool isAllowed = true;
+
+    for (auto patternPos = pattern.begin(), end = pattern.end();
+         isAllowed && (patternPos != end); ++patternPos)
+    {
+        char32_t patternChar = *patternPos;
+        char32_t source;
+
+        if (patternChar == U'*')
+        {
+            // Match any character upto whatever is next in the pattern.
+            ++patternPos;
+
+            if (patternPos == end)
+            {
+                // There was nothing else, the string must match.
+                break;
+            }
+            else
+            {
+                patternChar = *patternPos;
+                bool hasMatch = false;
+
+                while (tryGetNextChar(entry->d_name, offset, source))
+                {
+                    if (source == patternChar)
+                    {
+                        // We've found the first character the '*' doesn't match.
+                        hasMatch = true;
+                        break;
+                    }
+                }
+
+                // Ensure we matched the character after before we ran out
+                // of source string.
+                isAllowed = hasMatch;
+            }
+        }
+        else if (patternChar == U'?')
+        {
+            // Match any single character.
+            isAllowed = tryGetNextChar(entry->d_name, offset, source);
+        }
+        else
+        {
+            // Exactly match patternChar.
+            isAllowed = tryGetNextChar(entry->d_name, offset, source) &&
+                        (source == patternChar);
+        }
+    }
+
+    return isAllowed;
+}
+
 #endif
 
 } // TED
@@ -342,7 +556,6 @@ void Entry::refresh()
         _entry->refresh();
     }
 }
-
 
 ////////////////////////////////////////////////////////////////////////////////
 // Directory Member Function Definitions
@@ -459,12 +672,11 @@ const Path &Directory::getPath() const
     return _dir->getLocation();
 }
 
-#ifdef _WIN32
 //! @brief Gets the names of files and directories in the directory the current
 //! object represents.
 StringCollection Directory::getNames() const
 {
-    return getNames("*", SortAscending);
+    return getNames("*", SortAscending | IncludeFiles | IncludeDirectories);
 }
 
 //! @brief Gets the names of files and directories in the directory the current
@@ -475,7 +687,9 @@ StringCollection Directory::getNames() const
 //! what to return.
 StringCollection Directory::getNames(string_cref_t pattern, uint32_t queryFlags) const
 {
-    // TODO: Need POSIX-specific implementation.
+    StringCollection childNames;
+
+#ifdef _WIN32
     std::wstring widePath = _dir->getLocation().toWideString(PathUsage::Kernel);
     const wchar_t win32ElementSep = L'\\';
 
@@ -497,7 +711,6 @@ StringCollection Directory::getNames(string_cref_t pattern, uint32_t queryFlags)
                                       nullptr, 0);
 
     uint32_t errorCode = ::GetLastError();
-    StringCollection childNames;
 
     if (hFind == INVALID_HANDLE_VALUE)
     {
@@ -522,6 +735,66 @@ StringCollection Directory::getNames(string_cref_t pattern, uint32_t queryFlags)
         // Close the search handle.
         ::FindClose(hFind);
     }
+#else
+    String fullPath = _dir->getLocation().toString(PathUsage::Kernel);
+    unsigned char typeMatch = 0;
+
+    if (queryFlags & Directory::IncludeFiles)
+    {
+        typeMatch |= DT_REG;
+    }
+
+    if (queryFlags & Directory::IncludeDirectories)
+    {
+        typeMatch |= DT_DIR;
+    }
+
+    // Create an auto-closing pointer to the open directory.
+    DirUPtr dirInfo(opendir(fullPath.getUtf8Bytes()));
+
+    if (dirInfo)
+    {
+        // Reset errno before call.
+        errno = 0;
+        struct dirent *entryInfo = readdir(dirInfo.get());
+
+        while (entryInfo != nullptr)
+        {
+            if ((entryInfo->d_type & typeMatch) &&
+                filterDirEntry(entryInfo, pattern, queryFlags))
+            {
+                childNames.emplace_back(entryInfo->d_name);
+            }
+
+            // Get the next entry.
+            errno = 0;
+            entryInfo = readdir(dirInfo.get());
+        }
+
+        if (errno != 0)
+        {
+            // An error occurred from calling readdir().
+            std::string fnName;
+            fnName.assign("readdir('");
+            appendAgString(fnName, fullPath);
+            fnName.push_back('\'');
+            fnName.push_back(')');
+
+            throw RuntimeLibraryException(fnName.c_str(), errno);
+        }
+    }
+    else
+    {
+        // Throw exception based on errno.
+        std::string fnName;
+        fnName.assign("opendir('");
+        appendAgString(fnName, fullPath);
+        fnName.push_back('\'');
+        fnName.push_back(')');
+
+        throw RuntimeLibraryException(fnName.c_str(), errno);
+    }
+#endif
 
     if ((queryFlags & SortAscending) != 0)
     {
@@ -540,16 +813,19 @@ StringCollection Directory::getNames(string_cref_t pattern, uint32_t queryFlags)
 //! object represents.
 EntryVector Directory::getEntries() const
 {
-    return getEntries("*", SortAscending);
+    return getEntries("*", SortAscending | IncludeFiles | IncludeDirectories);
 }
 
 //! @brief Gets entries representing the elements in the directory the current
 //! object represents.
 EntryVector Directory::getEntries(string_cref_t pattern, uint32_t queryFlags) const
 {
-    std::wstring widePath = _dir->getLocation().toWideString(PathUsage::Kernel);
+    EntryVector entries;
+    const Path &parentPath = _dir->getLocation();
 
-    // TODO: Need POSIX-specific implementation.
+#ifdef _WIN32
+    std::wstring widePath = parentPath.toWideString(PathUsage::Kernel);
+
     const wchar_t win32ElementSep = L'\\';
 
     if ((widePath.empty() == false) &&
@@ -570,7 +846,6 @@ EntryVector Directory::getEntries(string_cref_t pattern, uint32_t queryFlags) co
                                       nullptr, 0);
 
     uint32_t errorCode = ::GetLastError();
-    EntryVector entries;
 
     if (hFind == INVALID_HANDLE_VALUE)
     {
@@ -584,14 +859,12 @@ EntryVector Directory::getEntries(string_cref_t pattern, uint32_t queryFlags) co
     }
     else
     {
-        const Path &parentPath = _dir->getLocation();
-
         do
         {
             if (filterByQueryFlags(fileInfo, queryFlags))
             {
-                std::shared_ptr<EntryPrivate> entry = std::make_shared<EntryPrivate>(parentPath,
-                                                                                     fileInfo);
+                auto entry = std::make_shared<EntryPrivate>(parentPath,
+                                                            fileInfo);
 
                 entries.emplace_back(entry);
             }
@@ -600,6 +873,69 @@ EntryVector Directory::getEntries(string_cref_t pattern, uint32_t queryFlags) co
         // Close the search handle.
         ::FindClose(hFind);
     }
+#else
+    String fullPath = parentPath.toString(PathUsage::Kernel);
+    unsigned char typeMatch = 0;
+
+    if (queryFlags & Directory::IncludeFiles)
+    {
+        typeMatch |= DT_REG;
+    }
+
+    if (queryFlags & Directory::IncludeDirectories)
+    {
+        typeMatch |= DT_DIR;
+    }
+
+    // Create an auto-closing pointer to the open directory.
+    DirUPtr dirInfo(opendir(fullPath.getUtf8Bytes()));
+
+    if (dirInfo)
+    {
+        // Reset errno before call.
+        errno = 0;
+        struct dirent *entryInfo = readdir(dirInfo.get());
+
+        while (entryInfo != nullptr)
+        {
+            if ((entryInfo->d_type & typeMatch) &&
+                filterDirEntry(entryInfo, pattern, queryFlags))
+            {
+                auto entry = std::make_shared<EntryPrivate>(parentPath,
+                                                            entryInfo);
+
+                entries.emplace_back(entry);
+            }
+
+            // Get the next entry.
+            errno = 0;
+            entryInfo = readdir(dirInfo.get());
+        }
+
+        if (errno != 0)
+        {
+            // An error occurred from calling readdir().
+            std::string fnName;
+            fnName.assign("readdir('");
+            appendAgString(fnName, fullPath);
+            fnName.push_back('\'');
+            fnName.push_back(')');
+
+            throw RuntimeLibraryException(fnName.c_str(), errno);
+        }
+    }
+    else
+    {
+        // Throw exception based on errno.
+        std::string fnName;
+        fnName.assign("opendir('");
+        appendAgString(fnName, fullPath);
+        fnName.push_back('\'');
+        fnName.push_back(')');
+
+        throw RuntimeLibraryException(fnName.c_str(), errno);
+    }
+#endif
 
     if ((queryFlags & SortAscending) != 0)
     {
@@ -614,11 +950,6 @@ EntryVector Directory::getEntries(string_cref_t pattern, uint32_t queryFlags) co
 
     return entries;
 }
-#else
-
-#error Implement Ag::Fs::Directory enumeration member functions.
-#endif
-
 
 ////////////////////////////////////////////////////////////////////////////////
 // Global Function Definitions

@@ -25,13 +25,7 @@
 #include "Ag/Core/Utils.hpp"
 #include "Ag/Private/SymbolEncoding.hpp"
 #include "CoreInternal.hpp"
-
-#ifdef _WIN32
-#include "Win32API.hpp"
-#else
-#include <execinfo.h>
-#include <unistd.h>
-#endif
+#include "Platform.hpp"
 
 namespace Ag {
 

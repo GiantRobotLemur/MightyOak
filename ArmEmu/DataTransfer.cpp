@@ -73,7 +73,8 @@ uint32_t DataTransfer::execLoad(uint32_t instruction, uint32_t baseAddr,
             if (readByte(effectiveAddr, value))
             {
                 isOK = true;
-                result |= setRd(decodeReg(instruction, 12), value, false) ? IR_FlushPipeline : 0;
+                result |= setRd(decodeReg(instruction, 12), value, false) ?
+                    static_cast<uint32_t>(IR_FlushPipeline) : 0;
             }
         }
         else
@@ -141,7 +142,8 @@ uint32_t DataTransfer::execLoad(uint32_t instruction, uint32_t baseAddr,
                 if (readByte(baseAddr, value))
                 {
                     isOK = true;
-                    result |= setRd(decodeReg(instruction, 12), value, false) ? IR_FlushPipeline : 0;
+                    result |= setRd(decodeReg(instruction, 12), value, false) ?
+                        static_cast<uint32_t>(IR_FlushPipeline) : 0;
                 }
             }
             else

@@ -31,5 +31,7 @@
 *.out
 *.app
 
-# MSVC stuff
+# MSVC/vscode stuff
 .vs
+.vscode
+build

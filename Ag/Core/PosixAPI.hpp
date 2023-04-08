@@ -37,6 +37,7 @@ String getProgramFileName();
 String getProgramDirectory();
 String getWorkingDirectory();
 String getHomeDirectory();
+void getProgramArgs(std::vector<char> &buffer, std::vector<utf8_cptr_t> &args);
 
 ////////////////////////////////////////////////////////////////////////////////
 // Templates

@@ -1012,26 +1012,6 @@ bool tryParseUri(const string_cref_t source, UriStructure &components,
     return isValid;
 }
 
-//! @brief Gets the sorted set of allowed scheme ASCII characters.
-AsciiCharSetRef getSchemeCharSet()
-{
-    static AsciiCharSet allowed;
-
-    if (allowed.empty())
-    {
-        appendRange(allowed, 'A', 'Z');
-        appendRange(allowed, 'a', 'z');
-        appendRange(allowed, '0', '9');
-        allowed.push_back('-');
-        allowed.push_back('.');
-        allowed.push_back('+');
-        allowed.shrink_to_fit();
-
-        std::sort(allowed.begin(), allowed.end());
-    }
-
-    return allowed;
-}
 
 //! @brief Gets the sorted set of unreserved URI ASCII characters.
 AsciiCharSetRef getUnreservedCharSet()

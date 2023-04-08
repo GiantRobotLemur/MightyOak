@@ -100,7 +100,6 @@ SearchPathList::iterator::iterator(const SearchItemQueue *source, size_t positio
 {
 }
 
-
 const Path &SearchPathList::iterator::operator*() const
 {
     return _source->at(_position).Source;

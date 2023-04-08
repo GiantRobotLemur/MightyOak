@@ -68,15 +68,6 @@ void skipNoneNewlineWhiteSpace(InputContext &input)
     }
 }
 
-//! @brief Updates the contents of a string to be all upper case.
-void toUpper(std::u32string &text)
-{
-    for (char32_t &ch : text)
-    {
-        ch = CodePoint::toUpper(ch);
-    }
-}
-
 //! @brief Creates an upper case UTF-8 string from a UTF-32 STL string.
 //! @param[in] text The STL string to process.
 //! @return A string containing the transformed and converted characters.
@@ -226,7 +217,7 @@ struct MnemonicContext
     const Location &Position;
     const std::u32string &Text;
     size_t Index;
-    TokenClass TokenClass;
+    TokenClass Class;
     InstructionMnemonic Mnemonic;
     DirectiveDataType DataType;
 
@@ -235,7 +226,7 @@ struct MnemonicContext
         Position(position),
         Text(text),
         Index(0),
-        TokenClass(mapping.Classifiation),
+        Class(mapping.Classifiation),
         Mnemonic(mapping.Mnemonic),
         DataType(mapping.DataType)
     {
@@ -637,7 +628,7 @@ struct MnemonicContext
 //! @returns A token object representing an instruction mnemonic.
 Token parseAluOp(MnemonicContext &context)
 {
-    Token result(context.Position, context.TokenClass);
+    Token result(context.Position, context.Class);
     result.addProperty(TokenProperty::Mnemonic, context.Mnemonic);
 
     // Parse condition code.
@@ -654,7 +645,7 @@ Token parseAluOp(MnemonicContext &context)
 //! @returns A token object representing an instruction mnemonic.
 Token parseAluCmpOp(MnemonicContext &context)
 {
-    Token result(context.Position, context.TokenClass);
+    Token result(context.Position, context.Class);
     result.addProperty(TokenProperty::Mnemonic, context.Mnemonic);
 
     // Parse condition code.
@@ -671,7 +662,7 @@ Token parseAluCmpOp(MnemonicContext &context)
 //! @returns A token object representing an instruction mnemonic.
 Token parseLongMulOp(MnemonicContext &context)
 {
-    Token result(context.Position, context.TokenClass);
+    Token result(context.Position, context.Class);
 
     if (context.Text.length() >= 5)
     {
@@ -744,7 +735,7 @@ Token parseConditionalBranch(MnemonicContext &context)
     // We can assume the first character is 'B'.
     context.Index = 1;
 
-    Token instruction(context.Position, context.TokenClass);
+    Token instruction(context.Position, context.Class);
     instruction.addProperty(TokenProperty::Mnemonic, InstructionMnemonic::B);
 
     context.parseConditionCode(instruction);
@@ -792,7 +783,7 @@ Token parseAmbiguousBranch(MnemonicContext &context)
 //! @returns A token object representing an instruction mnemonic.
 Token parseDataTransfer(MnemonicContext &context)
 {
-    Token instruction(context.Position, context.TokenClass);
+    Token instruction(context.Position, context.Class);
     instruction.addProperty(TokenProperty::Mnemonic, context.Mnemonic);
 
     context.parseConditionCode(instruction);
@@ -856,7 +847,7 @@ Token parseDataTransfer(MnemonicContext &context)
 //! @returns A token object representing an instruction mnemonic.
 Token parseMultiDataTransfer(MnemonicContext &context)
 {
-    Token instruction(context.Position, context.TokenClass);
+    Token instruction(context.Position, context.Class);
     instruction.addProperty(TokenProperty::Mnemonic, context.Mnemonic);
 
     context.parseConditionCode(instruction);
@@ -947,7 +938,7 @@ Token parseMultiDataTransfer(MnemonicContext &context)
 //! @returns A token object representing an instruction mnemonic.
 Token parseGenericInstruction(MnemonicContext &context)
 {
-    Token instruction(context.Position, context.TokenClass);
+    Token instruction(context.Position, context.Class);
     instruction.addProperty(TokenProperty::Mnemonic, context.Mnemonic);
 
     context.parseConditionCode(instruction);
@@ -962,7 +953,7 @@ Token parseGenericInstruction(MnemonicContext &context)
 //! @returns A token object representing an instruction mnemonic.
 Token parseSwapInstruction(MnemonicContext &context)
 {
-    Token instruction(context.Position, context.TokenClass);
+    Token instruction(context.Position, context.Class);
 
     context.parseConditionCode(instruction);
 
@@ -984,7 +975,7 @@ Token parseSwapInstruction(MnemonicContext &context)
 //! @returns A token object representing an instruction mnemonic.
 Token parseGenericWithLongSuffix(MnemonicContext &context)
 {
-    Token instruction(context.Position, context.TokenClass);
+    Token instruction(context.Position, context.Class);
     instruction.addProperty(TokenProperty::Mnemonic, context.Mnemonic);
 
     context.parseConditionCode(instruction);
@@ -1001,7 +992,7 @@ Token parseGenericWithLongSuffix(MnemonicContext &context)
 //! @returns A token object representing an instruction mnemonic.
 Token parseFpaDataOp(MnemonicContext &context)
 {
-    Token instruction(context.Position, context.TokenClass);
+    Token instruction(context.Position, context.Class);
     instruction.addProperty(TokenProperty::Mnemonic, context.Mnemonic);
 
     // Parse condition code
@@ -1033,7 +1024,7 @@ Token parseFpaDataOp(MnemonicContext &context)
 //! @returns A token object representing an instruction mnemonic.
 Token parseFpaCmpOp(MnemonicContext &context)
 {
-    Token instruction(context.Position, context.TokenClass);
+    Token instruction(context.Position, context.Class);
 
     size_t excess = context.Text.length() - context.Index;
 
@@ -1078,7 +1069,7 @@ Token parseFpaCmpOp(MnemonicContext &context)
 //! @returns A token object representing an instruction mnemonic.
 Token parseFpaStoreRegisterMnemonic(MnemonicContext &context)
 {
-    Token instruction(context.Position, context.TokenClass);
+    Token instruction(context.Position, context.Class);
     instruction.addProperty(TokenProperty::Mnemonic, context.Mnemonic);
 
     // Parse condition code
@@ -1096,7 +1087,7 @@ Token parseFpaStoreRegisterMnemonic(MnemonicContext &context)
 //! @returns A token object representing an instruction mnemonic.
 Token parseFpaDataTransfer(MnemonicContext &context)
 {
-    Token instruction(context.Position, context.TokenClass);
+    Token instruction(context.Position, context.Class);
     instruction.addProperty(TokenProperty::Mnemonic, context.Mnemonic);
 
     // Parse condition code
@@ -1118,7 +1109,7 @@ Token parseFpaDataTransfer(MnemonicContext &context)
 //! @returns A token object representing an instruction mnemonic.
 Token parseFpaMultiTransfer(MnemonicContext &context)
 {
-    Token instruction(context.Position, context.TokenClass);
+    Token instruction(context.Position, context.Class);
     instruction.addProperty(TokenProperty::Mnemonic, context.Mnemonic);
 
     // Parse condition code.
@@ -1151,7 +1142,7 @@ Token parseFpaMultiTransfer(MnemonicContext &context)
 //! @returns A token object representing an instruction mnemonic.
 Token parseEquDataDirective(MnemonicContext &context)
 {
-    Token directive(context.Position, context.TokenClass);
+    Token directive(context.Position, context.Class);
 
     char32_t next;
 
@@ -1260,7 +1251,7 @@ Token parseEquDataDirective(MnemonicContext &context)
 //! @returns A token object representing an instruction mnemonic.
 Token parseDataDirective(MnemonicContext &context)
 {
-    Token directive(context.Position, context.TokenClass);
+    Token directive(context.Position, context.Class);
     directive.addProperty(TokenProperty::DataType, context.DataType);
 
     return directive;
@@ -1271,7 +1262,7 @@ Token parseDataDirective(MnemonicContext &context)
 //! @returns A token object representing an instruction mnemonic.
 Token parseAlign(MnemonicContext &context)
 {
-    Token directive(context.Position, context.TokenClass);
+    Token directive(context.Position, context.Class);
 
     char32_t first, second;
 
@@ -1288,18 +1279,6 @@ Token parseAlign(MnemonicContext &context)
     }
 
     return directive;
-}
-
-//! @brief Creates a token if the align directive is recognised.
-//! @param[in] context The context to interpret to create the token.
-//! @returns A token object representing an instruction mnemonic.
-Token parseDefaultMnemonic(MnemonicContext &context)
-{
-    Token mnemonic(context.Position, context.TokenClass);
-    mnemonic.addProperty(TokenProperty::Mnemonic,
-                         context.Mnemonic);
-
-    return mnemonic;
 }
 
 //! @brief Interprets a possible label definition.

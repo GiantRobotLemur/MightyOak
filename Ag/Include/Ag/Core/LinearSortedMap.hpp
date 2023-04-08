@@ -14,6 +14,8 @@
 ////////////////////////////////////////////////////////////////////////////////
 // Dependant Header Files
 ////////////////////////////////////////////////////////////////////////////////
+#include <cstring>
+
 #include <algorithm>
 #include <iterator>
 #include <map>
@@ -173,7 +175,8 @@ private:
         {
             // Although we're being naughty, we should at least zero
             // the field, no matter what it's structure.
-            std::memset(&kvp->second, 0, sizeof(kvp->second));
+            std::memset(static_cast<void *>(&kvp->second),
+                        0, sizeof(kvp->second));
         }
 
         return KeyOnlyMappingUPtr(kvp);

@@ -132,7 +132,7 @@ template<typename TIterator> struct IteratorRange
 //! @param[in] predicate The predicate used to compare items in the set.
 //! @retval true An initial group was found and returned in groupRange.
 //! @retval false The set was empty, groupRange was set to an empty state.
-template<typename TIterator, typename TItem = TIterator::value_type,
+template<typename TIterator, typename TItem = typename TIterator::value_type,
     typename TPred = std::less<TItem> >
 bool getFirstGroup(const TIterator &begin, const TIterator &end,
                    IteratorRange<TIterator> &groupRange,
@@ -168,7 +168,7 @@ bool getFirstGroup(const TIterator &begin, const TIterator &end,
 //! @retval true Another group was found and returned in groupRange.
 //! @retval false There were no more groups in the set, groupRange was set to
 //! an empty state.
-template<typename TIterator, typename TItem = TIterator::value_type,
+template<typename TIterator, typename TItem = typename TIterator::value_type,
     typename TPred = std::less<TItem> >
 bool getNextGroup(const TIterator &end,
                   IteratorRange<TIterator> &groupRange,

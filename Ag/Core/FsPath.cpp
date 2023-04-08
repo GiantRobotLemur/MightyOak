@@ -24,13 +24,7 @@
 #include "Ag/Core/Utils.hpp"
 #include "Ag/Core/Variant.hpp"
 #include "FsPathSchema.hpp"
-
-#ifdef _WIN32
-#include "Win32API.hpp"
-#else
-#include "PosixAPI.hpp"
-#endif
-
+#include "Platform.hpp"
 
 ////////////////////////////////////////////////////////////////////////////////
 // Macro Definitions
@@ -566,8 +560,7 @@ void PathBuilder::setFileExtension(string_cref_t extension)
 //! used to create the current process.
 void PathBuilder::assignProgramFile()
 {
-    String modulePath =
-        getModuleFileName(reinterpret_cast<uintptr_t>(::GetModuleHandleW(nullptr)));
+    String modulePath = getProgramFileName();
     String error;
     _schema = getNativeSchema();
 
@@ -581,8 +574,7 @@ void PathBuilder::assignProgramFile()
 //! the module which was used to create the current process.
 void PathBuilder::assignProgramDirectory()
 {
-    String modulePath =
-        getModuleFileName(reinterpret_cast<uintptr_t>(::GetModuleHandleW(nullptr)));
+    String modulePath = getProgramFileName();
     String error;
     _schema = getNativeSchema();
 
@@ -1351,7 +1343,7 @@ Path Path::getProgramFile()
 #ifdef _WIN32
     String fileName = getModuleFileName(reinterpret_cast<uintptr_t>(::GetModuleHandleW(nullptr)));
 #else
-    String filename = getProgramFileName();
+    String fileName = Ag::getProgramFileName();
 #endif
 
     return Path(fileName);
@@ -1364,7 +1356,7 @@ Path Path::getProgramDirectory()
 #ifdef _WIN32
     String directory = getModuleDirectory(reinterpret_cast<uintptr_t>(::GetModuleHandleW(nullptr)));
 #else
-    String directory = getProgramDirectory();
+    String directory = Ag::getProgramDirectory();
 #endif
 
     return Path(directory);
@@ -1863,7 +1855,6 @@ bool Path::innerParse(string_cref_t &filePath, string_ref_t error, PathSchemaID 
     auto end = filePath.end();
     bool hasPath = false;
     size_t rootLength = 0;
-    size_t fileNameLength = 0;
 
     if (schema->tryParsePathRoot(pos, end, path, error, rootType) ||
         path.empty())
@@ -1912,7 +1903,6 @@ bool Path::innerParse(string_cref_t &filePath, string_ref_t error, PathSchemaID 
             {
                 if (element.empty() == false)
                 {
-                    fileNameLength = Utf::calculateConvertedLength(element, Utf::Utf8);
                     path.append(element);
                     isInSeparator = true;
                 }
@@ -1929,7 +1919,6 @@ bool Path::innerParse(string_cref_t &filePath, string_ref_t error, PathSchemaID 
         if ((element.empty() == false) && (isInSeparator == false))
         {
             // Append the last element.
-            fileNameLength = Utf::calculateConvertedLength(element, Utf::Utf8);
             path.append(element);
         }
     }

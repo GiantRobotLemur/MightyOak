@@ -41,32 +41,6 @@ namespace {
 ////////////////////////////////////////////////////////////////////////////////
 // Local Functions
 ////////////////////////////////////////////////////////////////////////////////
-//! @brief Encodes a condition in an instruction bit field.
-//! @param[in] condition The condition code to encode.
-//! @return A mask defining the condition code as it would appear in an ARM
-//! machine code instruction.
-uint32_t encodeCondition(ConditionCode condition)
-{
-    uint32_t encoding;
-
-    switch (condition)
-    {
-    case ConditionCode::Hs:
-        encoding = static_cast<uint32_t>(toScalar(ConditionCode::Cs)) << 28;
-        break;
-
-    case ConditionCode::Lo:
-        encoding = static_cast<uint32_t>(toScalar(ConditionCode::Cc)) << 28;
-        break;
-
-    default:
-        encoding = static_cast<uint32_t>(toScalar(condition)) << 28;
-        break;
-    }
-
-    return encoding;
-}
-
 //! @brief Attempts to encode an immediate constant in an barrel shifter
 //! operand.
 //! @param[in,out] coding The instruction encoding to update.
@@ -138,6 +112,9 @@ void createEncodableShifterOperand(const ShifterOperand &original,
         encodable.Mode = ShifterMode::ShiftByConstant;
         encodable.Shift = ShiftType::Ror;
         encodable.Immediate = 0;
+        break;
+
+    default:
         break;
     }
 }
@@ -222,7 +199,7 @@ void encodeCoreAlu(AssemblyParams &params)
             switch (shifter.Shift)
             {
             case ShiftType::Lsl:
-                if ((shifter.Immediate >= 0) && (shifter.Immediate < 32))
+                if (shifter.Immediate < 32)
                 {
                     shiftValue = static_cast<uint8_t>(shifter.Immediate);
                 }
@@ -241,7 +218,7 @@ void encodeCoreAlu(AssemblyParams &params)
                     // LSR #32 is encoded as LSR #0.
                     shiftValue = 0;
                 }
-                else if ((shifter.Immediate >= 0) && (shifter.Immediate < 32))
+                else if (shifter.Immediate < 32)
                 {
                     shiftValue = static_cast<uint8_t>(shifter.Immediate);
                 }
@@ -260,7 +237,7 @@ void encodeCoreAlu(AssemblyParams &params)
                     // ASR #32 is encoded as ASR #0.
                     shiftValue = 0;
                 }
-                else if ((shifter.Immediate >= 0) && (shifter.Immediate < 32))
+                else if (shifter.Immediate < 32)
                 {
                     shiftValue = static_cast<uint8_t>(shifter.Immediate);
                 }
@@ -274,7 +251,7 @@ void encodeCoreAlu(AssemblyParams &params)
                 break;
 
             case ShiftType::Ror:
-                if ((shifter.Immediate >= 0) && (shifter.Immediate < 32))
+                if (shifter.Immediate < 32)
                 {
                     shiftValue = static_cast<uint8_t>(shifter.Immediate);
                 }
@@ -285,6 +262,9 @@ void encodeCoreAlu(AssemblyParams &params)
                                                          { shifter.Immediate });
                     isOK = false;
                 }
+                break;
+
+            default:
                 break;
             }
 
@@ -379,6 +359,13 @@ void encodeDataTransfer(AssemblyParams &params)
             isOK = false;
             break;
 
+        case ShifterMode::Register: // Encode as <Reg>, LSL #0
+            params.encodeBit(25);
+            params.encodeCoreRegister(encodable.Rm, 0);
+            params.encodeShiftType(ShiftType::Lsl);
+            params.encodeBits(0, 5, 7);
+            break;
+
         case ShifterMode::ShiftByConstant:
             params.encodeBit(25);
             params.encodeCoreRegister(encodable.Rm, 0);
@@ -430,6 +417,10 @@ void encodeDataTransfer(AssemblyParams &params)
         case TransferDataType::UnsignedHalfWord:
             params.encodeBits(1, 2, 5);
             params.encodeBit(params.Mnemonic == InstructionMnemonic::Ldr, 20);
+            break;
+
+        default:
+            // Word and unsigned byte are encoded elsewhere.
             break;
         }
 
@@ -972,6 +963,9 @@ bool assembleInstruction(AssemblyParams &params)
 
         case InstructionMnemonic::Umlal:
             params.encodeBits(5, 7, 21);
+            break;
+
+        default:
             break;
         }
 

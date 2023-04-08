@@ -19,12 +19,7 @@
 #include "Ag/Core/Variant.hpp"
 
 #include "FsPathSchema.hpp"
-
-#ifdef _WIN32
-#include "Win32API.hpp"
-#else
-#include "PosixAPI.hpp"
-#endif
+#include "Platform.hpp"
 
 ////////////////////////////////////////////////////////////////////////////////
 // Macro Definitions
@@ -223,7 +218,7 @@ public:
             case State::AfterWin32FileThirdSlash:
                 if (next == U'U')
                 {
-                    // It looks like \\?\UNC\... or \\?\U:\
+                    /* It looks like \\?\UNC\... or \\?\U:\ */
 
                     state = State::AfterWin32FileU;
                     ++current;
@@ -312,14 +307,14 @@ public:
             case State::AfterWin32FileU:
                 if (next == U'N')
                 {
-                    // It still looks like \\?\UNC\...
+                    /* It still looks like \\?\UNC\... */
                     state = State::AfterWin32FileN;
                     ++current;
                 }
                 else if (next == U':')
                 {
                     // It looks more like a dos drive letter after a Win32
-                    // file system prefix: \\?\U:\
+                    /* file system prefix: \\?\U:\ */
 
                     root.push_back(U'U');
                     root.push_back(U':');
@@ -339,7 +334,7 @@ public:
             case State::AfterWin32FileN:
                 if (next == U'C')
                 {
-                    // It still looks like \\?\UNC\...
+                    /* It still looks like \\?\UNC\... */
                     state = State::AfterWin32FileC;
                     ++current;
                 }
@@ -764,7 +759,6 @@ public:
             AfterTildaSlash,
         };
 
-        bool hasRoot = false;
         bool keepParsing = true;
         rootType = PathRootType::None;
         error = String::Empty;
@@ -783,7 +777,6 @@ public:
             case State::Start:
                 if (next == U'/')
                 {
-                    hasRoot = true;
                     state = State::AfterSlash;
                     rootType = PathRootType::SysRoot;
                     root.push_back(U'/');
@@ -793,7 +786,6 @@ public:
                 {
                     // Assume it's a valid home directory reference until
                     // proved otherwise.
-                    hasRoot = true;
                     state = State::AfterTilda;
                     rootType = PathRootType::UserHome;
                     root.push_back(U'~');
@@ -836,7 +828,6 @@ public:
                     pos = original;
                     rootType = PathRootType::None;
                     root.clear();
-                    hasRoot = false;
                     keepParsing = false;
                 }
                 break;

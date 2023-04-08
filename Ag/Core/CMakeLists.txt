@@ -29,6 +29,7 @@ add_ag_library(AgCore SOURCES   CoreInternal.hpp
                                 FsSearchPathList.cpp
                                 FsDirectory.cpp
                                 Uri.cpp
+                                Platform.hpp
                                 ${AG_INCLUDE_DIR}/Ag/Core/Configuration.hpp
                                 ${AG_INCLUDE_DIR}/Ag/Core/EnumInfo.hpp
                                 ${AG_INCLUDE_DIR}/Ag/Core/Utils.hpp

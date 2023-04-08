@@ -19,7 +19,7 @@
 #include "Ag/Core/Exception.hpp"
 #include "Ag/Core/Utf.hpp"
 #include "CoreInternal.hpp"
-#include "Win32API.hpp"
+#include "Platform.hpp"
 
 namespace Ag {
 
@@ -171,7 +171,14 @@ int App::exec()
 #ifdef _WIN32
     CommandLineInfo cliInfo(createCommandLineArguments(), ::GetCommandLineW());
 #else
-#error Implement default command line for Linux.
+    // Read /proc/self/cmdline and parse into tokens.
+    std::vector<utf8_cptr_t> args;
+    std::vector<char> buffer;
+
+    getProgramArgs(buffer, args);
+    CommandLineInfo cliInfo(createCommandLineArguments(),
+                            static_cast<int>(args.size()),
+                            args.data());
 #endif
 
     return innerExec(cliInfo);

@@ -48,7 +48,6 @@ void InstructionPipeline::initialiseConditionMatrix() noexcept
     static const uint8_t C = 0x02; // Carry
     static const uint8_t Z = 0x04; // Zero
     static const uint8_t N = 0x08; // Negative
-    static const uint8_t CZ = C | Z;
     static const uint8_t NV = N | V;
     static const uint8_t ZNV = Z | N | V;
 

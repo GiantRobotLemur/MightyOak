@@ -16,6 +16,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 #include <cmath>
 #include <cstdio>
+#include <cstring>
 
 #include <limits>
 #include <memory>
@@ -62,8 +63,8 @@ public:
     //! @param[in] scopedValue A reference to the property to update.
     //! @param[in] value The value to write to scopedValue now.
     ValueScope(T &scopedValue, const T &value) :
-        _value(_scopedValue),
-        _oldValue(_scopedValue)
+        _value(scopedValue),
+        _oldValue(scopedValue)
     {
         // Overwrite the value until this object is destroyed.
         _value = value;
@@ -267,7 +268,7 @@ template<typename TDerived, typename TBase>
 bool tryCast(const std::shared_ptr<TBase> &obj,
              TDerived *&derived) noexcept
 {
-    derived = std::dynamic_cast<TDerived>(obj.get());
+  derived = std::dynamic_pointer_cast<TDerived>(obj.get());
 
     return derived != nullptr;
 }
@@ -361,7 +362,7 @@ constexpr T fromScalar(typename std::underlying_type<T>::type scalar) noexcept
 template<typename T, typename U>
 constexpr T forceFromScalar(U scalar) noexcept
 {
-    return static_cast<T>(static_cast<std::underlying_type<T>::type>(scalar));
+    return static_cast<T>(static_cast<typename std::underlying_type<T>::type>(scalar));
 }
 
 //! @brief Rounds a real value to the nearest integer.

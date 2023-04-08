@@ -40,7 +40,7 @@ namespace {
 //! @param[in] input The value to apply the operator to.
 //! @param[out] error Receives an error message if the application fails.
 //! @return The result of applying the operator, or an empty value.
-Value negate(const Value &input, string_ref_t error)
+Value unaryNegate(const Value &input, string_ref_t error)
 {
     Value result;
 
@@ -91,7 +91,7 @@ Value negate(const Value &input, string_ref_t error)
 //! @param[in] input The value to apply the operator to.
 //! @param[out] error Receives an error message if the application fails.
 //! @return The result of applying the operator, or an empty value.
-Value absolute(const Value &input, string_ref_t error)
+Value unaryAbsolute(const Value &input, string_ref_t error)
 {
     Value result;
 
@@ -120,7 +120,7 @@ Value absolute(const Value &input, string_ref_t error)
 //! @param[in] input The value to apply the operator to.
 //! @param[out] error Receives an error message if the application fails.
 //! @return The result of applying the operator, or an empty value.
-Value not(const Value &input, string_ref_t error)
+Value unaryNot(const Value &input, string_ref_t error)
 {
     Value result;
 
@@ -888,7 +888,7 @@ UnaryOpExpr::UnaryOpExpr(const Location &at, UnaryOpExpr::Fn opFn, IExprPtr chil
 //! @return A newly constructed sub-expression.
 UnaryOpExpr *UnaryOpExpr::createMinus(const Location &at, IExprPtr childExpr)
 {
-    return new UnaryOpExpr(at, negate, childExpr);
+    return new UnaryOpExpr(at, unaryNegate, childExpr);
 }
 
 //! @brief Constructs a sub-expression which applies the absolute operator.
@@ -897,7 +897,7 @@ UnaryOpExpr *UnaryOpExpr::createMinus(const Location &at, IExprPtr childExpr)
 //! @return A newly constructed sub-expression.
 UnaryOpExpr *UnaryOpExpr::createAbsolute(const Location &at, IExprPtr childExpr)
 {
-    return new UnaryOpExpr(at, absolute, childExpr);
+    return new UnaryOpExpr(at, unaryAbsolute, childExpr);
 }
 
 //! @brief Constructs a sub-expression which applies the NOT operator.
@@ -906,7 +906,7 @@ UnaryOpExpr *UnaryOpExpr::createAbsolute(const Location &at, IExprPtr childExpr)
 //! @return A newly constructed sub-expression.
 UnaryOpExpr *UnaryOpExpr::createNot(const Location &at, IExprPtr childExpr)
 {
-    return new UnaryOpExpr(at, not, childExpr);
+    return new UnaryOpExpr(at, unaryNot, childExpr);
 }
 
 // Inherited from IExpr.

@@ -22,7 +22,7 @@
 #include "Ag/Core/Utils.hpp"
 #include "Ag/Core/VariantType.hpp"
 
-#include "Win32API.hpp"
+#include "Platform.hpp"
 
 namespace Ag {
 

@@ -25,11 +25,7 @@
 #include "Ag/Core/Utils.hpp"
 #include "Ag/Core/Variant.hpp"
 
-#ifdef _WIN32
-#include "Win32API.hpp"
-#else
-#include "PosixAPI.h"
-#endif
+#include "Platform.hpp"
 
 namespace Ag {
 namespace Cli {

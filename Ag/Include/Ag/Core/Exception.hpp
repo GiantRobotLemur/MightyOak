@@ -60,7 +60,7 @@ public:
     const Exception &getInnerException() const;
 
     // Overrides
-    virtual const char *what() const override;
+    virtual const char *what() const noexcept override;
 protected:
     // Operations
     void initialise(const std::string_view &domain, const std::string_view &message,
@@ -217,6 +217,27 @@ public:
     ~Win32Exception() = default;
 };
 #endif // ifdef _WIN32
+
+//! @brief An exception describing an unexpcted result from the platform C
+//! runtime library (glibc on POSIX systems or MSVCRT on Windows/MSVC).
+class RuntimeLibraryException : public Exception
+{
+public:
+    // Public Types
+#ifdef _MSC_VER
+    using ErrorCode = errno_t;
+#else
+    using ErrorCode = int;
+#endif
+
+    // Public Data
+    //! @brief The domain used to annotate exceptions of this type.
+    static const char *Domain;
+
+    // Construction
+    RuntimeLibraryException(const char *fnName, ErrorCode runtimeErrorCode);
+    ~RuntimeLibraryException() = default;
+};
 
 //! @}
 

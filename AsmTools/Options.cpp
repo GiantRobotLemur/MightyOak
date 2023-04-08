@@ -143,9 +143,6 @@ void Options::addIncludePath(string_cref_t path)
 //! @brief Gets static metadata for the InstructionSet enumeration type.
 const EnumInfo<InstructionSet> &getInstructionSetType()
 {
-    using Metadata = EnumInfo<InstructionSet>;
-    using Symbol = typename Metadata::SymbolInfo;
-
     static const EnumInfo<InstructionSet> instance({
         { InstructionSet::ArmV2, "ArmV2", "ARM v2", "The original ARM 2/250 processor with no cache." },
         { InstructionSet::ArmV2a, "ArmV2a", "ARM v2a", "The ARM 2 + cache, i.e. the ARM 3." },
@@ -162,9 +159,6 @@ const EnumInfo<InstructionSet> &getInstructionSetType()
 //! @brief Gets static metadata for the ArchExtensionEnum flag enumeration.
 const EnumInfo<ArchExtensionEnum> &getArchExtensionsType()
 {
-    using Metadata = EnumInfo<ArchExtensionEnum>;
-    using Symbol = typename Metadata::SymbolInfo;
-    
     static const EnumInfo<ArchExtensionEnum> instance({
         { ArchExtensionEnum::None, "None", "None", "No extensions enabled." },
         { ArchExtensionEnum::Fpa, "Fpa", "FPA", "The Floating Point Accelerator used with ARM v2 and v3." },
