@@ -1,4 +1,4 @@
-//! @file Core/ProgarmArguments.cpp
+//! @file Core/ProgramArguments.cpp
 //! @brief The definition of an object which manages command line argument
 //! parsing, processing and verification.
 //! @author GiantRobotLemur@na-se.co.uk

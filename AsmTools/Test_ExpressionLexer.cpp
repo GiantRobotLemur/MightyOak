@@ -18,10 +18,6 @@
 #include "LexicalContext.hpp"
 #include "AsmTools/Options.hpp"
 
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
-
 namespace Ag {
 namespace Asm {
 
@@ -37,10 +33,6 @@ InputContext createInput(const char *sourceCode)
 
     return InputContext(source, position, sourceId, 2);
 }
-
-////////////////////////////////////////////////////////////////////////////////
-// Local Data
-////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////
 // Unit Tests
@@ -417,7 +409,7 @@ GTEST_TEST(ExpressionLexer, RecogniseStringLiteralAsciiEscape)
 {
     ILexicalContext *specimen = getExpressionLexer();
     InputContext input = createInput(
-        "\"Hello\\x20World\\X21\" 'A\\x4243' '\\X4'\n"
+        "\"Hello\\x20World\\X21\" 'A\\x42\\\"43' '\\X4'\n"
         "'\\xG'\n'\\X");
 
     Token token;
@@ -429,7 +421,7 @@ GTEST_TEST(ExpressionLexer, RecogniseStringLiteralAsciiEscape)
 
     ASSERT_TRUE(specimen->tryGetNextToken(input, token));
     EXPECT_EQ(token.getClass(), TokenClass::StringLiteral);
-    EXPECT_STRINGEQC(token.getValue(), "AB43");
+    EXPECT_STRINGEQC(token.getValue(), "AB\"43");
     EXPECT_FALSE(getTokenFlag(token, TokenProperty::UnterminatedString, false));
 
     ASSERT_TRUE(specimen->tryGetNextToken(input, token));

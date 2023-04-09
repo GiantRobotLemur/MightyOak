@@ -1,6 +1,9 @@
 # Mighty Oak : An Acorn Archimedes and RiscPC Emulator
 
-The Archimedes was a British computer popular in schools in the 1990s which was the first ARM-based desktop machine. ARM originally stood for Acorn RISC Machine, but was later changed to Advanced RISC Machine when the processor architecture outgrew the Archimedes and its successors.
+The Archimedes was a British computer popular in schools in the 1990s which
+was the first ARM-based desktop machine. ARM originally stood for Acorn RISC
+Machine, but was later changed to Advanced RISC Machine when the processor
+architecture outgrew the Archimedes and its successors.
 
 ## Aims
 
@@ -38,11 +41,12 @@ images containing appropriate metadata captured from the original media.
 
 At the current time, the project consists of the following major components
 written in C++.
-* Ag Core - A platform agnostic runtime library build base on the STL and C
-Runtime on which to build the system. Some unit test coverage.
-* Asm Tools - A library which can assemble and disassemble 32-bit ARM assembly
-language up to the ARMv4 architecture. This includes a fully fledged assembler
-akin to the one integrated into BBC BASIC. Plenty of unit test coverage.
+* [Ag Core](Docs/AgCore.md) - A platform agnostic runtime library build base
+on the STL and C Runtime on which to build the system. Some unit test coverage.
+* [Asm Tools](Docs/AsmTools.md) - A library which can assemble and disassemble
+32-bit ARM assembly language up to the ARMv4 architecture. This includes a
+fully fledged assembler akin to the one integrated into BBC BASIC. Plenty of
+unit test coverage.
 * Arm Emu - A library which emulates the core of an ARM processor, but
 without MMU. Some unit test coverage.
 
@@ -53,6 +57,7 @@ The project is currently dependent on the following up-stream components:
 * MASM [Optional]
 * Doxygen [Optional]
 * SDL 2 [Required, but not yet] - for later GUI application
+* GLM [Required, but not yet] - for later GUI application
 
 ## License
 
@@ -61,15 +66,5 @@ described in the [LICENSE file](LICENSE) at the root of the repository.
 
 ## TODO
 
-There is a long shopping list of elements which need to be developed. In the
-short term the following are desirable:
-* Finish the Linux port of the runtime library.
-* Splitting processor core components into template classes for reuse/recombination.
-* Emulation of MEMC-based memory management.
-* Emulation of ARMv2 (ARM 2/250)
-* Emulation of the rest of the A-Series chipset (IOC, VIDC 10, 82c710/11, CMOS RAM).
-* Implement a GUI application in SDL2+ which allows configuration and interactive use.
-* Implement ARM 3 (ARMv2 with cache)
-* Implement FPA support in both Asm Tools and Arm Emu.
-* Implement ARM 3 + FPA.
-
+There is a long shopping list of elements which need to be developed. These will
+be managed as GitHub issues.

@@ -192,7 +192,7 @@ extern "C" uint32_t ALU_Mul(uint32_t op1, uint32_t op2, uint8_t &statusFlags)
 }
 
 extern "C" uint32_t ALU_Mla(uint32_t op1, uint32_t op2, uint32_t op3,
-                               uint8_t & statusFlags)
+                            uint8_t &statusFlags)
 {
     uint32_t result = (op1 * op2) + op3;
     statusFlags = logicResultStatus(result, statusFlags);

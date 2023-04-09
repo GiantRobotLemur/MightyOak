@@ -60,7 +60,7 @@ public:
     virtual wchar_t getWideElementSeparator() const =0;
 
     //! @brief Determines if a character can be used to separate path elements.
-    //! @param[in] slash The character to test.
+    //! @param[in] character The character to test.
     //! @retval true The character is a valid separator.
     //! @retval false The character is not a valid separator.
     virtual bool isValidElementSeparator(char32_t character) const = 0;

@@ -85,9 +85,15 @@ if (DEFINED DOXYGEN_FOUND)
         set(DOXYGEN_SEARCHENGINE YES)
     endif()
 
-    list(APPEND DOC_SRCS "${CMAKE_CURRENT_SOURCE_DIR}/Ag/Core" "${AG_INCLUDE_DIR}/Ag/Core")
-    list(APPEND DOC_SRCS "${CMAKE_CURRENT_SOURCE_DIR}/AsmTools" "${MO_INCLUDE_DIR}/AsmTools")
-    list(APPEND DOC_SRCS "${CMAKE_CURRENT_SOURCE_DIR}/ArmEmu" "${MO_INCLUDE_DIR}/ArmEmu")
+    list(APPEND DOC_SRCS "${CMAKE_CURRENT_SOURCE_DIR}/Ag/Core" 
+                         "${AG_INCLUDE_DIR}/Ag/Core.hpp"
+                         "${AG_INCLUDE_DIR}/Ag/Core")
+    list(APPEND DOC_SRCS "${CMAKE_CURRENT_SOURCE_DIR}/AsmTools"
+                         "${MO_INCLUDE_DIR}/AsmTools.hpp"
+                         "${MO_INCLUDE_DIR}/AsmTools")
+    list(APPEND DOC_SRCS "${CMAKE_CURRENT_SOURCE_DIR}/ArmEmu"
+                         "${MO_INCLUDE_DIR}/ArmEmu.hpp"
+                         "${MO_INCLUDE_DIR}/ArmEmu")
 
     doxygen_add_docs(Documentation ${DOC_SRCS}
                      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}

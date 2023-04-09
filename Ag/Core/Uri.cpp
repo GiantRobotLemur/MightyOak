@@ -1636,7 +1636,6 @@ void UriBuilder::clear()
 }
 
 //! @brief Populates the object by parsing the contents of a UTF-8 string.
-//! @param[in] source The URI expressed as text.
 //! @param[in] source The UTF-8 encoded string to parse.
 //! @throws UriParseException If the source text represented an invalid URI.
 void UriBuilder::parse(string_cref_t source)

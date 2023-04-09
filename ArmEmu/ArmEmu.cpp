@@ -72,6 +72,7 @@ public:
 // IArmSystemDeleter Member Definitions
 ////////////////////////////////////////////////////////////////////////////////
 //! @brief Disposes of an IProcessor implementation.
+//! @param[in] processor The processor object to dispose of.
 void IArmSystemDeleter::operator()(IArmSystem *processor) const
 {
     if (processor != nullptr)
@@ -86,7 +87,7 @@ void IArmSystemDeleter::operator()(IArmSystem *processor) const
 //! @brief Constructs an implementation of an object representing an emulation
 //! of an ARM-based system for testing to run specified code assembled at the
 //! 32KB address mark in user mode.
-//! @parma[in] assembler The assembly language source code to assemble into
+//! @param[in] assembler The assembly language source code to assemble into
 //! the RAM at 32KB and run up to the first breakpoint.
 IArmSystemUPtr createUserModeTestSystem(const char *assembler)
 {
