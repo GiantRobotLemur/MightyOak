@@ -138,9 +138,9 @@ uint32_t ALU_Xor(uint32_t op1, uint32_t op2, uint8_t &statusFlags);
 //! @returns The result of the operation.
 uint32_t ALU_Bic(uint32_t op1, uint32_t op2, uint8_t &statusFlags);
 
-//! @brief Performs ARM-compatible status flags based on the result of a
+//! @brief Calculates ARM-compatible status flags based on the result of a
 //! logical operation, such as MOV.
-//! @param[in] op1 The operand which is copied and sets status flags.
+//! @param[in] result The result of the operation.
 //! @param[in] statusFlags Contains the states of the carry and
 //! overflow flags to inherit.
 //! @returns The status flags based on inherited values and result.
@@ -160,7 +160,7 @@ uint32_t ALU_Mul(uint32_t op1, uint32_t op2, uint8_t &statusFlags);
 //! produces ARM-compatible status flags from the result.
 //! @param[in] op1 The first operand.
 //! @param[in] op2 The second operand.
-//! @param[in] op2 The third operand, which is added to the product of the
+//! @param[in] op3 The third operand, which is added to the product of the
 //! first and second.
 //! @param[in,out] statusFlags Contains the states of the overflow flag to
 //! inherit and receives the status flag values based on the result of the

@@ -1,4 +1,4 @@
-//! @file Ag/Core/ProgarmArguments.hpp
+//! @file Ag/Core/ProgramArguments.hpp
 //! @brief The declaration of an object which manages command line argument
 //! parsing, processing and verification.
 //! @author GiantRobotLemur@na-se.co.uk

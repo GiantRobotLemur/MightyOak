@@ -36,17 +36,10 @@
 #include "AsmTools/InstructionInfo.hpp"
 #include "AsmTools/Options.hpp"
 
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
-
 namespace Ag {
 namespace Asm {
 
 namespace {
-////////////////////////////////////////////////////////////////////////////////
-// Local Data
-////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////
 // Local Functions
@@ -2474,22 +2467,31 @@ private:
                         break;
 
                     default:
+                        // By default, just produce the escaped character,
+                        // it could be a quote.
                         digitCount = 0;
+                        buffer.push_back(next);
+                        isValid = true;
                         break;
                     }
 
-                    if ((digitCount > 0) &&
-                        tryConsumeHexEscapeSequence(input, escapeSequence,
-                                                    digitCount, openingQuote,
-                                                    escaped))
+                    if (digitCount > 0)
                     {
-                        buffer.push_back(escaped);
-                        isEscaped = false;
+                        if (tryConsumeHexEscapeSequence(input, escapeSequence,
+                                                        digitCount, openingQuote,
+                                                        escaped))
+                        {
+                            isValid = true;
+                            buffer.push_back(escaped);
+                        }
+                        else
+                        {
+                            isValid = false;
+                        }
                     }
-                    else
-                    {
-                        isValid = false;
-                    }
+
+                    // Either way, finish the escape sequence.
+                    isEscaped = false;
                 }
 
                 if (isValid == false)

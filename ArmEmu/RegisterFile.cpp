@@ -464,7 +464,10 @@ uint32_t RegisterFile::getRd(GeneralRegister regId) const
 //! PSR flags too if updateStatus is true..
 //! @param[in] regId The identifier of the register to write.
 //! @param[in] value The new register value.
-//! @retval true R15 was updated, a pipeline stall should occur.
+//! @param[in] updateStatus True if status flags should be updated if the
+//! target register if R15. Either way, the Program Counter will be
+//! overwritten.
+//! @retval true The program counter was updated, a pipeline stall should occur.
 //! @retval false The PC was not updated.
 bool RegisterFile::setRd(GeneralRegister regId, uint32_t value, bool updateStatus)
 {

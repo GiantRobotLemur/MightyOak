@@ -47,7 +47,6 @@ public:
     // Operations
 
     // Overrides
-    virtual void destroy() override;
     virtual ProcessorMode getMode() const override;
     virtual uint32_t getCoreRegister(CoreRegister id) const override;
     virtual uint32_t readFromLogicalAddress(uint32_t logicalAddr, uint32_t length,

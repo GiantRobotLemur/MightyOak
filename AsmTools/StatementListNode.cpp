@@ -145,7 +145,7 @@ public:
     //! @brief Takes ownership of an assembly language statement which requires
     //! deferred processing.
     //! @param[in] statement The statement to take ownership of.
-    //! @param[in] assembleSize The predicted size of the object code the
+    //! @param[in] assembledSize The predicted size of the object code the
     //! statement will eventually produce.
     void appendStatement(StatementUPtr &&statement, uint32_t assembledSize)
     {
@@ -274,9 +274,9 @@ Statement *EmptyStatement::compile(Messages & /* output */) const
 //! which the block appears.
 //! @param[in] isPreAssembled Indicates whether the block contains object
 //! code which is already assembled.
-StatementBlock::StatementBlock(uint32_t offset, bool isPreAssebled) :
+StatementBlock::StatementBlock(uint32_t offset, bool isPreAssembled) :
     _offset(offset),
-    _isPreAssembled(isPreAssebled),
+    _isPreAssembled(isPreAssembled),
     _isClosed(false)
 {
 }
@@ -315,8 +315,6 @@ void StatementBlock::finalise()
 ////////////////////////////////////////////////////////////////////////////////
 //! @brief Creates a root parse node which holds all completed assembly language
 //! statements.
-//! @param[in] output The shared message collection to be added to during the
-//! assembly process.
 //! @param[in] initialState The initial state of the assembler when parsing of
 //! the first statement begins.
 //! @param[in] scope The variable evaluation stop at the top level.
@@ -713,9 +711,6 @@ IScopedContext *StatementListNode::getScope()
 
     return _scopeStack.back().get();
 }
-////////////////////////////////////////////////////////////////////////////////
-// Global Function Definitions
-////////////////////////////////////////////////////////////////////////////////
 
 }} // namespace Ag::Asm
 ////////////////////////////////////////////////////////////////////////////////

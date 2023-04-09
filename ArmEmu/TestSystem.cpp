@@ -58,15 +58,6 @@ InstructionPipeline &TestSystem::getProcessor()
 }
 
 // Inherited from IArmSystem.
-void TestSystem::destroy()
-{
-    if (this != nullptr)
-    {
-        delete this;
-    }
-}
-
-// Inherited from IArmSystem.
 ProcessorMode TestSystem::getMode() const
 {
     return _processor.getMode();

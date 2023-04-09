@@ -12,8 +12,13 @@ set(USE_ASM 1)
 set(PROJ_LANGUAGES CXX)
 
 if (${USE_ASM})
-    # HACK: We need to adapt this for different assembler types.
-    list(APPEND PROJ_LANGUAGES ASM_MASM)
+    if (DEFINED CMAKE_HOST_WIN32 AND "$ENV{PROCESSOR_ARCHITECTURE}" STREQUAL "AMD64")
+        # HACK: We need to adapt this for different assembler types.
+        list(APPEND PROJ_LANGUAGES ASM_MASM)
+    else()
+        # We're not ready for assembler in the current environment.
+        set(USE_ASM 0)
+    endif()
 endif()
 
 project(MightyOak
@@ -85,9 +90,15 @@ if (DEFINED DOXYGEN_FOUND)
         set(DOXYGEN_SEARCHENGINE YES)
     endif()
 
-    list(APPEND DOC_SRCS "${CMAKE_CURRENT_SOURCE_DIR}/Ag/Core" "${AG_INCLUDE_DIR}/Ag/Core")
-    list(APPEND DOC_SRCS "${CMAKE_CURRENT_SOURCE_DIR}/AsmTools" "${MO_INCLUDE_DIR}/AsmTools")
-    list(APPEND DOC_SRCS "${CMAKE_CURRENT_SOURCE_DIR}/ArmEmu" "${MO_INCLUDE_DIR}/ArmEmu")
+    list(APPEND DOC_SRCS "${CMAKE_CURRENT_SOURCE_DIR}/Ag/Core" 
+                         "${AG_INCLUDE_DIR}/Ag/Core.hpp"
+                         "${AG_INCLUDE_DIR}/Ag/Core")
+    list(APPEND DOC_SRCS "${CMAKE_CURRENT_SOURCE_DIR}/AsmTools"
+                         "${MO_INCLUDE_DIR}/AsmTools.hpp"
+                         "${MO_INCLUDE_DIR}/AsmTools")
+    list(APPEND DOC_SRCS "${CMAKE_CURRENT_SOURCE_DIR}/ArmEmu"
+                         "${MO_INCLUDE_DIR}/ArmEmu.hpp"
+                         "${MO_INCLUDE_DIR}/ArmEmu")
 
     doxygen_add_docs(Documentation ${DOC_SRCS}
                      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}

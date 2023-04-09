@@ -26,10 +26,6 @@
 #include "Statement.hpp"
 #include "SyntaxNode.hpp"
 
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
-
 namespace Ag {
 namespace Asm {
 
@@ -66,7 +62,7 @@ class StatementBlock
 {
 protected:
     // Construction/Destruction
-    StatementBlock(uint32_t offset, bool isPreAssebled);
+    StatementBlock(uint32_t offset, bool isPreAssembled);
 
 public:
     virtual ~StatementBlock() = default;
@@ -106,10 +102,6 @@ public:
                       uint32_t assemblyOffset = 0);
     virtual ~StatementListNode() = default;
 
-    // Accessors
-
-    // Accessors
-
     // Operations
     ObjectCode assemble(Messages &messages) const;
 
@@ -144,13 +136,6 @@ private:
     uint32_t _initialAssemblyOffset;
 };
 
-////////////////////////////////////////////////////////////////////////////////
-// Function Declarations
-////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////
-// Templates
-////////////////////////////////////////////////////////////////////////////////
 
 }} // namespace Ag::Asm
 

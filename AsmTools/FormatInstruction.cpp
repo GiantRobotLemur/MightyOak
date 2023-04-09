@@ -545,7 +545,7 @@ void FormatParams::appendAddress(uint32_t address)
 }
 
 //! @brief Appends numeric comment value embedded in an SWI or BKPT instruction.
-//! @param[in] comment The value to render as text.
+//! @param[in] value The comment value to render as text.
 void FormatParams::appendComment(uint32_t value)
 {
     FormatInfo options;
@@ -619,7 +619,7 @@ void FormatParams::append(ShiftType shift)
 
 //! @brief Appends the identifier of a co-processor to the string
 //! begin accumulated.
-//! @param[in] shift The shift type to append.
+//! @param[in] cpId The identifier of the co-processor to format.
 void FormatParams::append(CoProcId cpId)
 {
     Builder.append("CP");
@@ -628,7 +628,7 @@ void FormatParams::append(CoProcId cpId)
 
 //! @brief Appends the identifier of a co-processor register to the string
 //! begin accumulated.
-//! @param[in] shift The shift type to append.
+//! @param[in] reg The identifier of the register to format.
 void FormatParams::append(CoProcRegister reg)
 {
     Builder.append("CR");

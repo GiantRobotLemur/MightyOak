@@ -19,10 +19,6 @@
 
 #include "TestSystem.hpp"
 
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
-
 namespace Ag {
 namespace Arm {
 
@@ -58,27 +54,7 @@ public:
     }
 };
 
-////////////////////////////////////////////////////////////////////////////////
-// Local Data
-////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////
-// Local Functions
-////////////////////////////////////////////////////////////////////////////////
-
-} // TED
-
-////////////////////////////////////////////////////////////////////////////////
-// IArmSystemDeleter Member Definitions
-////////////////////////////////////////////////////////////////////////////////
-//! @brief Disposes of an IProcessor implementation.
-void IArmSystemDeleter::operator()(IArmSystem *processor) const
-{
-    if (processor != nullptr)
-    {
-        processor->destroy();
-    }
-}
+} // Anonymous namespace
 
 ////////////////////////////////////////////////////////////////////////////////
 // Function Declarations
@@ -86,7 +62,7 @@ void IArmSystemDeleter::operator()(IArmSystem *processor) const
 //! @brief Constructs an implementation of an object representing an emulation
 //! of an ARM-based system for testing to run specified code assembled at the
 //! 32KB address mark in user mode.
-//! @parma[in] assembler The assembly language source code to assemble into
+//! @param[in] assembler The assembly language source code to assemble into
 //! the RAM at 32KB and run up to the first breakpoint.
 IArmSystemUPtr createUserModeTestSystem(const char *assembler)
 {
@@ -166,9 +142,12 @@ IArmSystemUPtr createUserModeTestSystem(const char *assembler)
     testSystem->getProcessor().reset();
 
     // Return a unique pointer to the emulated system.
-    return std::unique_ptr<IArmSystem, IArmSystemDeleter>(testSystem);
+    return std::unique_ptr<IArmSystem>(testSystem);
 }
 
+////////////////////////////////////////////////////////////////////////////////
+// Global Function Definitions
+////////////////////////////////////////////////////////////////////////////////
 //! @brief Gets text identifying a CoreRegister value.
 //! @param[in] regId The identifier of the register to get display text for.
 //! @return The display text representing the register.
@@ -194,10 +173,6 @@ const char *coreRegisterToString(CoreRegister regId)
         return "(unknown Core Register)";
     }
 }
-
-////////////////////////////////////////////////////////////////////////////////
-// Global Function Definitions
-////////////////////////////////////////////////////////////////////////////////
 
 }} // namespace Ag::Arm
 ////////////////////////////////////////////////////////////////////////////////

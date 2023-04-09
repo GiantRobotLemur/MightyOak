@@ -721,7 +721,7 @@ String::String(wchar_cptr_t boundedWide, size_t charCount)
 
 //! @brief Constructs an immutable UTF-8 encoded string value from a mutable
 //! UTF-8 encoded STL string view.
-//! @param[in] stlUtf8String The string to copy to the object.
+//! @param[in] stlUtf8StringView The view of the string to copy to the object.
 String::String(const std::string_view &stlUtf8StringView)
 {
     StringPrivate key(stlUtf8StringView.data(),

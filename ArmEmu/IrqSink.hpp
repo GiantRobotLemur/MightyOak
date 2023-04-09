@@ -102,6 +102,7 @@ typedef uint32_t(*ReadMemFn)(uintptr_t context, uint32_t offset);
 //! range being written to.
 //! @param[in] offset The word-aligned offset of the byte, half-word or 
 //! word to write.
+//! @param[in] value The value to write to memory.
 typedef void (*WriteMemFn)(uintptr_t context, uint32_t offset, uint32_t value);
 
 //! @brief Describes a run of memory mapped I/O in the guest memory map.

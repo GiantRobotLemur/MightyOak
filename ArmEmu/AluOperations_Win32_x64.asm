@@ -1,4 +1,4 @@
-; AluOperations_x64.asm
+; AluOperations_Win32_x64.asm
 ; author GiantRobotLemur@na-se.co.uk
 ; date 2023
 ; copyright This file is part of the Mighty Oak project which is released

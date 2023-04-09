@@ -1,4 +1,4 @@
-//! @file Ag/AsmTools/InstructionInfo.hpp
+//! @file AsmTools/InstructionInfo.hpp
 //! @brief The declaration of data structures which describe any assembly
 //! language instruction.
 //! @author GiantRobotLemur@na-se.co.uk
@@ -17,10 +17,6 @@
 #include <cstdint>
 
 #include "Ag/Core/String.hpp"
-
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
 
 namespace Ag {
 namespace Asm {
@@ -591,6 +587,7 @@ class FormatterOptions
 {
 public:
     // Public Types
+    //! @brief Defines options to apply when formatting instructions.
     enum Flags
     {
         //! @brief Indicates branch and PC-relative locations should be
@@ -761,8 +758,6 @@ public:
     void reset(InstructionMnemonic mnemonic, OperationClass opClass,
                ConditionCode condition = ConditionCode::Al);
 private:
-    // Internal Types
-
     // Internal Functions
     void validateInstructionClass(OperationClass classification) const;
 
@@ -772,14 +767,6 @@ private:
     InstructionMnemonic _mnemonic;
     OperationClass _opClass;
 };
-
-////////////////////////////////////////////////////////////////////////////////
-// Function Declarations
-////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////
-// Templates
-////////////////////////////////////////////////////////////////////////////////
 
 }} // namespace Ag::Asm
 

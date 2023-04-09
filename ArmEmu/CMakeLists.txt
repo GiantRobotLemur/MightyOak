@@ -23,12 +23,11 @@ add_ag_library(ArmEmu   FOLDER      ARM
                         HEADERS     ${MO_INCLUDE_DIR}/ArmEmu.hpp
                         PUBLIC_LIBS AgCore)
 
-if(DEFINED CMAKE_ASM_MASM_COMPILER)
+if(DEFINED CMAKE_ASM_MASM_COMPILER AND "${USE_ASM}")
     target_sources(ArmEmu PRIVATE AluOperations_Win32_x64.asm)
 else()
     target_sources(ArmEmu PRIVATE AluOperations_NoArch.cpp)
 endif()
-
 
 # Define the unit test harness.
 add_ag_test_app(ArmEmu_Tests    TEST_LIB ArmEmu

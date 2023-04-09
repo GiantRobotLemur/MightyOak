@@ -873,8 +873,11 @@ void SchemaBuilder::defineValueArgument(utf8_cptr_t name,
 
 //! @brief Defines a command line option to be accessed via one or more aliases.
 //! @param[in] id The numeric identifier of the command line options.
+//! @param[in] description A string describing the option for use in the
+//! generated command line help text.
 //! @param[in] value Indicates whether a value should be associated with the option.
-//! @param[in] description An optional description of the command line argument.
+//! @param[in] valueName An optional name attributed to any bound value used
+//! when generating the command line help text.
 void SchemaBuilder::defineOption(uint32_t id, utf8_cptr_t description,
                                  OptionValue value /*= OptionValue::None*/,
                                  utf8_cptr_t valueName /*= nullptr*/)

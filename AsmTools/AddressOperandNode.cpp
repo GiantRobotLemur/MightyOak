@@ -424,6 +424,7 @@ void StatementAddressOperand::initialiseIndexed(const Location &at,
 //! @param[in] context The context used to evaluate expressions.
 //! @param[in] log The log to add messages to if the operand cannot be described
 //! in the specified instruction class.
+//! @param[in] isFinalPass True to indicate that errors should be reported.
 //! @retval true The address operand was properly encoded.
 //! @retval false The address operand could not be encoded given the instruction
 //! class, an error will have been added to the log.

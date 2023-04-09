@@ -1,4 +1,4 @@
-//! @file ArmEmu/name_here.hpp
+//! @file ArmEmu/DataTransfer.hpp
 //! @brief The declaration of the layer of emulation which provides data
 //! transfer functions for an ARM processor core.
 //! @author GiantRobotLemur@na-se.co.uk
@@ -34,12 +34,7 @@ namespace Arm {
 //! functions for an ARM processor core.
 class DataTransfer : public ArithmeticLogicUnit
 {
-
 private:
-    // Internal Types
-
-    // Internal Fields
-
     // Internal Functions
     //! @brief Converts a integer bit position to a general purpose register
     //! identifier.
@@ -56,8 +51,6 @@ public:
     DataTransfer() = default;
     virtual ~DataTransfer() = default;
 
-    // Accessors
-
     // Operations
     uint32_t execLoad(uint32_t instruction, uint32_t baseAddr,
                       uint32_t offset);
@@ -67,14 +60,6 @@ public:
     uint32_t execStoreMultiple(uint32_t instruction, uint32_t baseAddr);
     uint32_t execSwap(uint32_t instruction);
 };
-
-////////////////////////////////////////////////////////////////////////////////
-// Function Declarations
-////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////
-// Templates
-////////////////////////////////////////////////////////////////////////////////
 
 }} // namespace Ag::Arm
 
