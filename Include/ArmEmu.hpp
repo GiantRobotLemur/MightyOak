@@ -97,7 +97,6 @@ class IArmSystem
 public:
     // Construction/Destruction
     virtual ~IArmSystem() = default;
-    virtual void destroy() = 0;
 
     // Accessors
     virtual ProcessorMode getMode() const = 0;
@@ -110,14 +109,8 @@ public:
     virtual uint32_t runSingleStep() = 0;
 };
 
-//! @brief A functor which calls the destroy() member function on an IProcessor
-//! implementation as part of an std::unique_ptr specialisation.
-struct IArmSystemDeleter
-{
-    void operator()(IArmSystem *processor) const;
-};
-
-using IArmSystemUPtr = std::unique_ptr<IArmSystem, IArmSystemDeleter>;
+//! @brief An alias for a unique pointer to a simulated ARM system.
+using IArmSystemUPtr = std::unique_ptr<IArmSystem>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Function Declarations

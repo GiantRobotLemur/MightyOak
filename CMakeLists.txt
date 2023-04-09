@@ -8,7 +8,7 @@ set(CMAKE_CXX_EXTENSIONS        ON)
 
 # Use to determine whether to use ASM for small sections of code or
 # the C++, platform agnostic (slower) alternative.
-set(USE_ASM 1)
+set(USE_ASM 0)
 set(PROJ_LANGUAGES CXX)
 
 if (${USE_ASM})

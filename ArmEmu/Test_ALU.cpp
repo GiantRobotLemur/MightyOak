@@ -80,6 +80,9 @@ TEST_P(ALU, ExecuteCode)
         }
     }
 
+    // Put here to ensure that getMode() wasn't labelled as unused.
+    EXPECT_EQ(specimen->getMode(), ProcessorMode::Svc26);
+
     uint32_t cycles = specimen->run();
 
     EXPECT_GT(cycles, 1u);
