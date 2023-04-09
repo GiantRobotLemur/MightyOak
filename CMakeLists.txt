@@ -12,7 +12,7 @@ set(USE_ASM 1)
 set(PROJ_LANGUAGES CXX)
 
 if (${USE_ASM})
-    if (DEFINED CMAKE_HOST_WIN32 AND "${CMAKE_HOST_SYSTEM_PROCESSOR}" STREQUAL "AMD64")
+    if (DEFINED CMAKE_HOST_WIN32 AND "$ENV{PROCESSOR_ARCHITECTURE}" STREQUAL "AMD64")
         # HACK: We need to adapt this for different assembler types.
         list(APPEND PROJ_LANGUAGES ASM_MASM)
     else()

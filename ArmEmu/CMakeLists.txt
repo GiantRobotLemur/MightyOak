@@ -29,7 +29,6 @@ else()
     target_sources(ArmEmu PRIVATE AluOperations_NoArch.cpp)
 endif()
 
-
 # Define the unit test harness.
 add_ag_test_app(ArmEmu_Tests    TEST_LIB ArmEmu
                                 SOURCES  TestTools.cpp
