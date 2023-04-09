@@ -8,12 +8,17 @@ set(CMAKE_CXX_EXTENSIONS        ON)
 
 # Use to determine whether to use ASM for small sections of code or
 # the C++, platform agnostic (slower) alternative.
-set(USE_ASM 0)
+set(USE_ASM 1)
 set(PROJ_LANGUAGES CXX)
 
 if (${USE_ASM})
-    # HACK: We need to adapt this for different assembler types.
-    list(APPEND PROJ_LANGUAGES ASM_MASM)
+    if (DEFINED CMAKE_HOST_WIN32 AND "${CMAKE_HOST_SYSTEM_PROCESSOR}" STREQUAL "AMD64")
+        # HACK: We need to adapt this for different assembler types.
+        list(APPEND PROJ_LANGUAGES ASM_MASM)
+    else()
+        # We're not ready for assembler in the current environment.
+        set(USE_ASM 0)
+    endif()
 endif()
 
 project(MightyOak
