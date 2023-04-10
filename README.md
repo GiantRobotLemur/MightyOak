@@ -41,9 +41,9 @@ images containing appropriate metadata captured from the original media.
 
 At the current time, the project consists of the following major components
 written in C++.
-* [Ag Core](/Docs/AgCore.md) - A platform agnostic runtime library build base
+* [Ag Core](Doc/AgCore.md) - A platform agnostic runtime library build base
 on the STL and C Runtime on which to build the system. Some unit test coverage.
-* [Asm Tools](/Docs/AsmTools.md) - A library which can assemble and disassemble
+* [Asm Tools](Doc/AsmTools.md) - A library which can assemble and disassemble
 32-bit ARM assembly language up to the ARMv4 architecture. This includes a
 fully fledged assembler akin to the one integrated into BBC BASIC. Plenty of
 unit test coverage.
