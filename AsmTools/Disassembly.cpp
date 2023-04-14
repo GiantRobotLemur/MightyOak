@@ -16,21 +16,10 @@
 
 #include "Disassembly.hpp"
 
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
-
 namespace Ag {
 namespace Asm {
 
 namespace {
-////////////////////////////////////////////////////////////////////////////////
-// Local Data Types
-////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////
-// Local Data
-////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////
 // Local Functions
@@ -47,14 +36,14 @@ OperationClass interpretCoProcOp(DisassemblyParams &params)
     OperationClass opClass = OperationClass::None;
 
     if (params.isArchAllowed(InstructionInfo::ARMv2a) &&
-        (params.Instruction & RequiredMask) == RequiredBits)
+        (params.Instructions[params.Decoded] & RequiredMask) == RequiredBits)
     {
         CoProcId coProc = params.decodeCoProcessorID(8);
 
         // TODO if ((coProc == ?) && (flags & AllowFPA))
         // Decode instruction as FPA operations.
 
-        if (params.Instruction & (1u << 4))
+        if (params.Instructions[params.Decoded] & (1u << 4))
         {
             // Its a register transfer (MCR/MRC)
             opClass = OperationClass::CoProcRegisterTransfer;
@@ -83,6 +72,7 @@ OperationClass interpretCoProcOp(DisassemblyParams &params)
             info.OpCode1 = params.extract8(20, 4);
             info.OpCode2 = params.extract8(5, 3);
         }
+        ++params.Decoded;
     }
 
     return opClass;
@@ -120,6 +110,7 @@ OperationClass interpretCoProcDataTransfer(DisassemblyParams &params)
     info.Addr.Offset.Mode = ShifterMode::ImmediateConstant;
     info.Addr.Rn = fromScalar<CoreRegister>(params.extract8(16, 4));
     info.Addr.Offset.Immediate = params.extract16(0, 8) << 2;
+    ++params.Decoded;
 
     return OperationClass::CoProcDataTransfer;
 }
@@ -215,6 +206,8 @@ OperationClass interpretCoreAlu(DisassemblyParams &params)
             // else - Its a multiply instruction, we shouldn't be here.
         }
 
+        ++params.Decoded;
+
         if ((shifter->Mode == ShifterMode::ImmediateConstant) &&
             (opClass == OperationClass::CoreAlu) &&
             (params.Params->CoreAluOp.Rn == CoreRegister::R15) &&
@@ -227,18 +220,69 @@ OperationClass interpretCoreAlu(DisassemblyParams &params)
 
             // Extract values from the ALU operation before we overwrite them.
             addr.Rd = params.Params->CoreAluOp.Rd;
+            addr.Encoding = MultiWordEncoding::Single;
 
             // The PC register is 8-bytes ahead of the current instruction due
             // to pipelining.
             uint32_t pc = params.LoadAddress + 8;
 
+            // Make a copy of the original instruction template.
+            uint32_t oldTemplate = params.Instructions[params.Decoded - 1];
+            bool isPositiveOffset = false;
+
             if (params.Mnemonic == InstructionMnemonic::Add)
             {
                 addr.Address = pc + shifter->Immediate;
+                isPositiveOffset = true;
             }
             else // (params.Mnemonic == InstructionMnemonic::Sub)
             {
                 addr.Address = pc - shifter->Immediate;
+            }
+
+            // Query further instruction to see if the encoding is longer.
+
+            // Mask out the offset and Rn bits from the original instruction.
+            oldTemplate &= ~0x000F0FFF;
+
+            // Copy the original Rd to Rn.
+            oldTemplate |= (oldTemplate & 0x00000F000) << 4;
+
+            uint8_t maxSequence = std::min(params.MaxInstruction,
+                                           static_cast<uint8_t>(3));
+
+            while ((params.Decoded < maxSequence) &&
+                   params.matches(0xFFFFF000, oldTemplate))
+            {
+                // The next instruction add to/subtracts from the
+                // originally calculated PC-relative offset.
+                uint32_t offset = Bin::rotateRight(params.extract32(0, 8),
+                                                   params.extract8(8, 4) << 1);
+
+                if (isPositiveOffset)
+                {
+                    addr.Address += offset;
+                }
+                else
+                {
+                    addr.Address -= offset;
+                }
+
+                ++params.Decoded;
+            }
+
+            // See if the sequence was padded with non-ops.
+            while ((params.Decoded < maxSequence) && params.isNonOp())
+            {
+                ++params.Decoded;
+            }
+
+            switch (params.Decoded)
+            {
+            case 1: addr.Encoding = MultiWordEncoding::Single; break;
+            case 2: addr.Encoding = MultiWordEncoding::Long; break;
+            case 3:
+            default: addr.Encoding = MultiWordEncoding::Extended; break;
             }
 
             opClass = OperationClass::CoreAddress;
@@ -273,6 +317,7 @@ OperationClass interpretMultiply(DisassemblyParams &params)
         info.AffectsFlags = params.isSet(20);
         params.Mnemonic = params.isSet(21) ? InstructionMnemonic::Mla :
                                              InstructionMnemonic::Mul;
+        ++params.Decoded;
     }
 
     return opClass;
@@ -309,6 +354,8 @@ OperationClass interpretLongMultiply(DisassemblyParams &params)
         case 2: params.Mnemonic = InstructionMnemonic::Smull; break;
         case 3: params.Mnemonic = InstructionMnemonic::Smlal; break;
         }
+
+        ++params.Decoded;
     }
 
     return opClass;
@@ -371,6 +418,8 @@ OperationClass interpretCoreDataTransfer(DisassemblyParams &params)
         info.Addr.Offset.Mode = ShifterMode::ImmediateConstant;
         info.Addr.Offset.Immediate = params.extract16(0, 12);
     }
+
+    ++params.Decoded;
 
     return opClass;
 }
@@ -455,6 +504,8 @@ OperationClass interpretSignedHalfWordTransfer(DisassemblyParams &params)
         opClass = OperationClass::None;
     }
 
+    ++params.Decoded;
+
     return opClass;
 }
 
@@ -508,6 +559,8 @@ OperationClass interpretCoreMultiTransfer(DisassemblyParams &params)
         info.Mode = nonStackModes[bits];
     }
 
+    ++params.Decoded;
+
     return opClass;
 }
 
@@ -519,16 +572,18 @@ OperationClass interpretSwap(DisassemblyParams &params)
 {
     params.Mnemonic = InstructionMnemonic::Swp;
     auto &info = params.Params->AtomicSwapOp;
-    
+
     info.IsByte = params.isSet(22);
     info.Rd = params.decodeCoreRegister(12);
     info.Rn = params.decodeCoreRegister(16);
     info.Rm = params.decodeCoreRegister(0);
 
+    ++params.Decoded;
+
     return OperationClass::AtomicSwap;
 }
 
-} // TED
+} // Anonymous namespace
 
 ////////////////////////////////////////////////////////////////////////////////
 // DisassemblyParams Member Function Definitions
@@ -543,16 +598,58 @@ OperationClass interpretSwap(DisassemblyParams &params)
 DisassemblyParams::DisassemblyParams(uint32_t instruction, uint32_t flags,
                                      uint32_t loadAddr, InstructionParams *params) :
     Params(params),
-    Instruction(instruction),
     LoadAddress(loadAddr),
     Flags(flags),
     Condition(ConditionCode::Nv),
-    Mnemonic(InstructionMnemonic::MaxMnemonic)
+    Mnemonic(InstructionMnemonic::MaxMnemonic),
+    MaxInstruction(1),
+    Decoded(0)
 {
     if (params == nullptr)
     {
         throw Ag::ArgumentException("params");
     }
+
+    Instructions[0] = instruction;
+
+    std::fill_n(Instructions + 1, std::size(Instructions) - 1, 0);
+}
+
+DisassemblyParams::DisassemblyParams(const uint32_t *instructions, uint8_t count,
+                                     uint32_t flags, uint32_t loadAddr,
+                                     InstructionParams *params) :
+    Params(params),
+    LoadAddress(loadAddr),
+    Flags(flags),
+    Condition(ConditionCode::Nv),
+    Mnemonic(InstructionMnemonic::MaxMnemonic),
+    MaxInstruction(std::min(static_cast<uint8_t>(std::size(Instructions)), count)),
+    Decoded(0)
+{
+    if (params == nullptr)
+    {
+        throw Ag::ArgumentException("params");
+    }
+    else if (MaxInstruction < 1)
+    {
+        throw Ag::ArgumentException("count");
+    }
+
+    std::copy_n(instructions, MaxInstruction, Instructions);
+    std::fill_n(Instructions + MaxInstruction,
+                std::size(Instructions) - MaxInstruction, 0);
+}
+
+//! @brief Determines if the current instruction is MOVcc Rx,Rx.
+//! @retval true The instruction has no effect.
+//! @retval false The instruction does not follow the non-op pattern.
+bool DisassemblyParams::isNonOp() const noexcept
+{
+    uint32_t instruction = Instructions[Decoded];
+
+    // Check to see if the instruction is MOVcc Rx,Rx
+    return ((instruction & 0x0FFF0FFF) == 0x01A00000) &&
+           (((instruction >> 12) & 0x0F) == (instruction & 0x0F));
 }
 
 //! @brief Determines if a bit in the instruction field is set.
@@ -561,7 +658,7 @@ DisassemblyParams::DisassemblyParams(uint32_t instruction, uint32_t flags,
 //! @retval false The bit was clear.
 bool DisassemblyParams::isSet(uint8_t offset) const noexcept
 {
-    return (Instruction & (1u << offset));
+    return (Instructions[Decoded] & (1u << offset));
 }
 
 //! @brief Determines if a bit in the instruction field is clear.
@@ -570,7 +667,7 @@ bool DisassemblyParams::isSet(uint8_t offset) const noexcept
 //! @retval false The bit was set.
 bool DisassemblyParams::isClear(uint8_t offset) const noexcept
 {
-    return (Instruction & (1u << offset)) == 0;
+    return (Instructions[Decoded] & (1u << offset)) == 0;
 }
 
 //! @brief Determines if certain significant bits of the instruction
@@ -581,7 +678,7 @@ bool DisassemblyParams::isClear(uint8_t offset) const noexcept
 //! @retval false At least one significant bit does not match.
 bool DisassemblyParams::matches(uint32_t mask, uint32_t significantBits) const noexcept
 {
-    return (Instruction & mask) == significantBits;
+    return (Instructions[Decoded] & mask) == significantBits;
 }
 
 //! @brief Determines whether a specific architecture is enabled in a bit-field
@@ -610,7 +707,7 @@ bool DisassemblyParams::hasOption(InstructionInfo::DisasmBits option) const noex
 //! @return The extracted bits.
 uint8_t DisassemblyParams::extract8(uint8_t offset, uint8_t bitCount) const noexcept
 {
-    return static_cast<uint8_t>(Instruction >> offset) & ((1u << bitCount) - 1);
+    return static_cast<uint8_t>(Instructions[Decoded] >> offset) & ((1u << bitCount) - 1);
 }
 
 //! @brief Extracts up to 16 bits from the instruction bit field.
@@ -619,7 +716,7 @@ uint8_t DisassemblyParams::extract8(uint8_t offset, uint8_t bitCount) const noex
 //! @return The extracted bits.
 uint16_t DisassemblyParams::extract16(uint8_t offset, uint8_t bitCount) const noexcept
 {
-    return static_cast<uint16_t>(Instruction >> offset) & ((1u << bitCount) - 1);
+    return static_cast<uint16_t>(Instructions[Decoded] >> offset) & ((1u << bitCount) - 1);
 }
 
 //! @brief Extracts up to 32 bits from the instruction bit field.
@@ -628,7 +725,7 @@ uint16_t DisassemblyParams::extract16(uint8_t offset, uint8_t bitCount) const no
 //! @return The extracted bits.
 uint32_t DisassemblyParams::extract32(uint8_t offset, uint8_t bitCount) const noexcept
 {
-    return static_cast<uint32_t>(Instruction >> offset) & ((1u << bitCount) - 1);
+    return static_cast<uint32_t>(Instructions[Decoded] >> offset) & ((1u << bitCount) - 1);
 }
 
 //! @brief Extracts the value of a core register from an instruction bit field.
@@ -636,7 +733,7 @@ uint32_t DisassemblyParams::extract32(uint8_t offset, uint8_t bitCount) const no
 //! @return The extracted register value.
 CoreRegister DisassemblyParams::decodeCoreRegister(uint8_t lowestBit) const noexcept
 {
-    return fromScalar<CoreRegister>(static_cast<uint8_t>((Instruction >> lowestBit) & 0x0F));
+    return fromScalar<CoreRegister>(static_cast<uint8_t>((Instructions[Decoded] >> lowestBit) & 0x0F));
 }
 
 //! @brief Extracts the value of a co-processor register from an instruction bit field.
@@ -644,7 +741,7 @@ CoreRegister DisassemblyParams::decodeCoreRegister(uint8_t lowestBit) const noex
 //! @return The extracted register value.
 CoProcRegister DisassemblyParams::decodeCoProcessorRegister(uint8_t lowestBit) const noexcept
 {
-    return fromScalar<CoProcRegister>(static_cast<uint8_t>((Instruction >> lowestBit) & 0x0F));
+    return fromScalar<CoProcRegister>(static_cast<uint8_t>((Instructions[Decoded] >> lowestBit) & 0x0F));
 }
 
 //! @brief Extracts the value of an FPA register from an instruction bit field.
@@ -652,7 +749,7 @@ CoProcRegister DisassemblyParams::decodeCoProcessorRegister(uint8_t lowestBit) c
 //! @return The extracted register value.
 FpaRegister DisassemblyParams::decodeFPARegister(uint8_t lowestBit) const noexcept
 {
-    return fromScalar<FpaRegister>(static_cast<uint8_t>((Instruction >> lowestBit) & 0x07));
+    return fromScalar<FpaRegister>(static_cast<uint8_t>((Instructions[Decoded] >> lowestBit) & 0x07));
 }
 
 //! @brief Extracts the value of a co-processor identifier from an instruction bit field.
@@ -660,7 +757,7 @@ FpaRegister DisassemblyParams::decodeFPARegister(uint8_t lowestBit) const noexce
 //! @return The extracted co-processor identifier value.
 CoProcId DisassemblyParams::decodeCoProcessorID(uint8_t lowestBit) const noexcept
 {
-    return fromScalar<CoProcId>(static_cast<uint8_t>((Instruction >> lowestBit) & 0x0F));
+    return fromScalar<CoProcId>(static_cast<uint8_t>((Instructions[Decoded] >> lowestBit) & 0x0F));
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -675,11 +772,11 @@ OperationClass disassembleInstruction(DisassemblyParams &params)
 
     // Initialise the condition code, it is unlikely but possible that it
     // might be overwritten.
-    params.Condition = fromScalar<ConditionCode>(static_cast<uint8_t>(params.Instruction >> 28));
+    params.Condition = fromScalar<ConditionCode>(static_cast<uint8_t>(params.Instructions[params.Decoded] >> 28));
     uint8_t opCode;
 
     // Perform base decoding using bits 25-27.
-    switch (static_cast<uint8_t>(params.Instruction >> 25) & 0x07)
+    switch (static_cast<uint8_t>(params.Instructions[params.Decoded] >> 25) & 0x07)
     {
     case 0x00:
         // Core ALU operations using register/shifted register operand 2.
@@ -758,6 +855,7 @@ OperationClass disassembleInstruction(DisassemblyParams &params)
                     params.Mnemonic = InstructionMnemonic::Mrs;
                     params.Params->MoveFromPsrOp.Rd = params.decodeCoreRegister(12);
                     params.Params->MoveFromPsrOp.IsCPSR = true;
+                    ++params.Decoded;
                 }
                 break;
             case 9:
@@ -768,9 +866,10 @@ OperationClass disassembleInstruction(DisassemblyParams &params)
                     params.Mnemonic = InstructionMnemonic::Bkpt;
 
                     // Extract the 12 bits of the comment field.
-                    uint32_t comment = params.Instruction & 0x0F;
-                    comment |= (params.Instruction >> 4) & 0xFFF0;
+                    uint32_t comment = params.Instructions[params.Decoded] & 0x0F;
+                    comment |= (params.Instructions[params.Decoded] >> 4) & 0xFFF0;
                     params.Params->BreakpointOp.Comment = static_cast<uint16_t>(comment);
+                    ++params.Decoded;
                 }
                 else if (params.matches(0x0FF0FFF0, 0x0120F000))
                 {
@@ -783,6 +882,7 @@ OperationClass disassembleInstruction(DisassemblyParams &params)
                     info.IsSourceReg = true;
                     info.SourceReg = params.decodeCoreRegister(0);
                     info.PsrComponents = params.extract8(16, 4);
+                    ++params.Decoded;
                 }
                 break;
 
@@ -794,6 +894,7 @@ OperationClass disassembleInstruction(DisassemblyParams &params)
                     params.Mnemonic = InstructionMnemonic::Mrs;
                     params.Params->MoveFromPsrOp.Rd = params.decodeCoreRegister(12);
                     params.Params->MoveFromPsrOp.IsCPSR = false;
+                    ++params.Decoded;
                 }
                 break;
 
@@ -809,6 +910,7 @@ OperationClass disassembleInstruction(DisassemblyParams &params)
                     info.IsSourceReg = true;
                     info.SourceReg = params.decodeCoreRegister(0);
                     info.PsrComponents = params.extract8(16, 4);
+                    ++params.Decoded;
                 }
                 break;
             }
@@ -840,6 +942,7 @@ OperationClass disassembleInstruction(DisassemblyParams &params)
                 info.SourceImmediate = Bin::rotateRight(params.extract32(0, 8),
                                                         params.extract8(8, 4) << 1);
                 info.SourceReg = CoreRegister::R0;
+                ++params.Decoded;
             }
         }
         else
@@ -877,9 +980,10 @@ OperationClass disassembleInstruction(DisassemblyParams &params)
                                                  InstructionMnemonic::B;
 
             // Sign extend the offset field and multiply by 4.
-            int32_t offset = static_cast<int32_t>(params.Instruction << 8) >> 6;
+            int32_t offset = static_cast<int32_t>(params.Instructions[params.Decoded] << 8) >> 6;
             uint32_t pcAddr = params.LoadAddress + 8;
             params.Params->BranchOp.Address = pcAddr + static_cast<uint32_t>(offset);
+            ++params.Decoded;
         }
         break;
 
@@ -898,6 +1002,7 @@ OperationClass disassembleInstruction(DisassemblyParams &params)
             opClass = OperationClass::SoftwareIrq;
             params.Mnemonic = InstructionMnemonic::Swi;
             params.Params->SoftwareIrqOp.Comment = params.extract32(0, 24);
+            ++params.Decoded;
         }
         else
         {

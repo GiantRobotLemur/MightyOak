@@ -17,26 +17,15 @@
 #include "Ag/Core/Format.hpp"
 #include "Ag/Core/Utils.hpp"
 #include "Ag/Core/Variant.hpp"
-
 #include "AsmTools/InstructionInfo.hpp"
 
 #include "Assembly.hpp"
 
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
 
 namespace Ag {
 namespace Asm {
 
 namespace {
-////////////////////////////////////////////////////////////////////////////////
-// Local Data Types
-////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////
-// Local Data
-////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////
 // Local Functions
@@ -75,6 +64,61 @@ bool tryEncodeImmediateConstant(uint32_t &coding, uint32_t constant)
     }
 
     return isEncoded;
+}
+
+//! @brief Attempts to encode an offset as a successive number of
+//! immediate constants to be added or subtracted.
+//! @param[in] offset The offset to encode.
+//! @param[out] parts An array to receive the encodings.
+//! @param[in] maxCount The maximum number of successive instructions which
+//! can be used to encode the offset.
+//! @return The count of instructions required. 0 If encoding was not possible
+//! given the number of instructions allowed.
+uint8_t tryEncodeImmdiateOffset(uint32_t offset, uint32_t *parts,
+                                uint8_t maxCount)
+{
+    uint8_t encodingCount = 0;
+
+    if (maxCount > 0)
+    {
+        if (offset == 0)
+        {
+            parts[0] = 0;
+            encodingCount = 1;
+        }
+        else
+        {
+            uint32_t bits = offset;
+            int32_t lsb;
+
+            while ((encodingCount < maxCount) &&
+                   Bin::bitScanForward(bits, lsb))
+            {
+                // We can only shift values by an even number of places.
+                lsb &= ~1;
+
+                uint32_t rotateShift = (32 - lsb) & 0x1F;
+
+                // Grab the next 8-bits to encode.
+                parts[encodingCount] = ((bits >> lsb) & 0xFF);
+
+                // Encode the shift assuming the LSB is clear.
+                parts[encodingCount] |= rotateShift << 7;
+                ++encodingCount;
+
+                // Mask out the bits to find the next block.
+                bits &= ~(0xFF << lsb);
+            }
+
+            if (bits != 0)
+            {
+                // We could not encode all of the offset bits.
+                encodingCount = 0;
+            }
+        }
+    }
+
+    return encodingCount;
 }
 
 //! @brief Creates an encodable shifter operand from a more complex
@@ -536,13 +580,43 @@ void encodeCoreAddress(AssemblyParams &params)
 
     params.encodeCoreRegister(info.Rd, 12);
 
+    // Take a copy of the current instruction.
+    uint32_t templateInstruction = params.Instructions[params.InstructionCount];
+
     // Add or subtract from the PC register.
     params.encodeCoreRegister(CoreRegister::R15, 16);
 
-    if (tryEncodeImmediateConstant(params.Instructions[params.InstructionCount],
-                                   offset))
+    uint8_t maxInstructions = toScalar(info.Encoding) + 1;
+
+    uint32_t bitFields[AssemblyParams::MaxInstructions];
+    uint8_t count = tryEncodeImmdiateOffset(offset, bitFields,
+                                            maxInstructions);
+
+    if (count > 0)
     {
+        // Finish the first instruction.
+        params.Instructions[params.InstructionCount] |= bitFields[0];
         params.completeInstruction();
+
+        for (uint8_t i = 1; i < count; ++i)
+        {
+            params.Instructions[params.InstructionCount] = templateInstruction;
+
+            // Encode an additional instruction to add/sub from the destination
+            // register by a further amount.
+            params.encodeCoreRegister(info.Rd, 16);
+            params.Instructions[params.InstructionCount] |= bitFields[i];
+            params.completeInstruction();
+        }
+
+        uint8_t padding = maxInstructions - count;
+
+        // Encode non-ops to pad the sequence to the correct size.
+        for (uint8_t i = 0; i < padding; ++i)
+        {
+            // Hard code MOV R0,R0.
+            params.Instructions[params.InstructionCount++] = 0xE1A00000;
+        }
     }
     else
     {
@@ -550,8 +624,9 @@ void encodeCoreAddress(AssemblyParams &params)
 
         params.ErrorMessage =
             String::format(formatInfo,
-                           "Cannot encode the offset to address &{0:X} as an "
-                           "immediate constant.", { info.Address });
+                           "Cannot encode the offset to address &{0:X} as "
+                           "a sequence of {1} immediate constant.",
+                           { info.Address, maxInstructions });
     }
 }
 

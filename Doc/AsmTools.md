@@ -109,15 +109,29 @@ character. Subsequent characters, if there are any can be a letter, underscore
 or decimal digit. There is no maximum size for a symbol.
 
 A label identifier can be referenced in expressions anywhere else in the
-translation unit in which it is defined. The symbol evaluates to the object
-code address at which it was defined. That address is the base address of the
-target binary, if one was defined, plus the offset of the label within the
-object code.
+translation unit in which it is defined. If no explicit value is specified, the
+symbol evaluates to the object code address at which it was defined. That
+is, the base address of the target binary (if one was defined) plus the
+offset of the label within the object code.
 
-Labels are primarily used in branch instructions, PC-relative addressing modes
-and the ADR pseudo-instruction. In such cases the offset between the label and
-the instruction using it will be taken into account when calculating the
-resultant offset.
+If the label symbol is followed by an expression, the value it evaluates to
+will be associate with the symbol and can be re-used wherever the symbol appears.
+
+```
+.myLabel        ; The equivalent of .myLabel $
+.myValue "Hello World!\0"
+.SYS_EnterOS &16
+
+EQUS myValue    ; Will evaluate to 'Hello World!' followed by a null byte.
+EQUD myLabel    ; Will evaluate to the object code address at which myLabel
+                ; was defined.
+SWI SYS_EnterOS ; Calls the RISC OS EnterOS entry point (0x16).
+```
+
+Address labels are primarily used in branch instructions, PC-relative
+addressing modes and the ADR pseudo-instruction. In such cases the offset
+between the label and the instruction using it will be taken into account when
+calculating the resultant offset.
 
 ### Directives
 
@@ -207,6 +221,21 @@ or SUB instruction which helps facilitate PC-relative addressing:
     LDR R1,[R0,R1]  ; Load a word from the myData array.
 ```
 
+An extension to that which was provided by the BASIC assembler is the ability
+to encode a PC-relative offset using a sequence of multiple instructions:
+
+```
+    ADR R10,SomethingNear   ; Uses a single instruction to encode the offset
+    ADRL R9,FurtherAway     ; Uses 2 instructions to encode the offset
+    ADRE R3,VeryFarAway     ; Uses 3 instructions to encode the offset
+```
+
+As the length of each instruction or directive must be predictable on the first
+pass, the 'L' (long) and 'E' (extended) suffixes explicitly encode the length
+of the sequence used to define the pseudo-instruction. If the offset cannot be
+encoded, an error is raised. If the sequence is longer than it needs to be, the
+instruction stream is padded with non-ops (MOV R0,R0).
+
 ### Expressions
 
 A number of unary and binary operators can appear in expressions used to
@@ -259,6 +288,10 @@ Supports the basic ALU instructions: ADD, ADC, SUB, RSB, SBS, RSC, AND,
 EOR/XOR, ORR, BIC, MOV, MVN, CMP, CMN, TST, TEQ. The comparison instructions
 will support the 'P' suffix when in 26-bit mode. The standard MUL and MLA
 instructions are also supported.
+
+In terms of shift modes, the assembler supports LSL, LSR, ASR, ROR and RRX.
+Also, for compatibility with the BASIC assembler ASL is supported which is
+a synonym of LSL.
 
 For data transfer, LDR, STR, LDM and STM instructions are supported. The LDR
 and STR instructions support PC-relative addressing much like that which is

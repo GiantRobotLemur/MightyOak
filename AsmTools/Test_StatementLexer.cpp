@@ -13,18 +13,13 @@
 #include <gtest/gtest.h>
 
 #include "Ag/GTest_Core.hpp"
+#include "AsmTools/InstructionInfo.hpp"
+#include "AsmTools/Options.hpp"
 
 #include "AsmEnums.hpp"
 #include "InputContext.hpp"
 #include "LexicalAnalysers.hpp"
 #include "LexicalContext.hpp"
-
-#include "AsmTools/InstructionInfo.hpp"
-#include "AsmTools/Options.hpp"
-
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
 
 namespace Ag {
 namespace Asm {
@@ -41,10 +36,6 @@ InputContext createInput(const char *sourceCode)
 
     return InputContext(source, position, sourceId, 2);
 }
-
-////////////////////////////////////////////////////////////////////////////////
-// Local Data
-////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////
 // Unit Tests
@@ -740,7 +731,49 @@ GTEST_TEST(StatementLexer, RecogniseAluInstructionSuffixes)
     EXPECT_EQ(getTokenFlag(next, TokenProperty::OverwritePsr, false), true);
 }
 
-} // TED
+GTEST_TEST(StatementLexer, RecogniseAdrDirective)
+{
+    ILexicalContext *specimen = getStatementLexer();
+    InputContext input = createInput(
+        "adrvs ADRpll ADReqe"
+    );
+
+    Token next;
+
+    // Recognise ADR.
+    ASSERT_TRUE(specimen->tryGetNextToken(input, next));
+    EXPECT_EQ(next.getClass(), TokenClass::MnemonicAdr);
+    EXPECT_EQ(getTokenEnum(next, TokenProperty::Mnemonic, InstructionMnemonic::MaxMnemonic),
+              InstructionMnemonic::Adr);
+    EXPECT_EQ(getTokenEnum(next, TokenProperty::ConditionCode, ConditionCode::Al),
+              ConditionCode::Vs);
+    EXPECT_EQ(getTokenEnum(next, TokenProperty::SequenceEncoding,
+                           MultiWordEncoding::Single), MultiWordEncoding::Single);
+
+    // Recognise ADRL.
+    ASSERT_TRUE(specimen->tryGetNextToken(input, next));
+    EXPECT_EQ(next.getClass(), TokenClass::MnemonicAdr);
+    EXPECT_EQ(getTokenEnum(next, TokenProperty::Mnemonic, InstructionMnemonic::MaxMnemonic),
+              InstructionMnemonic::Adr);
+    EXPECT_EQ(getTokenEnum(next, TokenProperty::ConditionCode, ConditionCode::Al),
+              ConditionCode::Pl);
+    EXPECT_EQ(getTokenEnum(next, TokenProperty::SequenceEncoding,
+                           MultiWordEncoding::Extended), MultiWordEncoding::Long);
+
+    // Recognise ADRE.
+    ASSERT_TRUE(specimen->tryGetNextToken(input, next));
+    EXPECT_EQ(next.getClass(), TokenClass::MnemonicAdr);
+    EXPECT_EQ(getTokenEnum(next, TokenProperty::Mnemonic, InstructionMnemonic::MaxMnemonic),
+              InstructionMnemonic::Adr);
+    EXPECT_EQ(getTokenEnum(next, TokenProperty::ConditionCode, ConditionCode::Al),
+              ConditionCode::Eq);
+    EXPECT_EQ(getTokenEnum(next, TokenProperty::SequenceEncoding,
+                           MultiWordEncoding::Single), MultiWordEncoding::Extended);
+
+    ASSERT_FALSE(specimen->tryGetNextToken(input, next));
+}
+
+} // Anonymous namespace
 
 }} // namespace Ag::Asm
 ////////////////////////////////////////////////////////////////////////////////

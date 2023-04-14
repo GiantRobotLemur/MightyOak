@@ -17,16 +17,8 @@
 #include "Expr.hpp"
 #include "SymbolTable.hpp"
 
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
-
 namespace Ag {
 namespace Asm {
-
-////////////////////////////////////////////////////////////////////////////////
-// Data Type Declarations
-////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////
 // Class Declarations
@@ -70,8 +62,10 @@ public:
     //! @param[in] id The identifier to define.
     //! @param[in] source The location in source code of the definition.
     //! @param[in] value The value to associate with the symbol.
+    //! @param[in] isAddress True if the symbol value represents a position
+    //! in code, false if it represent an arbitrary value.
     virtual void defineSymbol(string_cref_t id, const Location &source,
-                              const Value &value) = 0;
+                              const Value &value, bool isAddress) = 0;
 };
 
 //! @brief An alias for a shared pointer to a scoped expression evaluation context.
@@ -86,6 +80,7 @@ public:
     virtual ~RootEvalContext() = default;
 
     // Accessors
+    const SymbolTable &getSymbols() const;
 
     // Overrides
     virtual bool tryLookupSymbol(string_cref_t &id, Value &value) const override;
@@ -98,7 +93,7 @@ public:
                                  Location &source) const override;
     virtual void setAssemblyOffset(uint32_t offset) override;
     virtual void defineSymbol(string_cref_t id, const Location &source,
-                              const Value &value) override;
+                              const Value &value, bool isAddress) override;
 private:
     // Internal Fields
     SymbolTable _globalSymbols;
@@ -128,7 +123,7 @@ public:
                                  Location &source) const override;
     virtual void setAssemblyOffset(uint32_t offset) override;
     virtual void defineSymbol(string_cref_t id, const Location &source,
-                              const Value &value) override;
+                              const Value &value, bool isAddress) override;
 private:
     // Internal Fields
     IScopedContext *_parentContext;
@@ -155,14 +150,6 @@ private:
     IEvalContext *_innerContext;
     const ConstantSet &_constants;
 };
-
-////////////////////////////////////////////////////////////////////////////////
-// Function Declarations
-////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////
-// Templates
-////////////////////////////////////////////////////////////////////////////////
 
 }} // namespace Ag::Asm
 

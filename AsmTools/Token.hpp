@@ -52,6 +52,7 @@ enum class TokenProperty : uint8_t
     UserPrivilage,
     TransferDataType,
     MultiTransferMode,
+    SequenceEncoding,
     LongMode,
     FpaPrecision,
     FpaRoundMode,

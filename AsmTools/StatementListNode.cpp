@@ -20,10 +20,6 @@
 #include "SimpleInstructionStatements.hpp"
 #include "StatementListNode.hpp"
 
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
-
 namespace Ag {
 namespace Asm {
 
@@ -180,7 +176,7 @@ public:
         // Process the deferred statements to produce object code.
         IScopedContext *context = _scope.get();
         AssemblyState *state = _state.get();
-        bool needsStuffing = false;
+        bool allowStuffing = false;
 
         for (const auto &statementPtr : _statements)
         {
@@ -191,33 +187,30 @@ public:
             {
                 // Assume the statement issued a message due to being unable
                 // to produce object code on the final pass.
-                needsStuffing = true;
+                allowStuffing = true;
             }
         }
 
         // Ensure the object code is stuffed to compensate for
         // the missing object code.
-        if (needsStuffing && (objectCode.getCurrentOffset() < getEndOffset()))
+        if (objectCode.getCurrentOffset() < getEndOffset())
         {
-            uint32_t padding = getEndOffset() - objectCode.getCurrentOffset();
-            objectCode.writeZeros(padding);
+            if (allowStuffing)
+            {
+                uint32_t padding = getEndOffset() - objectCode.getCurrentOffset();
+                objectCode.writeZeros(padding);
+            }
+            else
+            {
+                throw OperationException("One or more deferred assembly "
+                                         "statements did not produce the amount "
+                                         "of object code expected.");
+            }
         }
     }
 };
 
 using DeferredBlockUPtr = std::unique_ptr<DeferredBlock>;
-
-namespace {
-
-////////////////////////////////////////////////////////////////////////////////
-// Local Data
-////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////
-// Local Functions
-////////////////////////////////////////////////////////////////////////////////
-
-} // TED
 
 ////////////////////////////////////////////////////////////////////////////////
 // EmptyStatement Member Function Definitions
@@ -352,11 +345,26 @@ ObjectCode StatementListNode::assemble(Messages &messages) const
     builder.reserve(predictedSize);
     builder.beginFinalPass();
 
-    // Append the context of each block to the builder, merely copying some
+    // Append the contents of each block to the builder, merely copying some
     // and actually assembling others.
     for (const auto &block : _blocks)
     {
         block->appendObjectCode(builder);
+    }
+
+    // Now that all messages have been logged, sort them.
+    messages.sort();
+
+    if (_scopeStack.empty() == false)
+    {
+        const RootEvalContext *rootContext =
+            dynamic_cast<const RootEvalContext *>(_scopeStack.front().get());
+
+        if (rootContext != nullptr)
+        {
+            // Annotate the object code with symbols, if we can.
+            return builder.createObjectCode(rootContext->getSymbols());
+        }
     }
 
     return builder.createObjectCode();
@@ -436,7 +444,6 @@ uint32_t StatementListNode::getAssemblyAddress() const
 
     return offset + _baseAddress;
 }
-
 
 //! @brief Processes statement syntax node which is complete and valid.
 //! @param[in] context The state of the current parsing process.
@@ -531,10 +538,35 @@ void StatementListNode::processStatementNode(ParseContext &context,
             }
             else
             {
-                // Tag the current assembly position with the label.
-                currentContext->defineSymbol(label->getID(),
-                                             label->getSourcePosition(),
-                                             Value(getAssemblyAddress()));
+                if (label->getValueExpr() == nullptr)
+                {
+                    // Tag the current assembly position with the label.
+                    currentContext->defineSymbol(label->getID(),
+                                                 label->getSourcePosition(),
+                                                 Value(getAssemblyAddress()),
+                                                 true);
+                }
+                else
+                {
+                    String error;
+                    Value result;
+
+                    if (label->getValueExpr()->tryEvaluate(currentContext,
+                                                           result,
+                                                           error))
+                    {
+                        // Define the symbol with an explicit value.
+                        currentContext->defineSymbol(label->getID(),
+                                                     label->getSourcePosition(),
+                                                     result, false);
+                    }
+                    else
+                    {
+                        // Perhaps we could evaluate the expression on the
+                        // final pass.
+                        deferAssembly(std::move(statement), 0);
+                    }
+                }
             }
         } break;
 

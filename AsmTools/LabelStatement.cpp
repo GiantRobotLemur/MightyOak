@@ -11,7 +11,9 @@
 ////////////////////////////////////////////////////////////////////////////////
 // Header File Includes
 ////////////////////////////////////////////////////////////////////////////////
+#include "ConstantSet.hpp"
 #include "LabelStatement.hpp"
+#include "LexicalAnalysers.hpp"
 #include "ParseContext.hpp"
 
 namespace Ag {
@@ -27,14 +29,16 @@ namespace Asm {
 LabelNode::LabelNode(ParseContext &context, const Token &labelToken) :
     StatementNode(context, labelToken),
     _id(labelToken.getValue()),
-    _currentState(State::AfterSymbol)
+    _state(State::AfterSymbol)
 {
+    // Attempt to parse an optional value expression.
+    context.pushLexicalContext(getExpressionLexer());
 }
 
 // Inherited from ISyntaxNode.
 bool LabelNode::isComplete() const
 {
-    return _currentState == State::Complete;
+    return _state == State::Complete;
 }
 
 // Inherited from ISyntaxNode.
@@ -44,39 +48,84 @@ bool LabelNode::isValid() const
 }
 
 // Inherited from ISyntaxNode.
-ISyntaxNode *LabelNode::applyToken(ParseContext &/*context*/, const Token &token)
+ISyntaxNode *LabelNode::applyToken(ParseContext &context, const Token &token)
 {
-    ISyntaxNode *resultNode = nullptr;
+    ISyntaxNode *result = nullptr;
 
-    if (token.getClass() == TokenClass::StatementTerminator)
+    switch (_state)
     {
-        _currentState = State::Complete;
-        resultNode = this;
+    case State::AfterSymbol:
+        if (token.getClass() == TokenClass::StatementTerminator)
+        {
+            // There is no value, so the label represents the current
+            // assembly address.
+            restoreLexicalState(context);
+            _state = State::Complete;
+            result = this;
+        }
+        break;
+
+    case State::Complete:
+    default:
+        break;
     }
 
-    return resultNode;
+    return result;
 }
 
 // Inherited from ISyntaxNode.
-ISyntaxNode *LabelNode::applyNode(ParseContext & /* context */,
-                                  ISyntaxNode */* childNode */)
+ISyntaxNode *LabelNode::applyNode(ParseContext &context, ISyntaxNode *childNode)
 {
-    // This is a leaf node.
-    return nullptr;
+    ISyntaxNode *result = nullptr;
+    ExpressionNodePtr expr;
+
+    switch (_state)
+    {
+    case State::AfterSymbol:
+        if (tryCast(childNode, expr))
+        {
+            // The label was associated with a value.
+            _valueExpr.reset(expr);
+            restoreLexicalState(context);
+            result = this;
+        }
+        break;
+
+    case State::Complete:
+    default:
+        break;
+    }
+
+    return result;
 }
 
 // Inherited from ISyntaxNode.
 void LabelNode::recover(ParseContext &context, ISyntaxNode *node)
 {
+    restoreLexicalState(context);
     safeDelete(node);
 
     context.recover(TokenClass::StatementTerminator);
 }
 
 // Inherited from StatementNode.
-Statement *LabelNode::compile(Messages &/*output*/) const
+Statement *LabelNode::compile(Messages &output) const
 {
-    return new LabelStatement(_id, getStart());
+    IExprUPtr expr;
+
+    if (_valueExpr)
+    {
+        expr.reset(_valueExpr->compile(ConstantSet::Empty));
+
+        if (!expr)
+        {
+            output.appendError(_valueExpr->getPosition(),
+                               "Failed to compile labelled value expression.");
+            return nullptr;
+        }
+    }
+
+    return new LabelStatement(_id, getStart(), std::move(expr));
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -84,10 +133,16 @@ Statement *LabelNode::compile(Messages &/*output*/) const
 ////////////////////////////////////////////////////////////////////////////////
 //! @brief Constructs a new Statement-derived object which represents the
 //! definition of an assembly language label.
-LabelStatement::LabelStatement(string_cref_t id, const Location &at) :
+//! @param[in] id The label identifier being defined.
+//! @param[in] at The location at which the label was defined.
+//! @param[in] value The optional expression evaluating to a value to associate
+//! with the label.
+LabelStatement::LabelStatement(string_cref_t id, const Location &at,
+                               IExprUPtr &&value) :
     Statement(StatementType::Label),
     _at(at),
-    _id(id)
+    _id(id),
+    _valueExpr(std::move(value))
 {
 }
 
@@ -96,6 +151,15 @@ string_cref_t LabelStatement::getID() const { return _id; }
 
 //! @brief Gets the location in source code at which the label was defined.
 const Location &LabelStatement::getSourcePosition() const { return _at; }
+
+//! @brief Gets the optional expression giving the value to associate with the
+//! label.
+//! @return Either a pointer to an expression tree or nullptr if the label
+//! represents the current object code address.
+IExprCPtr LabelStatement::getValueExpr() const
+{
+    return _valueExpr.get();
+}
 
 }} // namespace Ag::Asm
 ////////////////////////////////////////////////////////////////////////////////

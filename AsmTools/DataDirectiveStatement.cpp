@@ -17,10 +17,6 @@
 #include "LexicalAnalysers.hpp"
 #include "SymbolTable.hpp"
 
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
-
 namespace Ag {
 namespace Asm {
 
@@ -981,7 +977,10 @@ bool DataDirectiveStatement::assemble(const AssemblyState &/*state*/,
         else if (output.isFinalPass())
         {
             output.getOutput().appendError(_at,
-                                           String("Error in data value expression: ") + error);
+                                           "Error in data value expression: {0}",
+                                           { error });
+            allValuesAdded = false;
+            break;
         }
         else
         {
@@ -1007,14 +1006,6 @@ const IExprUPtrCollection &DataDirectiveStatement::getValueExpressions() const
 {
     return _values;
 }
-
-////////////////////////////////////////////////////////////////////////////////
-// Class Method Definitions
-////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////
-// Global Function Definitions
-////////////////////////////////////////////////////////////////////////////////
 
 }} // namespace Ag::Asm
 ////////////////////////////////////////////////////////////////////////////////

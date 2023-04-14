@@ -736,6 +736,23 @@ Token parseConditionalBranch(MnemonicContext &context)
     return instruction;
 }
 
+//! @brief Creates a token from a recognised branch with link instruction
+//! mnemonic with a condition code.
+//! @param[in] context The context to interpret to create the token.
+//! @returns A token object representing an instruction mnemonic or an error.
+Token parseConditionalBranchLink(MnemonicContext &context)
+{
+    // We can assume the first character is 'BL'.
+    context.Index = 2;
+
+    Token instruction(context.Position, context.Class);
+    addTokenEnum(instruction, TokenProperty::Mnemonic, InstructionMnemonic::Bl);
+
+    context.parseConditionCode(instruction);
+
+    return instruction;
+}
+
 //! @brief Creates a token from a recognised BL instruction mnemonic but
 //! it could be a B mnemonic with a condition code of a BL mnemonic with
 //! a condition code.
@@ -957,6 +974,44 @@ Token parseSwapInstruction(MnemonicContext &context)
     {
         addTokenEnum(instruction, TokenProperty::TransferDataType, TransferDataType::UnsignedByte);
         ++context.Index;
+    }
+
+    return instruction;
+}
+
+//! @brief Parses an pseudo-instruction with a suffix defining the number of
+//! instruction words used to encode it.
+//! @param[in] context The context to interpret to create the token.
+//! @returns A token object representing an instruction mnemonic.
+Token parseSequencedEncoding(MnemonicContext &context)
+{
+    Token instruction(context.Position, context.Class);
+    addTokenEnum(instruction, TokenProperty::Mnemonic, context.Mnemonic);
+
+    context.parseConditionCode(instruction);
+
+    // Check for an operand size suffix.
+    char32_t suffix;
+
+    if (context.tryGetChar(0, suffix))
+    {
+        switch (CodePoint::toUpper(suffix))
+        {
+        case U'L':
+            addTokenEnum(instruction, TokenProperty::SequenceEncoding,
+                         MultiWordEncoding::Long);
+            ++context.Index;
+            break;
+
+        case U'E':
+            addTokenEnum(instruction, TokenProperty::SequenceEncoding,
+                         MultiWordEncoding::Extended);
+            ++context.Index;
+            break;
+
+        default:
+            break;
+        }
     }
 
     return instruction;
@@ -1475,7 +1530,16 @@ Token interpretMnemonic(const Location &position, std::u32string &buffer)
             mnemonicParsersById["BLE"] = MnemonicMapping(parseAmbiguousBranch, TokenClass::MnemonicBranch, InstructionMnemonic::B);
             mnemonicParsersById["BAL"] = MnemonicMapping(parseConditionalBranch, TokenClass::MnemonicBranch, InstructionMnemonic::B);
             mnemonicParsersById["BNV"] = MnemonicMapping(parseConditionalBranch, TokenClass::MnemonicBranch, InstructionMnemonic::B);
-            mnemonicParsersById["BLL"] = MnemonicMapping(parseAmbiguousBranch, TokenClass::MnemonicBranch, InstructionMnemonic::B);
+            mnemonicParsersById["BLL"] = MnemonicMapping(parseConditionalBranchLink, TokenClass::MnemonicBranch, InstructionMnemonic::Bl);
+
+            mnemonicParsersById["BLA"] = MnemonicMapping(parseConditionalBranchLink, TokenClass::MnemonicBranch, InstructionMnemonic::Bl);
+            mnemonicParsersById["BLC"] = MnemonicMapping(parseConditionalBranchLink, TokenClass::MnemonicBranch, InstructionMnemonic::Bl);
+            mnemonicParsersById["BLG"] = MnemonicMapping(parseConditionalBranchLink, TokenClass::MnemonicBranch, InstructionMnemonic::Bl);
+            mnemonicParsersById["BLH"] = MnemonicMapping(parseConditionalBranchLink, TokenClass::MnemonicBranch, InstructionMnemonic::Bl);
+            mnemonicParsersById["BLM"] = MnemonicMapping(parseConditionalBranchLink, TokenClass::MnemonicBranch, InstructionMnemonic::Bl);
+            mnemonicParsersById["BLN"] = MnemonicMapping(parseConditionalBranchLink, TokenClass::MnemonicBranch, InstructionMnemonic::Bl);
+            mnemonicParsersById["BLP"] = MnemonicMapping(parseConditionalBranchLink, TokenClass::MnemonicBranch, InstructionMnemonic::Bl);
+            mnemonicParsersById["BLV"] = MnemonicMapping(parseConditionalBranchLink, TokenClass::MnemonicBranch, InstructionMnemonic::Bl);
 
             mnemonicParsersById["SWI"] = MnemonicMapping(parseGenericInstruction, TokenClass::MnemonicSwi, InstructionMnemonic::Swi);
             mnemonicParsersById["SWP"] = MnemonicMapping(parseSwapInstruction, TokenClass::MnemonicSwap, InstructionMnemonic::Swp);
@@ -1534,7 +1598,7 @@ Token interpretMnemonic(const Location &position, std::u32string &buffer)
             mnemonicParsersById["LFM"] = MnemonicMapping(parseFpaMultiTransfer, TokenClass::MnemonicFpaMultiTransfer, InstructionMnemonic::Lfm);
             mnemonicParsersById["SFM"] = MnemonicMapping(parseFpaMultiTransfer, TokenClass::MnemonicFpaMultiTransfer, InstructionMnemonic::Sfm);
 
-            mnemonicParsersById["ADR"] = MnemonicMapping(parseGenericWithLongSuffix, TokenClass::MnemonicAdr, InstructionMnemonic::Adr);
+            mnemonicParsersById["ADR"] = MnemonicMapping(parseSequencedEncoding, TokenClass::MnemonicAdr, InstructionMnemonic::Adr);
 
             mnemonicParsersById["EQU"] = MnemonicMapping(parseEquDataDirective, TokenClass::DataDirective);
             mnemonicParsersById["DCB"] = MnemonicMapping(parseDataDirective, DirectiveDataType::Byte);
@@ -1547,6 +1611,7 @@ Token interpretMnemonic(const Location &position, std::u32string &buffer)
 
             // Shifts
             mnemonicParsersById["LSL"] = MnemonicMapping(TokenClass::LogicShiftLeft);
+            mnemonicParsersById["ASL"] = MnemonicMapping(TokenClass::LogicShiftLeft); // A synonym supported by the BASIC assembler
             mnemonicParsersById["LSR"] = MnemonicMapping(TokenClass::LogicShiftRight);
             mnemonicParsersById["ASR"] = MnemonicMapping(TokenClass::ArithmeticShiftRight);
             mnemonicParsersById["ROR"] = MnemonicMapping(TokenClass::RotateRightShift);
@@ -3080,11 +3145,7 @@ public:
     }
 };
 
-} // TED
-
-////////////////////////////////////////////////////////////////////////////////
-// Class Method Definitions
-////////////////////////////////////////////////////////////////////////////////
+} // Anonymous namespace
 
 ////////////////////////////////////////////////////////////////////////////////
 // Global Function Definitions
@@ -3115,7 +3176,6 @@ ILexicalContext *getPsrComponentLexer()
 
     return &instance;
 }
-
 
 }} // namespace Ag::Asm
 ////////////////////////////////////////////////////////////////////////////////

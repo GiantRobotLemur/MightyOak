@@ -1,0 +1,1269 @@
+;/***** hpda:net.sources / homxb!gemini /  1:58 am  Apr  1, 1986*/
+;/*	EVERBODY:	Please read "APOLOGY" below. -rick 01/06/85
+; *			See introduction in net.arch, or net.micro
+; *
+; *	"DHRYSTONE" Benchmark Program
+; *
+; *	Version:	C/1.1, 12/01/84
+; *
+; *	Date:		PROGRAM updated 01/06/86, RESULTS updated 03/31/86
+; *
+; *	Author:		Reinhold P. Weicker,  CACM Vol 27, No 10, 10/84 pg. 1013
+; *			Translated from ADA by Rick Richardson
+; *			Every method to preserve ADA-likeness has been used,
+; *			at the expense of C-ness.
+; *
+; *	Compile:	cc -O dry.c -o drynr			: No registers
+; *                      cc -O -DREG=register dry.c -o dryr      : Registers
+; *
+; *	Defines:	Defines are provided for old C compiler's
+; *			which don't have enums, and can't assign structures.
+; *			The time(2) function is library dependant; Most
+; *			return the time in seconds, but beware of some, like
+; *			Aztec C, which return other units.
+; *			The LOOPS define is initially set for 50000 loops.
+; *			If you have a machine with large integers and is
+; *			very fast, please change this number to 500000 to
+; *			get better accuracy.  Please select the way to
+; *			measure the execution time using the TIME define.
+; *			For single user machines, time(2) is adequate. For
+; *			multi-user machines where you cannot get single-user
+; *			access, use the times(2) function.  If you have
+; *			neither, use a stopwatch in the dead of night.
+; *			Use a "printf" at the point marked "start timer"
+; *			to begin your timings. DO NOT use the UNIX "time(1)"
+; *			command, as this will measure the total time to
+; *			run this program, which will (erroneously) include
+; *			the time to malloc(3) storage and to compute the
+; *			time it takes to do nothing.
+; *
+; *	Run:		drynr; dryr
+; *
+; *	Results:	If you get any new machine/OS results, please send to:
+; *
+; *				ihnp4!castor!pcrat!rick
+; *
+; *			and thanks to all that do.  Space prevents listing
+; *			the names of those who have provided some of these
+; *			results.  I'll be forwarding these results to
+; *			Rheinhold Weicker.
+; *
+; *	Note:		I order the list in increasing performance of the
+; *			"with registers" benchmark.  If the compiler doesn't
+; *			provide register variables, then the benchmark
+; *			is the same for both REG and NOREG.
+; *
+; *	PLEASE:		Send complete information about the machine type,
+; *			clock speed, OS and C manufacturer/version.  If
+; *			the machine is modified, tell me what was done.
+; *			On UNIX, execute uname -a and cc -V to get this info.
+; *
+; *	80x8x NOTE:	80x8x benchers: please try to do all memory models
+; *			for a particular compiler.
+; *
+; *	APOLOGY (1/30/86):
+; *		Well, I goofed things up!  As pointed out by Haakon Bugge,
+; *		the line of code marked "GOOF" below was missing from the
+; *		Dhrystone distribution for the last several months.  It
+; *		*WAS* in a backup copy I made last winter, so no doubt it
+; *		was victimized by sleepy fingers operating vi!
+; *
+; *		The effect of the line missing is that the reported benchmarks
+; *		are 15% too fast (at least on a 80286).  Now, this creates
+; *		a dilema - do I throw out ALL the data so far collected
+; *		and use only results from this (corrected) version, or
+; *		do I just keep collecting data for the old version?
+; *
+; *		Since the data collected so far *is* valid as long as it
+; *		is compared with like data, I have decided to keep
+; *		TWO lists- one for the old benchmark, and one for the
+; *		new.  This also gives me an opportunity to correct one
+; *		other error I made in the instructions for this benchmark.
+; *		My experience with C compilers has been mostly with
+; *		UNIX 'pcc' derived compilers, where the 'optimizer' simply
+; *		fixes sloppy code generation (peephole optimization).
+; *		But today, there exist C compiler optimizers that will actually
+; *		perform optimization in the Computer Science sense of the word,
+; *		by removing, for example, assignments to a variable whose
+; *		value is never used.  Dhrystone, unfortunately, provides
+; *		lots of opportunities for this sort of optimization.
+; *
+; *		I request that benchmarkers re-run this new, corrected
+; *		version of Dhrystone, turning off or bypassing optimizers
+; *		which perform more than peephole optimization.  Please
+; *		indicate the version of Dhrystone used when reporting the
+; *		results to me.
+; *		
+; * RESULTS BEGIN HERE
+; *
+; *----------------DHRYSTONE VERSION 1.1 RESULTS BEGIN--------------------------
+; *
+; * MACHINE	MICROPROCESSOR	OPERATING	COMPILER	DHRYSTONES/SEC.
+; * TYPE				SYSTEM				NO REG	REGS
+; * --------------------------	------------	-----------	---------------
+; * Apple IIe	65C02-1.02Mhz	DOS 3.3		Aztec CII v1.05i  37	  37
+; * -		Z80-2.5Mhz	CPM-80 v2.2	Aztec CII v1.05g  91	  91
+; * -		8086-8Mhz	RMX86 V6	Intel C-86 V2.0	 197	 203LM??
+; * IBM PC/XT	8088-4.77Mhz	COHERENT 2.3.43	Mark Wiiliams	 259	 275
+; * -		8086-8Mhz	RMX86 V6	Intel C-86 V2.0	 287	 304 ??
+; * Fortune 32:16 68000-6Mhz	V7+sys3+4.1BSD  cc		 360	 346
+; * PDP-11/34A	w/FP-11C	UNIX V7m	cc		 406	 449
+; * Macintosh512	68000-7.7Mhz	Mac ROM O/S	DeSmet(C ware)	 625	 625
+; * VAX-11/750	w/FPA		UNIX 4.2BSD	cc		 831	 852
+; * DataMedia 932 68000-10Mhz	UNIX sysV	cc		 837	 888
+; * Plexus P35	68000-12.5Mhz	UNIX sysIII	cc		 835	 894
+; * ATT PC7300	68010-10Mhz	UNIX 5.0.3	cc		 973	1034
+; * Compaq II	80286-8Mhz	MSDOS 3.1	MS C 3.0 	1086	1140 LM
+; * IBM PC/AT    80286-7.5Mhz    Venix/286 SVR2  cc              1159    1254 *15
+; * Compaq II	80286-8Mhz	MSDOS 3.1	MS C 3.0 	1190	1282 MM
+; * MicroVAX II	-		Mach/4.3	cc		1361	1385
+; * DEC uVAX II	-		Ultrix-32m v1.1	cc		1385	1399
+; * Compaq II	80286-8Mhz	MSDOS 3.1	MS C 3.0 	1351	1428
+; * VAX 11/780	-		UNIX 4.2BSD	cc		1417	1441
+; * VAX-780/MA780		Mach/4.3	cc		1428	1470
+; * VAX 11/780	-		UNIX 5.0.1	cc 4.1.1.31	1650	1640
+; * Ridge 32C V1	-		ROS 3.3		Ridge C (older)	1628	1695
+; * Gould PN6005	-		UTX 1.1c+ (4.2)	cc		1732	1884
+; * Gould PN9080	custom ECL	UTX-32 1.1C	cc		4745	4992
+; * VAX-784	-		Mach/4.3	cc		5263	5555 &4
+; * VAX 8600	-		4.3 BSD		cc		6329	6423
+; * Amdahl 5860	-		UTS sysV	cc 1.22	       28735   28846
+; * IBM3090/200	-		?		?	       31250   31250
+; *
+; *
+; *----------------DHRYSTONE VERSION 1.0 RESULTS BEGIN--------------------------
+; *
+; * MACHINE	MICROPROCESSOR	OPERATING	COMPILER	DHRYSTONES/SEC.
+; * TYPE				SYSTEM				NO REG	REGS
+; * --------------------------	------------	-----------	---------------
+; * Commodore 64	6510-1MHz	C64 ROM		C Power 2.8	  36	  36
+; * HP-110	8086-5.33Mhz	MSDOS 2.11	Lattice 2.14	 284	 284
+; * IBM PC/XT	8088-4.77Mhz	PC/IX		cc		 271	 294
+; * CCC 3205	-		Xelos(SVR2) 	cc		 558	 592
+; * Perq-II	2901 bitslice	Accent S5c 	cc (CMU)	 301	 301
+; * IBM PC/XT	8088-4.77Mhz	COHERENT 2.3.43	MarkWilliams cc  296	 317
+; * Cosmos	68000-8Mhz	UniSoft		cc		 305	 322
+; * IBM PC/XT	8088-4.77Mhz	Venix/86 2.0	cc		 297	 324
+; * DEC PRO 350  11/23           Venix/PRO SVR2  cc               299     325
+; * IBM PC	8088-4.77Mhz	MSDOS 2.0	b16cc 2.0	 310	 340
+; * PDP11/23	11/23           Venix (V7)      cc               320     358
+; * Commodore Amiga		?		Lattice 3.02	 368	 371
+; * PC/XT        8088-4.77Mhz    Venix/86 SYS V  cc               339     377
+; * IBM PC	8088-4.77Mhz	MSDOS 2.0	CI-C86 2.20M	 390	 390
+; * IBM PC/XT	8088-4.77Mhz	PCDOS 2.1	Wizard 2.1	 367	 403
+; * IBM PC/XT	8088-4.77Mhz	PCDOS 3.1	Lattice 2.15	 403	 403 @
+; * Colex DM-6	68010-8Mhz	Unisoft SYSV	cc		 378	 410
+; * IBM PC	8088-4.77Mhz	PCDOS 3.1	Datalight 1.10	 416	 416
+; * IBM PC	NEC V20-4.77Mhz	MSDOS 3.1	MS 3.1 		 387	 420
+; * IBM PC/XT	8088-4.77Mhz	PCDOS 2.1	Microsoft 3.0	 390	 427
+; * IBM PC	NEC V20-4.77Mhz	MSDOS 3.1	MS 3.1 (186) 	 393	 427
+; * PDP-11/34	-		UNIX V7M	cc		 387	 438
+; * IBM PC	8088, 4.77mhz	PC-DOS 2.1	Aztec C v3.2d	 423	 454
+; * Tandy 1000	V20, 4.77mhz	MS-DOS 2.11	Aztec C v3.2d	 423	 458
+; * Tandy TRS-16B 68000-6Mhz	Xenix 1.3.5	cc		 438	 458
+; * PDP-11/34	-		RSTS/E		decus c		 438	 495
+; * Onyx C8002	Z8000-4Mhz	IS/1 1.1 (V7)	cc		 476	 511
+; * Tandy TRS-16B 68000-6Mhz	Xenix 1.3.5	Green Hills	 609	 617
+; * DEC PRO 380  11/73           Venix/PRO SVR2  cc               577     628
+; * FHL QT+	68000-10Mhz	Os9/68000	version 1.3	 603	 649 FH
+; * Apollo DN550	68010-?Mhz	AegisSR9/IX	cc 3.12		 666	 666
+; * HP-110	8086-5.33Mhz	MSDOS 2.11	Aztec-C		 641	 676 
+; * ATT PC6300	8086-8Mhz	MSDOS 2.11	b16cc 2.0	 632	 684
+; * IBM PC/AT	80286-6Mhz	PCDOS 3.0	CI-C86 2.1	 666	 684
+; * Tandy 6000	68000-8Mhz	Xenix 3.0	cc		 694	 694
+; * IBM PC/AT	80286-6Mhz	Xenix 3.0	cc		 684	 704 MM
+; * Macintosh	68000-7.8Mhz 2M	Mac Rom		Mac C 32 bit int 694	 704
+; * Macintosh	68000-7.7Mhz	-		MegaMax C 2.0	 661	 709
+; * Macintosh512	68000-7.7Mhz	Mac ROM O/S	DeSmet(C ware)	 714	 714
+; * IBM PC/AT	80286-6Mhz	Xenix 3.0	cc		 704	 714 LM
+; * Codata 3300	68000-8Mhz	UniPlus+ (v7)	cc		 678	 725
+; * WICAT MB	68000-8Mhz	System V	WICAT C 4.1	 585	 731 ~
+; * Cadmus 9000	68010-10Mhz	UNIX		cc		 714	 735
+; * AT&T 6300    8086-8Mhz       Venix/86 SVR2   cc               668     743
+; * Cadmus 9790	68010-10Mhz 1MB	SVR0,Cadmus3.7	cc		 720	 747
+; * NEC PC9801F	8086-8Mhz	PCDOS 2.11	Lattice 2.15	 768	  -  @
+; * ATT PC6300	8086-8Mhz	MSDOS 2.11	CI-C86 2.20M	 769	 769
+; * Burroughs XE550 68010-10Mhz	Centix 2.10	cc		 769	 769 CT1
+; * EAGLE/TURBO  8086-8Mhz       Venix/86 SVR2   cc               696     779
+; * ALTOS 586	8086-10Mhz	Xenix 3.0b	cc 		 724	 793
+; * DEC 11/73	J-11 micro	Ultrix-11 V3.0	cc		 735	 793
+; * ATT 3B2/300	WE32000-?Mhz	UNIX 5.0.2	cc		 735	 806
+; * Apollo DN320	68010-?Mhz	AegisSR9/IX	cc 3.12		 806	 806
+; * IRIS-2400	68010-10Mhz	UNIX System V	cc		 772	 829
+; * Atari 520ST  68000-8Mhz      TOS             DigResearch      839     846
+; * IBM PC/AT	80286-6Mhz	PCDOS 3.0	MS 3.0(large)	 833	 847 LM
+; * WICAT MB	68000-8Mhz	System V	WICAT C 4.1	 675	 853 S~
+; * VAX 11/750	-		Ultrix 1.1	4.2BSD cc	 781	 862
+; * CCC  7350A	68000-8MHz	UniSoft V.2	cc		 821	 875
+; * VAX 11/750	-		UNIX 4.2bsd	cc		 862	 877
+; * Fast Mac	68000-7.7Mhz	-		MegaMax C 2.0	 839	 904 +
+; * IBM PC/XT	8086-9.54Mhz	PCDOS 3.1	Microsoft 3.0	 833	 909 C1
+; * DEC 11/44			Ultrix-11 V3.0	cc		 862	 909
+; * Macintosh	68000-7.8Mhz 2M	Mac Rom		Mac C 16 bit int 877	 909 S
+; * CCC 3210	-		Xelos R01(SVR2)	cc		 849	 924
+; * CCC 3220	-               Ed. 7 v2.3      cc		 892	 925
+; * IBM PC/AT	80286-6Mhz	Xenix 3.0	cc -i		 909	 925
+; * AT&T 6300	8086, 8mhz	MS-DOS 2.11	Aztec C v3.2d	 862	 943
+; * IBM PC/AT	80286-6Mhz	Xenix 3.0	cc		 892	 961
+; * VAX 11/750	w/FPA		Eunice 3.2	cc		 914	 976
+; * IBM PC/XT	8086-9.54Mhz	PCDOS 3.1	Wizard 2.1	 892	 980 C1
+; * IBM PC/XT	8086-9.54Mhz	PCDOS 3.1	Lattice 2.15	 980	 980 C1
+; * Plexus P35	68000-10Mhz	UNIX System III cc		 984	 980
+; * PDP-11/73	KDJ11-AA 15Mhz	UNIX V7M 2.1	cc		 862     981
+; * VAX 11/750	w/FPA		UNIX 4.3bsd	cc		 994	 997
+; * IRIS-1400	68010-10Mhz	UNIX System V	cc		 909	1000
+; * IBM PC/AT	80286-6Mhz	Venix/86 2.1	cc		 961	1000
+; * IBM PC/AT	80286-6Mhz	PCDOS 3.0	b16cc 2.0	 943	1063
+; * Zilog S8000/11 Z8001-5.5Mhz	Zeus 3.2	cc		1011	1084
+; * NSC ICM-3216 NSC 32016-10Mhz	UNIX SVR2	cc		1041	1084
+; * IBM PC/AT	80286-6Mhz	PCDOS 3.0	MS 3.0(small)	1063	1086
+; * VAX 11/750	w/FPA		VMS		VAX-11 C 2.0	 958	1091
+; * Stride	68000-10Mhz	System-V/68	cc		1041	1111
+; * Plexus P/60  MC68000-12.5Mhz	UNIX SYSIII	Plexus		1111	1111
+; * ATT PC7300	68010-10Mhz	UNIX 5.0.2	cc		1041	1111
+; * CCC 3230	-		Xelos R01(SVR2)	cc		1040	1126
+; * Stride	68000-12Mhz	System-V/68	cc		1063	1136
+; * IBM PC/AT    80286-6Mhz      Venix/286 SVR2  cc              1056    1149
+; * Plexus P/60  MC68000-12.5Mhz	UNIX SYSIII	Plexus		1111	1163 T
+; * IBM PC/AT	80286-6Mhz	PCDOS 3.0	Datalight 1.10	1190	1190
+; * ATT PC6300+	80286-6Mhz	MSDOS 3.1	b16cc 2.0	1111	1219
+; * IBM PC/AT	80286-6Mhz	PCDOS 3.1	Wizard 2.1	1136	1219
+; * Sun2/120	68010-10Mhz	Sun 4.2BSD	cc		1136	1219
+; * IBM PC/AT	80286-6Mhz	PCDOS 3.0	CI-C86 2.20M	1219	1219
+; * WICAT PB	68000-8Mhz	System V	WICAT C 4.1	 998	1226 ~
+; * MASSCOMP 500	68010-10MHz	RTU V3.0	cc (V3.2)	1156	1238
+; * Alliant FX/8 IP (68012-12Mhz) Concentrix	cc -ip;exec -i 	1170	1243 FX
+; * Cyb DataMate	68010-12.5Mhz	Uniplus 5.0	Unisoft cc	1162	1250
+; * PDP 11/70	-		UNIX 5.2	cc		1162	1250
+; * IBM PC/AT	80286-6Mhz	PCDOS 3.1	Lattice 2.15	1250	1250
+; * IBM PC/AT	80286-7.5Mhz	Venix/86 2.1	cc		1190	1315 *15
+; * Sun2/120	68010-10Mhz	Standalone	cc		1219	1315
+; * Intel 380	80286-8Mhz	Xenix R3.0up1	cc		1250	1315 *16
+; * Sequent Balance 8000	NS32032-10MHz	Dynix 2.0	cc	1250	1315 N12
+; * IBM PC/DSI-32 32032-10Mhz	MSDOS 3.1	GreenHills 2.14	1282	1315 C3
+; * ATT 3B2/400	WE32100-?Mhz	UNIX 5.2	cc		1315	1315
+; * CCC 3250XP	-		Xelos R01(SVR2)	cc		1215	1318
+; * IBM PC/RT 032 RISC(801?)?Mhz BSD 4.2         cc              1248    1333 RT
+; * DG MV4000	-		AOS/VS 5.00	cc		1333	1333
+; * IBM PC/AT	80286-8Mhz	Venix/86 2.1	cc		1275	1380 *16
+; * IBM PC/AT	80286-6Mhz	MSDOS 3.0	Microsoft 3.0	1250	1388
+; * ATT PC6300+	80286-6Mhz	MSDOS 3.1	CI-C86 2.20M	1428	1428
+; * COMPAQ/286   80286-8Mhz      Venix/286 SVR2  cc              1326    1443
+; * IBM PC/AT    80286-7.5Mhz    Venix/286 SVR2  cc              1333    1449 *15
+; * WICAT PB	68000-8Mhz	System V	WICAT C 4.1	1169	1464 S~
+; * Tandy II/6000 68000-8Mhz	Xenix 3.0	cc      	1384	1477
+; * MicroVAX II	-		Mach/4.3	cc		1513	1536
+; * WICAT MB	68000-12.5Mhz	System V	WICAT C 4.1	1246	1537 ~
+; * IBM PC/AT    80286-9Mhz      SCO Xenix V     cc              1540    1556 *18
+; * Cyb DataMate	68010-12.5Mhz	Uniplus 5.0	Unisoft cc	1470	1562 S
+; * VAX 11/780	-		UNIX 5.2	cc		1515	1562
+; * MicroVAX-II	-		-		-		1562	1612
+; * VAX-780/MA780		Mach/4.3	cc		1587	1612
+; * VAX 11/780	-		UNIX 4.3bsd	cc		1646	1662
+; * Apollo DN660	-		AegisSR9/IX	cc 3.12		1666	1666
+; * ATT 3B20	-		UNIX 5.2	cc		1515	1724
+; * NEC PC-98XA	80286-8Mhz	PCDOS 3.1	Lattice 2.15	1724	1724 @
+; * HP9000-500	B series CPU	HP-UX 4.02	cc		1724	-
+; * Ridge 32C V1	-		ROS 3.3		Ridge C (older)	1776	-
+; * IBM PC/STD	80286-8Mhz	MSDOS 3.0 	Microsoft 3.0	1724	1785 C2
+; * WICAT MB	68000-12.5Mhz	System V	WICAT C 4.1	1450	1814 S~
+; * WICAT PB	68000-12.5Mhz	System V	WICAT C 4.1	1530	1898 ~
+; * DEC-2065	KL10-Model B	TOPS-20 6.1FT5	Port. C Comp.	1937	1946
+; * Gould PN6005	-		UTX 1.1(4.2BSD)	cc		1675	1964
+; * DEC2060	KL-10		TOPS-20		cc		2000	2000 NM
+; * Intel 310AP	80286-8Mhz	Xenix 3.0	cc		1893	2009
+; * VAX 11/785	-		UNIX 5.2	cc		2083	2083
+; * VAX 11/785	-		VMS		VAX-11 C 2.0	2083	2083
+; * VAX 11/785	-		UNIX SVR2	cc		2123	2083
+; * VAX 11/785   -               ULTRIX-32 1.1   cc		2083    2091 
+; * VAX 11/785	-		UNIX 4.3bsd	cc		2135	2136
+; * WICAT PB	68000-12.5Mhz	System V	WICAT C 4.1	1780	2233 S~
+; * Pyramid 90x	-		OSx 2.3		cc		2272	2272
+; * Pyramid 90x	FPA,cache,4Mb	OSx 2.5		cc no -O	2777	2777
+; * Pyramid 90x	w/cache		OSx 2.5		cc w/-O		3333	3333
+; * IBM-4341-II	-		VM/SP3		Waterloo C 1.2  3333	3333
+; * IRIS-2400T	68020-16.67Mhz	UNIX System V	cc		3105	3401
+; * Celerity C-1200 ?		UNIX 4.2BSD	cc		3485	3468
+; * SUN 3/75	68020-16.67Mhz	SUN 4.2 V3	cc		3333	3571
+; * IBM-4341	Model 12	UTS 5.0		?		3685	3685
+; * SUN-3/160    68020-16.67Mhz  Sun 4.2 V3.0A   cc		3381    3764
+; * Sun 3/180	68020-16.67Mhz	Sun 4.2		cc		3333	3846
+; * IBM-4341	Model 12	UTS 5.0		?		3910	3910 MN
+; * MC 5400	68020-16.67MHz	RTU V3.0	cc (V4.0)	3952	4054
+; * Intel 386/20	80386-12.5Mhz	PMON debugger	Intel C386v0.2	4149	4386
+; * NCR Tower32  68020-16.67Mhz  SYS 5.0 Rel 2.0 cc              3846	4545
+; * MC 5600/5700	68020-16.67MHz	RTU V3.0	cc (V4.0)	4504	4746 %
+; * Intel 386/20	80386-12.5Mhz	PMON debugger	Intel C386v0.2	4534	4794 i1
+; * Intel 386/20	80386-16Mhz	PMON debugger	Intel C386v0.2	5304	5607
+; * Gould PN9080	custom ECL	UTX-32 1.1C	cc		5369	5676
+; * Gould 1460-342 ECL proc      UTX/32 1.1/c    cc              5342    5677 G1
+; * VAX-784	-		Mach/4.3	cc		5882	5882 &4
+; * Intel 386/20	80386-16Mhz	PMON debugger	Intel C386v0.2	5801	6133 i1
+; * VAX 8600	-		UNIX 4.3bsd	cc		7024	7088
+; * VAX 8600	-		VMS		VAX-11 C 2.0	7142	7142
+; * Alliant FX/8 CE		Concentrix	cc -ce;exec -c 	6952	7655 FX
+; * CCI POWER 6/32		COS(SV+4.2)	cc		7500	7800
+; * CCI POWER 6/32		POWER 6 UNIX/V	cc		8236	8498
+; * CCI POWER 6/32		4.2 Rel. 1.2b	cc		8963	9544
+; * Sperry (CCI Power 6)		4.2BSD		cc		9345   10000
+; * CRAY-X-MP/12	   105Mhz	COS 1.14	Cray C         10204   10204
+; * IBM-3083	-		UTS 5.0 Rel 1	cc	       16666   12500
+; * CRAY-1A	    80Mhz	CTSS		Cray C 2.0     12100   13888
+; * IBM-3083	-		VM/CMS HPO 3.4	Waterloo C 1.2 13889   13889
+; * Amdahl 470 V/8 		UTS/V 5.2       cc v1.23       15560   15560
+; * CRAY-X-MP/48	   105Mhz	CTSS		Cray C 2.0     15625   17857
+; * Amdahl 580	-		UTS 5.0 Rel 1.2	cc v1.5        23076   23076
+; * Amdahl 5860	 		UTS/V 5.2       cc v1.23       28970   28970
+; *
+; * NOTE
+; *   *   Crystal changed from 'stock' to listed value.
+; *   +   This Macintosh was upgraded from 128K to 512K in such a way that
+; *       the new 384K of memory is not slowed down by video generator accesses.
+; *   %   Single processor; MC == MASSCOMP
+; *   NM  A version 7 C compiler written at New Mexico Tech.
+; *   @   vanilla Lattice compiler used with MicroPro standard library
+; *   S   Shorts used instead of ints
+; *   T	 with Chris Torek's patches (whatever they are).
+; *   ~   For WICAT Systems: MB=MultiBus, PB=Proprietary Bus
+; *   LM  Large Memory Model. (Otherwise, all 80x8x results are small model)
+; *   MM  Medium Memory Model. (Otherwise, all 80x8x results are small model)
+; *   C1  Univation PC TURBO Co-processor; 9.54Mhz 8086, 640K RAM
+; *   C2  Seattle Telecom STD-286 board
+; *   C3  Definicon DSI-32 coprocessor
+; *   C?  Unknown co-processor board?
+; *   CT1 Convergent Technologies MegaFrame, 1 processor.
+; *   MN  Using Mike Newtons 'optimizer' (see net.sources).
+; *   G1  This Gould machine has 2 processors and was able to run 2 dhrystone
+; *       Benchmarks in parallel with no slowdown.
+; *   FH  FHC == Frank Hogg Labs (Hazelwood Uniquad 2 in an FHL box).
+; *   FX  The Alliant FX/8 is a system consisting of 1-8 CEs (computation
+; *	 engines) and 1-12 IPs (interactive processors). Note N8 applies.
+; *   RT  This is one of the RT's that CMU has been using for awhile.  I'm
+; *	 not sure that this is identical to the machine that IBM is selling
+; *	 to the public.
+; *   i1  Normally, the 386/20 starter kit has a 16k direct mapped cache
+; *	 which inserts 2 or 3 wait states on a write thru.  These results
+; *	 were obtained by disabling the write-thru, or essentially turning
+; *	 the cache into 0 wait state memory.
+; *   Nnn This machine has multiple processors, allowing "nn" copies of the
+; *	 benchmark to run in the same time as 1 copy.
+; *   &nn This machine has "nn" processors, and the benchmark results were
+; *	 obtained by having all "nn" processors working on 1 copy of dhrystone.
+; *	 (Note, this is different than Nnn. Salesmen like this measure).
+; *   ?   I don't trust results marked with '?'.  These were sent to me with
+; *       either incomplete info, or with times that just don't make sense.
+; *	 ?? means I think the performance is too poor, ?! means too good.
+; *       If anybody can confirm these figures, please respond.
+; *
+; *  ABBREVIATIONS
+; *	CCC	Concurrent Computer Corp. (was Perkin-Elmer)
+; *	MC	Masscomp
+; *
+; *--------------------------------RESULTS END----------------------------------
+; *
+; *	The following program contains statements of a high-level programming
+; *	language (C) in a distribution considered representative:
+; *
+; *	assignments			53%
+; *	control statements		32%
+; *	procedure, function calls	15%
+; *
+; *	100 statements are dynamically executed.  The program is balanced with
+; *	respect to the three aspects:
+; *		- statement type
+; *		- operand type (for simple data types)
+; *		- operand access
+; *			operand global, local, parameter, or constant.
+; *
+; *	The combination of these three aspects is balanced only approximately.
+; *
+; *	The program does not compute anything meaningfull, but it is
+; *	syntactically and semantically correct.
+; *
+; */
+
+; Accuracy of timings and human fatigue controlled by next two lines
+.LOOPS   50000       ; Use this for slow or 16 bit machines
+; .LOOPS 500000      ; Use this for faster machines
+
+;/* Compiler dependent options */
+;#undef	NOENUM			/* Define if compiler has no enum's */
+;#undef	NOSTRUCTASSIGN		/* Define if compiler can't assign structures */
+
+;/* define only one of the next two defines */
+;#define TIMES			/* Use times(2) time function */
+;/*#define TIME			/* Use time(2) time function */
+
+;/* define the granularity of your times(2) function (when used) */
+;#define HZ      100             /* times(2) returns 1/60 second (most) */
+
+;/* for compatibility with goofed up version */
+;/*#define GOOF			/* Define if you want the goofed up version */
+
+;#ifdef GOOF
+;char	Version[] = "1.0";
+;#else
+;char	Version[] = "1.1";
+;#endif
+
+;#ifdef	NOSTRUCTASSIGN
+;#define	structassign(d, s)	memcpy(&(d), &(s), sizeof(d))
+;#else
+;#define	structassign(d, s)	d = s
+;#endif
+
+;#ifdef	NOENUM
+;#define	Ident1	1
+;#define	Ident2	2
+;#define	Ident3	3
+;#define	Ident4	4
+;#define	Ident5	5
+;typedef int	Enumeration;
+;#else
+;typedef enum	{Ident1, Ident2, Ident3, Ident4, Ident5} Enumeration;
+;#endif
+
+;typedef int OneToThirty; // 4-bytes.
+;typedef int OneToFifty;  // 4-bytes.
+;typedef char CapitalLetter; // 1 byte.
+;typedef char String30[31];  // 31 bytes.
+;typedef int Array1Dim[51];  // 51x4 = 204 bytes
+;typedef int Array2Dim[51][51]; // 51x51x4 = 10404 bytes, 204 bytes per row.
+.Array1Dim_Size 51 * 4
+.Array2Dim_RowSize 51 * 4
+.Array2Dim_Size Array2Dim_RowSize * 51
+
+;struct Record
+;{
+.Record_PtrComp 0       ; Record      *PtrComp;   // 00: Pointer
+.Record_IntComp 4       ; OneToFifty  IntComp;    // 04: int32_t
+.Record_Discr 8         ; Enumeration Discr;      // 08: uint8_t
+.Record_EnumComp 9      ; Enumeration EnumComp;   // 09: uint8_t
+.Record_StringComp 10   ; String30    StringComp; // 10: uint8_t[31]
+.Record_SizeOf 44       ; Total Size: 41 bytes (aligned 44 bytes).
+;};
+
+;typedef struct Record RecordType;
+;typedef RecordType *RecordPtr;
+;typedef int boolean;
+
+; #define NULL        0
+.NULL 0
+; #define TRUE        1
+.TRUE 1
+;#define FALSE       0
+.FALSE 0
+
+;#ifndef REG
+;#define	REG
+;#endif
+
+;extern Enumeration	Func1();
+;extern boolean		Func2();
+
+;#ifdef TIMES
+;#include <sys/types.h>
+;#include <sys/times.h>
+;#endif
+
+;main()
+;{
+.main
+    BL Proc0
+;    Proc0();
+    BKPT 0
+;    exit(0);
+;}
+
+;/*
+; * Package 1
+; */
+
+.PtrGlb:    EQUD 0              ; RecordPtr PtrGlb;             // Offset 0 - 4 bytes
+.PtrGlbNext:EQUD 0              ; RecordPtr PtrGlbNext;         // Offset 4 - 4 bytes
+.IntGlob:   EQUD 0              ; int IntGlob;                  // Offset 8 - 4 bytes
+.Loops:     EQUD LOOPS
+.BoolGlob:  EQUD 0              ; boolean     BoolGlob;         // Offset 12 - 4 bytes
+.Char1Glob: EQUB 0              ; char        Char1Glob;        // Offset 16 - 1 byte
+.Char2Glob: EQUB 0              ; char        Char2Glob;        // Offset 17 - 1 byte
+.InitData1: EQUS "DHRYSTONE PROGRAM, SOME STRING", 0
+.InitData2: EQUS "DHRYSTONE PROGRAM, 2'ND STRING", 0
+.Array1Glob:EQUD 0              ; Array1Dim   Array1Glob;       // Offset End + 0 - 51x4 = 204 bytes
+.Array2Glob:EQUD 0              ; Array2Dim   Array2Glob;       // Offset End + 204 - 51x51x4 = 10404 bytes
+; End of data should be endOfCode + 10696
+
+ALIGN
+.Proc0  ; void Proc0()
+;{
+    STMFD sp!,{v1-v6,ip,link}   ; 8 words (32 bytes stored).
+    MOV ip,sp
+    SUB sp,sp,#88               ; setup a stack frame for local variables
+
+.Proc0_IntLoc1 -4       ; OneToFifty      IntLoc1;
+.Proc0_IntLoc2 -8       ; OneToFifty      IntLoc2;
+.Proc0_IntLoc3 -12      ; OneToFifty      IntLoc3;
+.Proc0_EnumLoc -16      ; Enumeration     EnumLoc;
+.Proc0_CharLoc -17      ; char            CharLoc;
+.Proc0_CharIndex -18    ; char            CharIndex;
+.Proc0_String1Loc -49   ; String30        String1Loc;
+.Proc0_String2Loc -80   ; String30        String2Loc;
+.Proc0_i -84            ; unsigned int    i;
+
+;#ifdef TIME
+;    long			time();
+;    long			starttime;
+;    long			benchtime;
+;    long			nulltime;
+;
+;    starttime = time( (long *) 0);
+;    for (i = 0; i < LOOPS; ++i);
+;    nulltime = time( (long *) 0) - starttime; /* Computes o'head of loop */
+;#endif
+;#ifdef TIMES
+;    time_t			starttime;
+;    time_t			benchtime;
+;    time_t			nulltime;
+;    struct tms		tms;
+;
+;    times(&tms); starttime = tms.tms_utime;
+;    for (i = 0; i < LOOPS; ++i);
+;    times(&tms);
+;    nulltime = tms.tms_utime - starttime; /* Computes overhead of looping */
+;#endif
+
+; The malloc calls are replaced with statically allocated blocks.
+;    PtrGlbNext = (RecordPtr) malloc(sizeof(RecordType));
+    ADRL a1,endOfCode           ; Allocate a record
+    STR a1,PtrGlb               ; Store the pointer
+
+;    PtrGlb = (RecordPtr) malloc(sizeof(RecordType));
+    ADD a2,a1,#Record_SizeOf    ; Allocate another record
+    STR a2,PtrGlbNext           ; Store it
+
+;    PtrGlb->PtrComp = PtrGlbNext;
+    STR a2,[a1,#Record_PtrComp] ; Store the link pointer
+
+    ADD a2,a2,#Record_SizeOf    ; Allocate Array1Glob
+    STR a2,Array1Glob           ; Store the pointer
+
+    ADD a2,a2,#Array1Dim_Size   ; Move to the next free byte
+    STR a2,Array2Glob           ; Store the pointer
+
+;     PtrGlb->Discr = Ident1;
+    MOV a3,#1
+    STRB a3,[a1,#Record_Discr]
+
+;    PtrGlb->EnumComp = Ident3;
+    MOV a4,#3
+    STRB a4,[a1,#Record_EnumComp]
+
+;    PtrGlb->IntComp = 40;
+    MOV a3,#40
+    STR a3,[a1,#Record_IntComp]
+
+;    strcpy(PtrGlb->StringComp, "DHRYSTONE PROGRAM, SOME STRING");
+    ADD a2,a1,#Record_StringComp
+    ADR a3,InitData1
+.Proc0_strcpy1
+    LDRB a4,[a3],#1
+    STRB a4,[a2],#1
+    TST a4,#0xFF
+    BNE Proc0_strcpy1
+
+;    Array2Glob[8][7] = 10;  /* Was missing in published program */
+    MOV a3,#10
+    LDR a2,Array2Glob
+    ADD a2,a2,#(Array2Dim_RowSize * 8)  ; Can't encode the whole offset at once.
+    ADD a2,a2,#(7 * 4)
+    STR a3,[a2]
+
+;/*****************
+;-- Start Timer --
+;*****************/
+;    for (i = 0; i < LOOPS; ++i)
+;    {
+    MOV v1,#0
+.Proc0_MainLoop_Start
+
+;        Proc5();
+    BL Proc5
+
+;        Proc4();
+    BL Proc4
+
+;        IntLoc1 = 2;
+    MOV a1,#2
+    STR a1,[ip,#Proc0_IntLoc1]
+
+;        IntLoc2 = 3;
+    MOV a2,#3
+    STR a2,[ip,#Proc0_IntLoc2]
+
+;        strcpy(String2Loc, "DHRYSTONE PROGRAM, 2'ND STRING");
+    SUB a3,ip,#-Proc0_String2Loc    ; Get the address of String2Loc
+    ADR a4,InitData2                ; Get the static string to copy.
+.Proc0_strcpy2
+    LDRB a1,[a4],#1                 ; Copy byte-by-byte
+    STRB a1,[a3],#1
+    TST a1,#0xFF                    ; Check for null terminator
+    BNE Proc0_strcpy1
+
+;        EnumLoc = Ident2;
+    MOV a3,#2
+    STR a3,[ip,#Proc0_EnumLoc]
+
+;        BoolGlob = ! Func2(String1Loc, String2Loc);
+    ADD a1,ip,#-Proc0_String1Loc
+    ADD a2,ip,#-Proc0_String2Loc
+    BL Func2
+    MVN a1,a1
+    STR a1,BoolGlob
+
+;        while (IntLoc1 < IntLoc2)
+    LDR v2,[ip,#Proc0_IntLoc1]
+    LDR v3,[ip,#Proc0_IntLoc2]
+.Proc0_Loop1_Start
+    CMP v2,v3
+    BGE Proc0_Loop1_End
+;        {
+;            IntLoc3 = 5 * IntLoc1 - IntLoc2;
+    ADD a1,v2,v2,LSL #2             ; a1 = IntLoc1 * 5
+    SUB a1,a1,v3                    ; a1 = (IntLoc1 * 5) - IntLoc2
+
+;            Proc7(IntLoc1, IntLoc2, &IntLoc3);
+    SUB a3,ip,#-Proc0_IntLoc3
+    STR a1,[a3]                     ; Ensure the current value of IntLoc3 is in memory.
+    MOV a1,v2
+    MOV a2,v3
+    BL Proc7
+
+;            ++IntLoc1;
+    ADD v2,v2,#1
+
+;        }
+    B Proc0_Loop1_Start
+.Proc0_Loop1_End
+    STR v2,[ip,#Proc0_IntLoc1]      ; Store the variables we were caching in registers.
+    STR v3,[ip,#Proc0_IntLoc2]
+
+;        Proc8(Array1Glob, Array2Glob, IntLoc1, IntLoc3);
+    MOV a3,v2
+    LDR a4,[ip,#Proc0_IntLoc3]
+    LDR a1,Array1Glob
+    LDR a2,Array2Glob
+    BL Proc8
+
+;        Proc1(PtrGlb);
+    LDR a1,PtrGlb
+    BL Proc1
+
+;        for (CharIndex = 'A'; CharIndex <= Char2Glob; ++CharIndex)
+    MOV v2,#'A'
+    SUB v3,ip,#-Proc0_EnumLoc       ; Get the address of EnumLoc
+.Proc0_Loop2_Start
+    LDRB a1,Char1Glob
+    CMP v2,a1
+    BGT Proc0_Loop2_End
+;        {
+;            if (EnumLoc == Func1(CharIndex, 'C'))
+    MOV a1,v2
+    MOV a2,#'C'
+    BL Func1
+    LDR a2,[v3]
+    CMP a1,a2
+    BNE Proc0_Loop2_Epilog
+;            {
+;                Proc6(Ident1, &EnumLoc);
+    MOV a1,#1
+    MOV a2,v3
+    BL Proc6
+;            }
+.Proc0_Loop2_Epilog
+    ADD v2,v2,#1                    ; for(... ; ++CharIndex)
+    B Proc0_Loop2_Start
+;        }
+.Proc0_Loop2_End
+
+;        IntLoc3 = IntLoc2 * IntLoc1;
+    LDR v2,[ip,#Proc0_IntLoc1]      ; v2 = IntLoc1
+    LDR v3,[ip,#Proc0_IntLoc2]      ; v3 = IntLoc2
+    MUL v4,v2,v3                    ; v4 = IntLoc3
+    STR v4,[ip,#Proc0_IntLoc3]
+
+;        IntLoc2 = IntLoc3 / IntLoc1;
+    MOV a1,v4
+    MOV a2,v2
+    BL SignedDivide                 ; Perform the division in software
+    MOV v3,a1
+
+;        IntLoc2 = 7 * (IntLoc3 - IntLoc2) - IntLoc1;
+    SUB a2,v4,v3                    ; Calculate IntLoc3 - IntLoc2
+    RSB a2,a2,a2,LSL #3             ; (a2 * 8) - a2 = (a2 * 7)
+    SUB v3,a2,v2                    ; Calculate (7 * (IntLoc3 - IntLoc2)) - IntLoc1
+
+;        Proc2(&IntLoc1);
+    SUB a1,ip,#-Proc0_IntLoc1
+    STR v2,[a1]                     ; Update the value of IntLoc1 before call.
+    BL Proc2
+    LDR v2,[ip,#Proc0_IntLoc1]      ; Re-cache the value after possible update?
+
+    ; } // end for loop
+    ADD v1,v1,#1                    ; for (...; ++i)
+    LDR a1,Loops
+    CMP v1,a1                       ; for (...; i < LOOPS; ...)
+    BLT Proc0_MainLoop_Start
+
+;/*****************
+;-- Stop Timer --
+;*****************/
+
+;#ifdef TIME
+;    benchtime = time( (long *) 0) - starttime - nulltime;
+;    printf("Dhrystone(%s) time for %ld passes = %ld\n",
+;        Version,
+;        (long) LOOPS, benchtime);
+;    printf("This machine benchmarks at %ld dhrystones/second\n",
+;        ((long) LOOPS) / benchtime);
+;#endif
+;#ifdef TIMES
+;    times(&tms);
+;    benchtime = tms.tms_utime - starttime - nulltime;
+;    printf("Dhrystone(%s) time for %ld passes = %ld\n",
+;        Version,
+;        (long) LOOPS, benchtime/HZ);
+;    printf("This machine benchmarks at %ld dhrystones/second\n",
+;        ((long) LOOPS) * HZ / benchtime);
+;#endif
+
+; }
+    MOV sp,ip                   ; Restore the previous stack frame.
+    LDMFD sp!,{v1-v6,ip,pc}^    ; Restore registers and return
+
+
+.CopyRecord                     ; CopyRecord(a1 = *dest, a2 = *src)
+    STMFD sp!,{v1-v2,link}      ; Preserve registers, no need for a stack frame.
+    MOV v1,a1
+    MOV v2,a2
+
+    LDMIA v2!,{a1-a4}           ; Copy 16 bytes
+    STMIA v1!,{a1-a4}
+
+    LDMIA v2!,{a1-a4}           ; Copy bytes 16-31
+    STMIA v1!,{a1-a4}
+
+    LDMIA v2!,{a1-a3}           ; Copy bytes 32-43
+    STMIA v1!,{a1-a3}
+    LDMFD sp!,{v1-v2,pc}^       ; Restore registers and leave
+
+.Proc1
+;void Proc1(RecordPtr PtrParIn)
+;{
+;#define NextRecord  (*(PtrParIn->PtrComp))
+    STMFD sp!,{v1-v6,link}      ; Preserve registers, no need for a stack frame.
+    MOV v5, a1                  ; v5 = PtrParIn
+
+;    structassign(NextRecord, *PtrGlb);
+    LDR v6,[a1,#Record_PtrComp] ; v6 = &NextRecord
+    LDR v4,PtrGlb               ; v4 = PtrGlb
+
+    MOV a1,v6
+    MOV a2,v4
+    BL CopyRecord
+
+;    PtrParIn->IntComp = 5;
+    MOV a2,#5
+    STR a2,[v5,#Record_IntComp]
+
+;    NextRecord.IntComp = PtrParIn->IntComp;
+    STR a2,[v6,#Record_IntComp]
+
+;    NextRecord.PtrComp = PtrParIn->PtrComp;
+    LDR a1,[v5,#Record_PtrComp]
+    STR a1,[v6,#Record_PtrComp]
+
+;    Proc3(NextRecord.PtrComp);
+    BL Proc3
+
+;    if (NextRecord.Discr != Ident1)
+    LDRB a1,[v6,#Record_Discr]
+    CMP a1,#1
+
+;    {
+;        structassign(*PtrParIn, NextRecord);
+    MOVNE a1,v5
+    MOVNE a2,v6
+    BLNE CopyRecord
+    BNE Proc1_End
+;    }
+
+;    else
+;    {
+;        NextRecord.IntComp = 6;
+    MOV a3,#6
+    STR a3,[v6,#Record_IntComp]
+
+;        Proc6(PtrParIn->EnumComp, &NextRecord.EnumComp);
+    LDRB a1,[v5,#Record_EnumComp]
+    ADD a2,v6,#Record_IntComp
+    BL Proc6
+
+;        NextRecord.PtrComp = PtrGlb->PtrComp;
+    LDR a3,[v4,#Record_PtrComp]
+    STR a3,[v6,#Record_PtrComp]
+
+;        Proc7(NextRecord.IntComp, 10, &NextRecord.IntComp);
+    LDR a1,[v6,#Record_IntComp]
+    MOV a2,#10
+    ADD a3,v6,#Record_IntComp
+    BL Proc7
+;    }
+
+.Proc1_End
+;#undef  NextRecord
+;}
+    LDMFD sp!,{v1-v6,pc}^       ; Restore registers and leave
+
+.Proc2
+;void Proc2(OneToFifty  *IntParIO)
+;{
+    STMFD sp!,{v1-v3,link}      ; No need to setup a stack frame
+;    OneToFifty      IntLoc;
+;    Enumeration     EnumLoc;
+    MOV v3,#0                   ; v3 = EnumLoc
+
+;    IntLoc = *IntParIO + 10;
+    MOV v1,a1                   ; v1 = IntParIO
+    LDR a2,[v1]
+    ADD v2,a2,#10               ; v2 = IntLoc
+
+.Proc2_MainLoop
+;    for(;;)
+;    {
+;        if (Char1Glob == 'A')
+    LDRB a1,Char1Glob
+    CMP a1,#'A'
+    BNE Proc2_Loc1
+
+;        {
+;            --IntLoc;
+    SUB v2,v2,#1
+
+;            *IntParIO = IntLoc - IntGlob;
+    LDR a3,IntGlob
+    SUB a2,v2,a3
+    STR a2,[v1]
+
+;            EnumLoc = Ident1;
+    MOV v3,#1                   ; v3 = EnumLoc
+;        }
+
+.Proc2_Loc1
+;        if (EnumLoc == Ident1)
+    CMP v3,#1
+;        {
+;            break;
+    BEQ Proc2_End
+;        }
+    B Proc2_MainLoop
+;    }
+.Proc2_End
+    LDMFD sp!,{v1-v3,pc}^       ; Restore registers and return
+;}
+
+.Proc3
+;void Proc3(RecordPtr *PtrParOut)
+;{
+    STMFD sp!,{link}            ; No need for a stack frame or to preserve registers.
+
+;    if (PtrGlb == NULL)
+    LDR a2,PtrGlb
+    CMP a2,#0
+
+;    {
+;        IntGlob = 100;
+    MOVEQ a4,#100
+    STREQ a4,IntGlob
+
+;    }
+;    else
+;    {
+;        *PtrParOut = PtrGlb->PtrComp;
+    LDRNE a4,[a2,#Record_PtrComp]
+    STRNE a4,[a1]
+;    }
+
+;    Proc7(10, IntGlob, &PtrGlb->IntComp);
+    ADD a3,a2,#Record_IntComp
+    LDR a2,IntGlob
+    MOV a1,#10
+    BL Proc7
+;}
+    LDMFD sp!,{pc}^             ; Returns, no volatile register affected.
+
+.Proc4
+;void Proc4()
+;{
+;    boolean BoolLoc;           ; a1 = BoolLoc
+
+;    BoolLoc = Char1Glob == 'A';
+    LDRB a2,Char1Glob
+    CMP a2,#'A'
+    MOVEQ a1,#TRUE
+    MOVNE a1,#FALSE
+
+;    BoolLoc |= BoolGlob;
+    LDR a3,BoolGlob
+    ORR a1,a1,a3
+
+;    Char2Glob = 'B';
+    MOV a4,#'B'
+    STRB a4,Char2Glob
+;}
+    MOVS pc,link                ; Return, no volatile registers modified.
+
+.Proc5
+;void Proc5()
+;{
+;    Char1Glob = 'A';
+    MOV a1,#'A'
+    STRB a1,Char1Glob
+
+;    BoolGlob = FALSE;
+    MOV a2,#FALSE
+    STR a2,BoolGlob
+;}
+    MOVS pc,link
+
+; extern boolean Func3();
+
+.Proc6
+;void Proc6(Enumeration EnumParIn, Enumeration *EnumParOut)
+;{
+    STMFD sp!,{v1-v2,link}
+    MOV v1,a1                   ; v1 = EnumParIn
+    MOV v2,a2                   ; v2 = *EnumParOut
+
+;    *EnumParOut = EnumParIn;
+    STR a1,[a2]
+
+;    if (! Func3(EnumParIn) )
+    BL Func3
+    CMP a1,#0
+;    {
+;        *EnumParOut = Ident4;
+    MOVNE a2,#4
+    STRNE a2,[v2]
+;    }
+
+;    switch (EnumParIn)
+;    {
+    SUB a1,v1,#1                ; Make EnumParIn values continuous from 0.
+    CMP a1,#5
+    ADDCC pc,pc,a1,LSL #2       ; Implement a jump table
+    B Proc6_Ident1
+    B Proc6_Ident2
+    B Proc6_Ident3
+    B Proc6_End
+
+;    case Ident5: *EnumParOut = Ident3;
+.Proc6_Ident5
+    MOV a1,#3
+    B Proc6_Epilogue
+
+.Proc6_Ident1
+;    case Ident1: *EnumParOut = Ident1; break;
+    MOV a1,#1
+    B Proc6_Epilogue
+
+.Proc6_Ident2
+;    case Ident2:
+;        if (IntGlob > 100)
+    LDR a2,IntGlob
+    CMP a2,#100
+;        {
+;            *EnumParOut = Ident1;
+    MOVGT a1,#1
+;        }
+;        else
+;        {
+;            *EnumParOut = Ident4;
+    MOVLE a1,#4
+;        }
+;        break;
+    B Proc6_Epilogue
+
+;    case Ident3: *EnumParOut = Ident2; break;
+.Proc6_Ident3
+    MOV a1,#2
+    B Proc6_Epilogue
+
+;    case Ident4: break;
+;    }
+.Proc6_Epilogue
+    STR a1,[v2]
+
+.Proc6_End
+    LDMFD sp!,{v1-v2,pc}^
+;}
+
+.Proc7
+;void Proc7(OneToFifty IntParI1, OneToFifty IntParI2, OneToFifty *IntParOut)
+;{
+;    OneToFifty  IntLoc;
+;    IntLoc = IntParI1 + 2;
+    ADD a1,a1,#2            ; a1 = IntLoc
+
+;    *IntParOut = IntParI2 + IntLoc;
+    ADD a4,a1,a2
+    STR a4,[a3]
+;}
+    MOV pc,link                 ; Simply return
+
+.Proc8
+;void Proc8(Array1Dim Array1Par, Array2Dim Array2Par,
+;           OneToFifty IntParI1, OneToFifty IntParI2)
+;{
+    STMFD sp!,{v1-v6,link}
+
+;    OneToFifty  IntLoc;
+;    OneToFifty  IntIndex;
+
+;    IntLoc = IntParI1 + 5;
+    ADD v1,a3,#5                ; v1 = IntLoc
+
+;    Array1Par[IntLoc] = IntParI2;
+    STR a4,[a1,v1,LSL #2]!      ; a1 = Array1Par + IntLoc
+
+;    Array1Par[IntLoc+1] = Array1Par[IntLoc];
+    STR a4,[a1,#4]
+
+;    Array1Par[IntLoc+30] = IntLoc;
+    STR v1,[a1,#30 * 4]
+    MOV v2,a1                   ; v2 = Array1Par + IntLoc
+
+;    for (IntIndex = IntLoc; IntIndex <= (IntLoc+1); ++IntIndex)
+    MOV v3,a3                   ; v3 = IntIndex
+    MOV a3,#Array2Dim_RowSize   ; Calculate the row offset
+    MUL a3,v1,a3
+    ADD v4,a2,a3                ; v4 = &Array2Par[IntLoc][0]
+
+.Proc8_Loop_Start
+    ADD a1,v1,#1                ; for(...; IntIndex <= (IntLoc+1) ...)
+    CMP v3,a1
+    BGT Proc8_Loop_End
+;    {
+;        Array2Par[IntLoc][IntIndex] = IntLoc;
+        STR v1,[v4,v3,LSL #2]
+
+        ADD v3,v3,#1                ; for(...;...; ++IntIndex)
+        B Proc8_Loop_Start
+;    }
+.Proc8_Loop_End
+
+;    ++Array2Par[IntLoc][IntLoc-1];
+    SUB a1,v1,#1                    ; a1 = IntLoc - 1
+    LDR a2,[a1,v4,LSL #2]!
+    ADD a2,a2,#1
+    STR a2,[a1]
+
+;    Array2Par[IntLoc+20][IntLoc] = Array1Par[IntLoc];
+    ADD a1,v1,#20 * Array2Dim_RowSize
+    ADD a1,v4,a1                    ; a1 = &Array2Par[IntLoc+20][0]
+    LDR a2,[v2]                     ; Get Array1Par[IntLoc]
+    STR a2,[a1,v1,LSL #2]
+
+;    IntGlob = 5;
+    MOV a1,#5
+    STR a1,IntGlob
+;}
+
+.Func1
+;Enumeration Func1(CapitalLetter CharPar1, CapitalLetter CharPar2)
+;{
+;    CapitalLetter   CharLoc1;  a1 = CharLoc1
+;    CapitalLetter   CharLoc2;  a2 = CharLoc2
+
+;    CharLoc1 = CharPar1;
+;    CharLoc2 = CharLoc1;   ; CharLoc2 = CharPar1
+
+;    if (CharLoc2 != CharPar2)
+    CMP a1,a2
+;        return (Ident1);
+    MOVNE a1,#1
+;    else
+;        return (Ident2);
+    MOVEQ a1,#2
+;}
+    MOV pc,link
+
+.Func2
+;boolean Func2(String30 StrParI1, String30 StrParI2)
+;{
+    STMFD sp!,{v1-v6,link}
+;    OneToThirty     IntLoc;
+;    CapitalLetter   CharLoc;
+
+;    IntLoc = 1;
+    MOV v1,a1                   ; v1 = StrParI1
+    MOV v2,a2                   ; v2 = StrParI2
+    MOV v3,#1                   ; v3 = IntLoc
+    MOV v4,#0                   ; v4 = CharLoc
+
+;    while (IntLoc <= 1)
+.Func2_Loop1_Start
+    CMP v1,#1
+    BGT Func2_Loop1_End
+;    {
+    LDRB a1,[v1,v3]
+    ADD a3,v3,#1
+    LDRB a2,[v1,a3]
+    BL Func1
+    CMP a1,#1
+;        if (Func1(StrParI1[IntLoc], StrParI2[IntLoc+1]) == Ident1)
+;        {
+    MOVEQ v4,#'A'
+    ADDEQ v3,v3,#1
+;            CharLoc = 'A';
+;            ++IntLoc;
+;        }
+;    }
+    B Func2_Loop1_Start
+.Func2_Loop1_End
+
+;    if (CharLoc >= 'W' && CharLoc <= 'Z')
+    CMP v4,#'W'
+    BLT Func2_Loc1
+    CMP v4,#'Z'
+;    {
+;        IntLoc = 7;
+    MOVLE v3,#7
+;    }
+
+.Func2_Loc1
+;    if (CharLoc == 'X')
+    CMP v4,#'X'
+    MOVEQ a1,#TRUE
+    BEQ Func2_End
+;    {
+;        return TRUE;
+;    }
+;    else
+;    {
+        MOV a1,v1
+        MOV a2,v2
+
+;        if (strcmp(StrParI1, StrParI2) > 0)
+        BL strcmp
+        CMP a1,#0
+;        {
+;            IntLoc += 7;
+        ADDLT v3,v3,#7
+;            return TRUE;
+        MOVLT a1,#TRUE
+;        }
+;        else
+;        {
+;            return FALSE;
+        MOVGE a1,#FALSE
+;        }
+;    }
+;}
+.Func2_End
+    LDMFD sp!,{v1-v6,pc}^
+
+.Func3
+;boolean Func3(Enumeration EnumParIn)
+;{
+;    Enumeration EnumLoc = EnumParIn;
+
+    CMP a1,#3
+;    if (EnumLoc == Ident3)
+;    {
+;        return TRUE;
+    MOVEQ a1,#TRUE
+;    }
+;    else
+;    {
+;        return FALSE;
+    MOVNE a1,#FALSE
+;    }
+;}
+    MOVS pc,link
+
+.strcmp
+; int strcmp(char *str1, char *str2)
+    STMFD sp!,{v1-v2,link}
+    MOV v1,a1                   ; v1 = str1
+    MOV v2,a2                   ; v2 = str2
+
+.strcmp_Loop
+    LDRB a3,[v1],#1
+    LDRB a4,[v2],#1
+    TEQ a3,#0
+    BEQ strcmp_str1_Finished
+    TEQ a4,#0
+    BEQ strcmp_str2_Finished
+    CMP a3,a4
+    BEQ strcmp_Loop
+    MVNLT a1,#0                 ; str1 has a lower value, result -1
+    MOVGT a1,#1                 ; str1 has a higher value, result 1
+    B strcmp_End
+
+.strcmp_str1_Finished
+    TEQ a4,#0
+    MOVEQ a1,#0                 ; str1 and str2 finished together
+    MOVNE a1,#1                 ; str2 is longer, result = 1
+    B strcmp_End
+
+.strcmp_str2_Finished
+    MVN a1,#0                   ; str1 is longer, result = -1
+
+.strcmp_End
+    LDMFD sp!,{v1-v2,pc}^
+
+.SignedDivide
+; [a1=quotient, a2=remainder] SignedDivide(numerator, denominator)
+; Inspired by Archimedes Assembly Language: The complete programming course, by Mike Ginns
+    STMFD sp!,{v3-v5,link}
+
+    ANDS a3,a1,#1<<31           ; a3 = remainder sign
+    RSBMI a1,a1,#0              ; Negate the numerator
+    EOR a4,a3,a2                ; a4 = quotient sign
+    RSBMI a2,a2,#0              ; Negate the denominator
+
+    MOV v3,#0                   ; v3 = remainder
+    MOV v4,#0                   ; v4 = quotient
+    MOV v5,#1 << 31             ; v5 = place counter
+.SignedDivide_Loop
+    MOVS v3,v3,LSL #1           ; Shift top bit into carry
+    ADC v3,v3,v3
+    CMP v3,a2                   ; If remainder > denominator
+    SUBGE v3,v3,a2              ;   Take divisor from remainder
+    ORRGE v4,v4,v5              ;   Set a quotient bit
+    MOVS v5,v5,LSR #1           ; Move place counter 1-bit down
+    BNE SignedDivide_Loop       ; Keep going until all 32-bits processed
+
+    CMP a4,#0                   ; Apply the quotient sign
+    RSBMI v4,v4,#0
+    CMP a3,#0                   ; Apply the remainder sign
+    RSBMI v3,v3,#0
+
+    MOV a1,v4                   ; Return the quotient and remainder
+    MOV a2,v3
+
+    LDMFD sp!,{v3-v5,pc}^
+
+
+; End of code, start of uninitialised data
+.endOfCode
+
+;#ifdef	NOSTRUCTASSIGN
+;memcpy(d, s, l)
+;register char	*d;
+;register char	*s;
+;register int	l;
+;{
+;    while (l--) *d++ = *s++;
+;}
+;#endif
+;/* ---------- */

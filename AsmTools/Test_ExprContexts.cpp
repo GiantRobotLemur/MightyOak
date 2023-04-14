@@ -17,21 +17,11 @@
 
 #include "ExprContexts.hpp"
 
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
 
 namespace Ag {
 namespace Asm {
 
 namespace {
-////////////////////////////////////////////////////////////////////////////////
-// Local Data Types
-////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////
-// Local Data
-////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////
 // Unit Tests
@@ -70,7 +60,7 @@ GTEST_TEST(RootEvalContext, WithSymbols)
     Location at;
     Value value;
 
-    specimen.defineSymbol("FooBar", Location(__FILE__), Value(42));
+    specimen.defineSymbol("FooBar", Location(__FILE__), Value(42), true);
 
     EXPECT_FALSE(specimen.isSymbolDefined("fOObAR", scope, at));
     EXPECT_TRUE(specimen.isSymbolDefined("FooBar", scope, at));
@@ -83,7 +73,7 @@ GTEST_TEST(RootEvalContext, WithSymbols)
     EXPECT_EQ(value.asInt32(), 42);
 
     // Try overwriting the value (should fail).
-    specimen.defineSymbol("FooBar", Location(__FILE__), Value(1.125f));
+    specimen.defineSymbol("FooBar", Location(__FILE__), Value(1.125f), false);
 
     EXPECT_FALSE(specimen.tryLookupSymbol("fooBAR", value));
     EXPECT_TRUE(specimen.tryLookupSymbol("FooBar", value));
@@ -132,7 +122,7 @@ GTEST_TEST(InnerEvalContext, WithSymbols)
     Location at;
     Value value;
 
-    globalScope.defineSymbol("FooBar", Location(__FILE__), Value(42));
+    globalScope.defineSymbol("FooBar", Location(__FILE__), Value(42), true);
 
     EXPECT_FALSE(specimen.isSymbolDefined("fOObAR", scope, at));
     EXPECT_TRUE(specimen.isSymbolDefined("FooBar", scope, at));
@@ -145,7 +135,7 @@ GTEST_TEST(InnerEvalContext, WithSymbols)
     EXPECT_EQ(value.asInt32(), 42);
 
     // Try setting the value in the local scope.
-    specimen.defineSymbol("FooBar", Location("Here"), Value(1.125f));
+    specimen.defineSymbol("FooBar", Location("Here"), Value(1.125f), false);
 
     EXPECT_TRUE(specimen.isSymbolDefined("FooBar", scope, at));
     EXPECT_STRINGEQ(specimen.getScopeName(), scope);
@@ -157,7 +147,7 @@ GTEST_TEST(InnerEvalContext, WithSymbols)
     EXPECT_EQ(value.asFloat(), 1.125f);
 }
 
-} // TED
+} // Anonymous namespace
 
 }} // namespace Ag::Asm
 ////////////////////////////////////////////////////////////////////////////////
