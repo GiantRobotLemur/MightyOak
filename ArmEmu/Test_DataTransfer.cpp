@@ -80,6 +80,7 @@ TEST_P(DataTransfer, ExecuteCode)
             {
             case CoreRegister::CPSR: expectedValue = 0x0C000003u; break;
             case CoreRegister::PC: expectedValue = 0x00000008u; break;
+            default: break;
             }
 
             EXPECT_TRUE(isEqualReg(resultReq.first, initialValue, expectedValue));
