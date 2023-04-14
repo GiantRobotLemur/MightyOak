@@ -16,16 +16,13 @@
 #include "Ag/GTest_Core.hpp"
 
 #include "AsmEnums.hpp"
+#include "ConstantSet.hpp"
 #include "InputContext.hpp"
 #include "LexicalAnalysers.hpp"
 #include "LexicalContext.hpp"
 
 #include "AsmTools/InstructionInfo.hpp"
 #include "AsmTools/Options.hpp"
-
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
 
 namespace Ag {
 namespace Asm {
@@ -42,10 +39,6 @@ InputContext createInput(const char *sourceCode)
 
     return InputContext(source, position, sourceId, 2);
 }
-
-////////////////////////////////////////////////////////////////////////////////
-// Local Data
-////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////
 // Unit Tests
@@ -320,7 +313,42 @@ GTEST_TEST(CoreRegListLexer, RecogniseCharacterTokens)
     }
 }
 
-} // TED
+GTEST_TEST(CoreRegListLexer, RecogniseApcsRegList)
+{
+    ILexicalContext *specimen = getCoreRegListLexer();
+    InputContext input = createInput("{v1-v6,ip,link}");
+
+    TokenClass expectedTokens[] =
+    {
+        TokenClass::OpenBrace,
+        TokenClass::Symbol,
+        TokenClass::Minus,
+        TokenClass::Symbol,
+        TokenClass::Comma,
+        TokenClass::Symbol,
+        TokenClass::Comma,
+        TokenClass::Symbol,
+        TokenClass::CloseBrace,
+    };
+
+    Token token;
+    const ConstantSet &regSymbols = getCoreRegSymbols();
+
+    for (TokenClass expectedToken : expectedTokens)
+    {
+        ASSERT_TRUE(specimen->tryGetNextToken(input, token));
+
+        if (token.getClass() == TokenClass::Symbol)
+        {
+            Value regIndex;
+            EXPECT_TRUE(regSymbols.tryLookupValue(token.getValue(), regIndex));
+        }
+
+        EXPECT_EQ(token.getClass(), expectedToken);
+    }
+}
+
+} // Anonymous namespace
 
 }} // namespace Ag::Asm
 ////////////////////////////////////////////////////////////////////////////////

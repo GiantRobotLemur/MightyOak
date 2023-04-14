@@ -208,6 +208,7 @@ add_ag_test_app(AsmTools_Tests TEST_LIB AsmTools
                                         Test_ExprContexts.cpp
                                         Test_DataDirective.cpp
                                         Test_AssemblyLabel.cpp
+                                        Test_AddressDirective.cpp
                                         Test_InstructionInfo.cpp
                                         Test_SimpleInstructions.cpp)
 
@@ -224,14 +225,3 @@ add_cli_app(ADisasm FOLDER ARM
                     VERSION "${PROJECT_VERSION}"
                     SOURCES ADisasm_Main.cpp
                     LIBS AgCore AsmTools)
-
-# add_gui_app(target ...)
-# Arguments: target                  - The mandatory target name
-#            FOLDER <folder name>    - The name of the project folder to add the item to.
-#            NAME <app name>         - The base name of the application program file.
-#            DESCRIPTION <desc>      - A description of the application's purpose.
-#            VERSION <version>       - The version to embed in the application.
-#            SOURCES <files>         - Internal source and header files.
-#            WIN_SOURCES <files>     - Win32-specific source and header files.
-#            POSIX_SOURCES <files>   - Linux-specific source and header files.
-#            LIBS                    - The libraries the application should link to.

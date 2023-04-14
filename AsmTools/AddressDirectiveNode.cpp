@@ -19,10 +19,6 @@
 #include "ParseContext.hpp"
 #include "Token.hpp"
 
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
-
 namespace Ag {
 namespace Asm {
 
@@ -37,20 +33,25 @@ private:
     // Internal Fields
     IExprUPtr _rd;
     IExprUPtr _addr;
+    MultiWordEncoding _encoding;
 
 public:
     // Construction/Destruction
     //! @brief Constructs a statement representing an ADR pseudo-instruction.
     //! @param[in] at The location of the start of the statement in source code.
     //! @param[in] condition The condition code to encode with the instruction.
+    //! @param[in] encoding Indicates how many words the pseudo-instruction
+    //! can be encoded in.
     //! @param[in] destReg The destination register expression to take ownership of.
     //! @param[in] addr The address expression to take ownership of.
     AdrInstruction(const Location &at, ConditionCode condition,
-                   IExprUPtr &&destReg, IExprUPtr &&addr) :
+                   MultiWordEncoding encoding, IExprUPtr &&destReg,
+                   IExprUPtr &&addr) :
         InstructionStatement(at, OperationClass::CoreAddress,
                              InstructionMnemonic::Adr, condition),
         _rd(std::move(destReg)),
-        _addr(std::move(addr))
+        _addr(std::move(addr)),
+        _encoding(encoding)
     {
     }
 
@@ -58,6 +59,14 @@ public:
 
 protected:
     // Overrides
+    // Inherited from Statement.
+    uint32_t calculateObjectCodeSize(IEvalContext */*context*/) const
+    {
+        // Calculate the length based on the instruction suffix used, even
+        // if it cannot be immediately encoded.
+        return (toScalar(_encoding) + 1) * 4u;
+    }
+
     // Inherited from InstructionStatement.
     virtual bool configureInstruction(InstructionInfo &instruction,
                                       IEvalContext *context, Messages &log,
@@ -69,6 +78,7 @@ protected:
         {
             String error;
             auto &info = instruction.getCoreAddressParameters();
+            info.Encoding = _encoding;
 
             if (tryEvaluateCoreRegister(context, _rd.get(), info.Rd, error) == false)
             {
@@ -101,14 +111,6 @@ protected:
     }
 };
 
-////////////////////////////////////////////////////////////////////////////////
-// Local Data
-////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////
-// Local Functions
-////////////////////////////////////////////////////////////////////////////////
-
 } // TED
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -122,6 +124,7 @@ AddressDirectiveNode::AddressDirectiveNode(ParseContext &context,
     StatementNode(context, mnemonic),
     _oldLexerState(context.pushLexicalContext(getExpressionLexer())),
     _condtion(getTokenEnum(mnemonic, TokenProperty::ConditionCode, ConditionCode::Al)),
+    _encoding(getTokenEnum(mnemonic, TokenProperty::SequenceEncoding, MultiWordEncoding::Single)),
     _state(State::AfterMnemonic)
 {
 }
@@ -220,17 +223,12 @@ Statement *AddressDirectiveNode::compile(Messages &/*output*/) const
         IExprUPtr rd(constantOptimise(_destRegExpr->compile(getCoreRegSymbols())));
         IExprUPtr addr(constantOptimise(_addrExpr->compile(ConstantSet::Empty)));
 
-        statement = new AdrInstruction(getStart(), _condtion,
+        statement = new AdrInstruction(getStart(), _condtion, _encoding,
                                        std::move(rd), std::move(addr));
     }
 
     return statement;
 }
-
-
-////////////////////////////////////////////////////////////////////////////////
-// Global Function Definitions
-////////////////////////////////////////////////////////////////////////////////
 
 }} // namespace Ag::Asm
 ////////////////////////////////////////////////////////////////////////////////

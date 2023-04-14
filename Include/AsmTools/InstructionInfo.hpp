@@ -306,6 +306,20 @@ enum class MultiTransferMode : uint8_t
     Max,
 };
 
+//! @brief Defines how many instruction words should be used to encode a
+//! pseudo-instruction.
+enum class MultiWordEncoding : uint8_t
+{
+    //! @brief The encoding will be a single 32-bit word (default).
+    Single,
+
+    //! @brief The encoding will be a pair of 32-bit words.
+    Long,
+
+    //! @brief The encoding will be three 32-bit words.
+    Extended,
+};
+
 //! @brief Expresses the precision of FPA data operations.
 enum class FpaPrecision : uint8_t
 {
@@ -487,7 +501,12 @@ struct EffectiveAddress
 {
     //! @brief The absolute address to load into the destination register.
     uint32_t Address;
+
+    //! @brief The register to receive the address.
     CoreRegister Rd;
+
+    //! @brief The encoding used to define the PC-relative offset.
+    MultiWordEncoding Encoding;
 };
 
 //! @brief The parameters of a single-register data transfer instruction.
@@ -751,6 +770,8 @@ public:
     size_t assemble(uint32_t *instructions, uint32_t loadAddr, size_t maxCount,
                     string_ref_t error) const;
     bool disassemble(uint32_t instruction, uint32_t loadAddress, uint32_t flags = 0x3F);
+    uint8_t disassemble(const uint32_t *instructions, uint8_t count,
+                        uint32_t loadAddress, uint32_t flags = 0x3F);
     String toString(const FormatterOptions *options = nullptr) const;
     String toString(uint32_t loadAddr, uint32_t formatterOptionsFlags) const;
 

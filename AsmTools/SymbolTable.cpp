@@ -14,7 +14,6 @@
 
 #include "SymbolTable.hpp"
 
-
 namespace Ag {
 namespace Asm {
 
@@ -24,7 +23,8 @@ namespace Asm {
 //! @brief Constructs a symbol definition to be used as a lookup key.
 //! @param[in] id The value used to identify the symbol.
 SymbolDefinition::SymbolDefinition(string_cref_t id) :
-    _id(id)
+    _id(id),
+    _isAddress(false)
 {
 }
 
@@ -34,7 +34,8 @@ SymbolDefinition::SymbolDefinition(string_cref_t id) :
 //! @param[in] source The location at which the symbol was defined.
 SymbolDefinition::SymbolDefinition(string_cref_t id, const Location &source) :
     _id(id),
-    _source(source)
+    _source(source),
+    _isAddress(false)
 {
 }
 
@@ -42,11 +43,14 @@ SymbolDefinition::SymbolDefinition(string_cref_t id, const Location &source) :
 //! @param[in] id The value used to identify the symbol.
 //! @param[in] source The location at which the symbol was defined.
 //! @param[in] value The initial value of the symbol.
+//! @param[in] isAddress True if the symbol value represents a position in
+//! code, false if it represent an arbitrary value.
 SymbolDefinition::SymbolDefinition(string_cref_t id, const Location &source,
-                                   const Value &value) :
+                                   const Value &value, bool isAddress) :
     _id(id),
     _source(source),
-    _definition(value)
+    _definition(value),
+    _isAddress(isAddress)
 {
 }
 
@@ -67,6 +71,24 @@ const Value &SymbolDefinition::getValue() const { return _definition; }
 //! @brief Assigns a value to the symbol.
 //! @param[in] value The new symbol value, possibly null.
 void SymbolDefinition::setValue(const Value &value) { _definition = value; }
+
+//! @brief Gets whether the label marks a position in code.
+//! @retval true The label marks a position in code.
+//! @retval false The label was given an explicit value, possibly derived
+//! from other labels defining a position in code.
+bool SymbolDefinition::isAddress() const
+{
+    return _isAddress;
+}
+
+//! @brief Annotates the label as one created from an address in code.
+//! @param isAddress True to make the label as an address, false to
+//! mark it as arbitrary data.
+void SymbolDefinition::setIsAddress(bool isAddress)
+{
+    _isAddress = isAddress;
+}
+
 
 //! @brief Determines if the identifier for the current symbol is the same as
 //! the identifier for another.
@@ -110,6 +132,12 @@ bool SymbolDefinitionIDEqual::operator()(const Ag::Asm::SymbolDefinition &lhs,
 ////////////////////////////////////////////////////////////////////////////////
 // SymbolTable Member Function Definitions
 ////////////////////////////////////////////////////////////////////////////////
+//! @brief Gets the set of all symbols defined in the table.
+const SymbolTable::Symbols &SymbolTable::getAllSymbols() const
+{
+    return _symbols;
+}
+
 //! @brief Determines if the symbol table contains a definition for a named symbol.
 //! @param[in] id The case-sensitive identifier of the symbol to query.
 //! @param[out] at Received the source code location of the definition of the
@@ -174,10 +202,12 @@ bool SymbolTable::declareSymbol(string_cref_t id, const Location &source)
 //! @param[in] value The value to associate with the symbol.
 //! @retval true The symbol unique and thus added to the table.
 //! @retval false The symbol was a duplicate and not added.
+//! @param[in] isAddress True if the symbol value represents a position in
+//! code, false if it represent an arbitrary value.
 bool SymbolTable::defineSymbol(string_cref_t id, const Location &source,
-                               const Value &value)
+                               const Value &value, bool isAddress)
 {
-    auto insertPair = _symbols.emplace(id, source, value);
+    auto insertPair = _symbols.emplace(id, source, value, isAddress);
 
     return insertPair.second;
 }

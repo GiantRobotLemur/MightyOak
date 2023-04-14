@@ -14,10 +14,6 @@
 #include "Ag/Core/Format.hpp"
 #include "AsmTools/Messages.hpp"
 
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
-
 namespace Ag {
 namespace Asm {
 
@@ -25,16 +21,49 @@ namespace {
 ////////////////////////////////////////////////////////////////////////////////
 // Local Data Types
 ////////////////////////////////////////////////////////////////////////////////
+struct CompareMessages
+{
+private:
+    const std::unordered_map<String, size_t> &_ordinalById;
+public:
+    CompareMessages(const std::unordered_map<String, size_t> &ordinalById) :
+        _ordinalById(ordinalById)
+    {
+    }
 
-////////////////////////////////////////////////////////////////////////////////
-// Local Data
-////////////////////////////////////////////////////////////////////////////////
+    bool operator()(const Message &lhs, const Message &rhs) const
+    {
+        const Location &lhsLoc = lhs.getLocation();
+        const Location &rhsLoc = rhs.getLocation();
+        bool isLess = false;
 
-////////////////////////////////////////////////////////////////////////////////
-// Local Functions
-////////////////////////////////////////////////////////////////////////////////
+        if (lhsLoc.FileName == rhsLoc.FileName)
+        {
+            if (lhsLoc.LineNo == rhsLoc.LineNo)
+            {
+                isLess = lhsLoc.Offset < rhsLoc.Offset;
+            }
+            else
+            {
+                isLess = lhsLoc.LineNo < rhsLoc.LineNo;
+            }
+        }
+        else
+        {
+            auto sourcePos = _ordinalById.find(lhsLoc.FileName);
+            size_t lhsSourceOrdinal = (sourcePos == _ordinalById.end()) ? SIZE_MAX : sourcePos->second;
 
-} // TED
+            sourcePos = _ordinalById.find(rhsLoc.FileName);
+            size_t rhsSourceOrdinal = (sourcePos == _ordinalById.end()) ? SIZE_MAX : sourcePos->second;
+
+            isLess = lhsSourceOrdinal < rhsSourceOrdinal;
+        }
+
+        return isLess;
+    }
+};
+
+} // Anonymous namespace
 
 ////////////////////////////////////////////////////////////////////////////////
 // Location Member Function Definitions
@@ -70,12 +99,21 @@ bool Location::isValid() const
 //! @param[in] location The position of the first character in source code
 //! which is associated with the message.
 //! @param[in] message The message text.
+//! @param[in] ordinal A scalar value defining relative when the message was
+//! created.
 Message::Message(MessageSeverity severity, const Location &location,
-                 const String &message) :
+                 const String &message, size_t ordinal) :
     _message(message),
     _location(location),
+    _ordinal(ordinal),
     _severity(severity)
 {
+}
+
+//! @brief Gets a scalar value defining relative when the message was created.
+size_t Message::getOrdinal() const
+{
+    return _ordinal;
 }
 
 //! @brief Gets the nature of the message.
@@ -174,7 +212,8 @@ const Messages::MessageCollection &Messages::getMessages() const
 //! @param[in] message The message text.
 void Messages::appendInfo(const Location &location, const String &message)
 {
-    _messages.emplace_back(MessageSeverity::Info, location, message);
+    _messages.emplace_back(MessageSeverity::Info, location, message,
+                           _messages.size());
 }
 
 //! @brief Appends a formatted informational message to the collection.
@@ -192,7 +231,8 @@ void Messages::appendInfo(const Location &location, utf8_cptr_t formatSpec,
 //! @param[in] message The message text.
 void Messages::appendWarning(const Location &location, const String &message)
 {
-    _messages.emplace_back(MessageSeverity::Warning, location, message);
+    _messages.emplace_back(MessageSeverity::Warning, location, message,
+                           _messages.size());
 }
 
 //! @brief Appends a formatted warning message to the collection.
@@ -210,7 +250,8 @@ void Messages::appendWarning(const Location &location, utf8_cptr_t formatSpec,
 //! @param[in] message The message text.
 void Messages::appendError(const Location &location, const String &message)
 {
-    _messages.emplace_back(MessageSeverity::Error, location, message);
+    _messages.emplace_back(MessageSeverity::Error, location,
+                           message, _messages.size());
     _hasErrors = true;
 }
 
@@ -230,7 +271,8 @@ void Messages::appendError(const Location &location, utf8_cptr_t formatSpec,
 //! @param[in] message The message text.
 void Messages::appendFatal(const Location &location, const String &message)
 {
-    _messages.emplace_back(MessageSeverity::Fatal, location, message);
+    _messages.emplace_back(MessageSeverity::Fatal, location,
+                           message, _messages.size());
     _hasErrors = true;
 }
 
@@ -257,14 +299,28 @@ void Messages::appendFormatted(MessageSeverity severity,
 {
     FormatInfo formatInfo(LocaleInfo::getDisplay());
 
-    String message = String::format(LocaleInfo::getDisplay(), formatSpec, values);
+    String message = String::format(LocaleInfo::getDisplay(),
+                                    formatSpec, values);
 
-    _messages.emplace_back(severity, location, message);
+    _messages.emplace_back(severity, location, message, _messages.size());
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// Global Function Definitions
-////////////////////////////////////////////////////////////////////////////////
+//! @brief Sorts messages into a more useful order after all have been added.
+void Messages::sort()
+{
+    // Determine the order of input sources.
+    std::unordered_map<String, size_t> sourceOrdinalById;
+
+    for (const Message &message : _messages)
+    {
+        sourceOrdinalById.try_emplace(message.getLocation().FileName,
+                                      sourceOrdinalById.size());
+    }
+
+    // Sort based on source ordinal, line number and offset.
+    std::sort(_messages.begin(), _messages.end(),
+              CompareMessages(sourceOrdinalById));
+}
 
 }} // namespace Ag::Asm
 ////////////////////////////////////////////////////////////////////////////////

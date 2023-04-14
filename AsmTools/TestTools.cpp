@@ -18,21 +18,10 @@
 #include "SymbolTable.hpp"
 #include "SyntaxNode.hpp"
 
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
-
 namespace Ag {
 namespace Asm {
 
 namespace {
-////////////////////////////////////////////////////////////////////////////////
-// Local Data Types
-////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////
-// Local Data
-////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////
 // Local Functions
@@ -78,8 +67,7 @@ void logMessages(testing::AssertionResult &result, const Messages &messages)
     }
 }
 
-
-} // TED
+} // Anonymous namespace
 
 ////////////////////////////////////////////////////////////////////////////////
 // ExpressionContainer Member Function Definitions
@@ -399,7 +387,20 @@ void appendLog(::testing::AssertionResult &result, const Messages &log)
     }
 }
 
-////////////////////////////////////////////////////////////////////////////////
+//! @brief Tests to see is assembly was successful and appends messages to the
+//! unit test log either way.
+//! @param[in] log The log indicating if assembly was successful or not.
+//! @return The assertion result.
+::testing::AssertionResult assemblySuccess(const Messages &log)
+{
+    ::testing::AssertionResult result = log.hasErrors() ? ::testing::AssertionFailure() :
+                                                          ::testing::AssertionSuccess();
+
+    appendLog(result, log);
+
+    return result;
+}
+
 //! @brief Gets some basic assembly settings suitable for an ARM3 assembling at
 //! the 32KB address line.
 const Options &getDefaultOptions()
@@ -411,7 +412,6 @@ const Options &getDefaultOptions()
 
     return opts;
 }
-
 
 }} // namespace Ag::Asm
 ////////////////////////////////////////////////////////////////////////////////

@@ -16,27 +16,8 @@
 #include "ConstantSet.hpp"
 #include "ExprContexts.hpp"
 
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
-
 namespace Ag {
 namespace Asm {
-
-namespace {
-////////////////////////////////////////////////////////////////////////////////
-// Local Data Types
-////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////
-// Local Data
-////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////
-// Local Functions
-////////////////////////////////////////////////////////////////////////////////
-
-} // TED
 
 ////////////////////////////////////////////////////////////////////////////////
 // RootEvalContext Member Function Definitions
@@ -47,6 +28,12 @@ RootEvalContext::RootEvalContext(uint32_t baseAddress) :
     _assemblyOffset(0),
     _baseAddress(baseAddress)
 {
+}
+
+//! @brief Gets the table of symbols defined in the current context.
+const SymbolTable &RootEvalContext::getSymbols() const
+{
+    return _globalSymbols;
 }
 
 // Inherited from IEvalContext.
@@ -104,9 +91,9 @@ void RootEvalContext::setAssemblyOffset(uint32_t offset)
 
 // Inherited from IScopedContext.
 void RootEvalContext::defineSymbol(string_cref_t id, const Location &source,
-                                   const Value &value)
+                                   const Value &value, bool isAddress)
 {
-    _globalSymbols.defineSymbol(id, source, value);
+    _globalSymbols.defineSymbol(id, source, value, isAddress);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -200,11 +187,10 @@ void InnerEvalContext::setAssemblyOffset(uint32_t offset)
 
 // Inherited from IScopedContext.
 void InnerEvalContext::defineSymbol(string_cref_t id, const Location &source,
-                                    const Value &value)
+                                    const Value &value, bool isAddress)
 {
-    _localSymbols.defineSymbol(id, source, value);
+    _localSymbols.defineSymbol(id, source, value, isAddress);
 }
-
 
 ////////////////////////////////////////////////////////////////////////////////
 // ConstantWrapperEvalContext Member Functions
@@ -240,10 +226,6 @@ uint32_t ConstantWrapperEvalContext::getAssemblyOffset() const
 {
     return _innerContext->getAssemblyOffset();
 }
-
-////////////////////////////////////////////////////////////////////////////////
-// Global Function Definitions
-////////////////////////////////////////////////////////////////////////////////
 
 }} // namespace Ag::Asm
 ////////////////////////////////////////////////////////////////////////////////

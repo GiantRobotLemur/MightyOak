@@ -24,13 +24,11 @@
 ////////////////////////////////////////////////////////////////////////////////
 // Macro Definitions
 ////////////////////////////////////////////////////////////////////////////////
+//! @brief A macro which captures the current source code location.
+#define LOC TestLocation(__FILE__, __LINE__)
 
 namespace Ag {
 namespace Asm {
-
-////////////////////////////////////////////////////////////////////////////////
-// Data Type Declarations
-////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////
 // Class Declarations
@@ -68,9 +66,6 @@ struct TestLocation
     TestLocation();
     TestLocation(const char *file, int line);
 };
-
-//! @brief A macro which captures the current source code location.
-#define LOC TestLocation(__FILE__, __LINE__)
 
 //! @brief A base class for the parameters required for a dynamically
 //! registered test.
@@ -121,6 +116,7 @@ InputContext createInput(const char *sourceCode);
 
 void appendLog(::testing::AssertionResult &result, const Messages &log);
 ::testing::AssertionResult compareWords(uint32_t lhs, uint32_t rhs);
+::testing::AssertionResult assemblySuccess(const Messages &log);
 
 const Options &getDefaultOptions();
 void registerInstructionTests();
@@ -153,7 +149,6 @@ void registerTestPoints(const char *suiteName, const TPoint *testPoints, size_t 
             [=]() -> BaseTestFixture *{ return new TTest(point); });
     }
 }
-
 
 }} // namespace Ag::Asm
 

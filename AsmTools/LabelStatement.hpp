@@ -17,6 +17,7 @@
 #include "Ag/Core/String.hpp"
 #include "AsmTools/Messages.hpp"
 
+#include "ExpressionNode.hpp"
 #include "StatementListNode.hpp"
 
 namespace Ag {
@@ -36,10 +37,6 @@ public:
     LabelNode(ParseContext &context, const Token &labelToken);
     virtual ~LabelNode() = default;
 
-    // Accessors
-
-    // Operations
-
     // Overrides
     virtual bool isComplete() const override;
     virtual bool isValid() const override;
@@ -57,26 +54,29 @@ private:
 
     // Internal Fields
     String _id;
-    State _currentState;
+    ExpressionNodeUPtr _valueExpr;
+    State _state;
 };
-
 
 //! @brief An object represent a statement defining an assembly language label.
 class LabelStatement : public Statement
 {
 public:
     // Construction/Destruction
-    LabelStatement(string_cref_t id, const Location &at);
+    LabelStatement(string_cref_t id, const Location &at, IExprUPtr &&value);
     virtual ~LabelStatement() = default;
 
     // Accessors
     string_cref_t getID() const;
     const Location &getSourcePosition() const;
+    IExprCPtr getValueExpr() const;
 
 private:
     // Internal Fields
     Location _at;
     String _id;
+    IExprUPtr _valueExpr;
+    bool _isAddress;
 };
 
 }} // namespace Ag::Asm

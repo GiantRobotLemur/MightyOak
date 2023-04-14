@@ -19,28 +19,21 @@
 #include "AsmTools/Messages.hpp"
 #include "Value.hpp"
 
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
-
 namespace Ag {
 namespace Asm {
 
 ////////////////////////////////////////////////////////////////////////////////
-// Data Type Declarations
-////////////////////////////////////////////////////////////////////////////////
-
-
-////////////////////////////////////////////////////////////////////////////////
 // Class Declarations
 ////////////////////////////////////////////////////////////////////////////////
+//! @brief Captures the definition of a symbol defined in source code.
 class SymbolDefinition
 {
 public:
     // Construction/Destruction
     SymbolDefinition(string_cref_t id);
     SymbolDefinition(string_cref_t id, const Location &source);
-    SymbolDefinition(string_cref_t id, const Location &source, const Value &value);
+    SymbolDefinition(string_cref_t id, const Location &source,
+                     const Value &value, bool isAddress);
 
     // Accessors
     string_cref_t getId() const;
@@ -48,6 +41,8 @@ public:
     bool hasValue() const;
     const Value &getValue() const;
     void setValue(const Value &value);
+    bool isAddress() const;
+    void setIsAddress(bool isAddress);
 
     // Operations
     bool operator==(const SymbolDefinition &rhs) const;
@@ -56,6 +51,7 @@ private:
     String _id;
     Location _source;
     Value _definition;
+    bool _isAddress;
 };
 
 //! @brief A functor which produces a hash of a symbol definition identifier.
@@ -75,36 +71,28 @@ struct SymbolDefinitionIDEqual
 class SymbolTable
 {
 public:
+    // Public Types
+    using Symbols = std::unordered_set<SymbolDefinition,
+        SymbolDefinitionIDHash,
+        SymbolDefinitionIDEqual>;
+
     // Construction/Destruction
     SymbolTable() = default;
     ~SymbolTable() = default;
 
     // Accessors
+    const Symbols &getAllSymbols() const;
     bool contains(string_cref_t id, Location &at) const;
     bool tryLookupValue(string_cref_t id, Value &value) const;
 
     // Operations
     bool declareSymbol(string_cref_t id, const Location &source);
-    bool defineSymbol(string_cref_t id, const Location &source, const Value &value);
+    bool defineSymbol(string_cref_t id, const Location &source,
+                      const Value &value, bool isAddress);
 private:
-    // Internal Types
-    using SymbolHashTable = std::unordered_set<SymbolDefinition,
-                                               SymbolDefinitionIDHash,
-                                               SymbolDefinitionIDEqual>;
-
-    // Internal Functions
-
     // Internal Fields
-    SymbolHashTable _symbols;
+    Symbols _symbols;
 };
-
-////////////////////////////////////////////////////////////////////////////////
-// Function Declarations
-////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////
-// Templates
-////////////////////////////////////////////////////////////////////////////////
 
 }} // namespace Ag::Asm
 

@@ -13,10 +13,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 #include "TestTools.hpp"
 
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
-
 namespace Ag {
 namespace Asm {
 
@@ -276,6 +272,7 @@ void registerAssemblyTests()
         { LOC, "Add_Immediate", "ADD R1, R2, #3", 0xE2821003 },
         { LOC, "And_Register", "AND R1, R2, R3", 0xE0021003 },
         { LOC, "Adc_LSL_Register", "ADCNES R9, R10, R11, LSL R12", 0x10BA9C1B },
+        { LOC, "Adc_ASL_Register", "ADCNES R9, R10, R11, ASL R12", 0x10BA9C1B },
         { LOC, "Sub_LSR_Immediate", "SUBCS R4, R5, R6, LSR #7", 0x204543A6 },
         { LOC, "Rsb_ASR_Immediate", "RSBHSS R9, R10, R11, ASR #12", 0x207A964B },
         { LOC, "Rsc_ROR_Immediate", "RSCS R14, R15, R0, ROR #1", 0xE0FFE0E0 },
@@ -352,9 +349,10 @@ void registerAssemblyTests()
         { LOC, "Stm_EA", "STMEA R13, {R0-R4}", 0xE88D001Fu },
         { LOC, "Ldm_ED", "LDMED sp, {R8-R11}", 0xE99D0F00u },
         { LOC, "Stm_ED", "STMED R13!, {R0-R4}^", 0xE86D001Fu },
+        { LOC, "Stm_Real", "STMFD sp!,{v1-v6,ip,link}", 0xE92D53F0u },
 
-        { LOC, "Adr_Forward", "ADR R1, &10010", 0xE28F1008u },
-        { LOC, "Adr_Backwards", "ADR R4, &FFF0", 0xE24F4018u },
+        { LOC, "Adr_Forward", "ADR R1, &10010", 0xE28F1F02u },
+        { LOC, "Adr_Backwards", "ADR R4, &FFF0", 0xE24F4F06u },
 
         { LOC, "Bkpt_Simple", "BKPT &DEAD", 0xE12DEA7Du },
         { LOC, "Bkpt_Zero", "BKPT 0", 0xE1200070u },

@@ -14,33 +14,14 @@
 #include <algorithm>
 
 #include "Ag/Core/Exception.hpp"
-
 #include "AsmTools/InstructionInfo.hpp"
+
 #include "Assembly.hpp"
 #include "Disassembly.hpp"
 #include "FormatInstruction.hpp"
 
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
-
 namespace Ag {
 namespace Asm {
-
-namespace {
-////////////////////////////////////////////////////////////////////////////////
-// Local Data Types
-////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////
-// Local Data
-////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////
-// Local Functions
-////////////////////////////////////////////////////////////////////////////////
-
-} // TED
 
 ////////////////////////////////////////////////////////////////////////////////
 // InstructionInfo Member Function Definitions
@@ -575,6 +556,40 @@ bool InstructionInfo::disassemble(uint32_t instruction, uint32_t loadAddress,
     return _opClass != OperationClass::None;
 }
 
+//! @brief Attempts to initialise the object by disassembling a sequence of
+//! machine code instructions.
+//! @param[in] instructions The instruction bit fields to disassemble.
+//! @param[in] count The count of instruction words in instructions.
+//! @param[in] loadAddress The address at which the disassembled instruction is
+//! expected to be executed.
+//! @param[in] flags A bit field defining how the instruction should be
+//! interpreted using bits from the DisasmBits enumeration.
+//! @returns The count of words successfully disassembled.
+uint8_t InstructionInfo::disassemble(const uint32_t *instructions,
+                                     uint8_t count, uint32_t loadAddress,
+                                     uint32_t flags /*= 0x3F*/)
+{
+    // Rest the object to an empty state.
+    reset(InstructionMnemonic::MaxMnemonic,
+          OperationClass::None,
+          ConditionCode::Nv);
+
+    // Prepare parameters for the disassembler.
+    DisassemblyParams params(instructions, count, flags, loadAddress, &_params);
+
+    // Perform disassembly somewhere else (as it requires quite a bit of code).
+    _opClass = disassembleInstruction(params);
+
+    if (_opClass != OperationClass::None)
+    {
+        // Copy over parameters on success.
+        _mnemonic = params.Mnemonic;
+        _condition = params.Condition;
+    }
+
+    return (_opClass == OperationClass::None) ? 0u : params.Decoded;
+}
+
 
 //! @brief Outputs the instruction as text.
 //! @param[in] options An optional object which specifies how the instruction
@@ -645,10 +660,6 @@ void InstructionInfo::validateInstructionClass(OperationClass classification) co
             "Getting the wrong type of instruction parameters for the instruction class.");
     }
 }
-
-////////////////////////////////////////////////////////////////////////////////
-// Global Function Definitions
-////////////////////////////////////////////////////////////////////////////////
 
 }} // namespace Ag::Asm
 ////////////////////////////////////////////////////////////////////////////////

@@ -18,16 +18,8 @@
 
 #include "Ag/Core.hpp"
 
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
-
 namespace Ag {
 namespace Asm {
-
-////////////////////////////////////////////////////////////////////////////////
-// Data Type Declarations
-////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////
 // Class Declarations
@@ -76,9 +68,11 @@ class Message
 {
 public:
     // Construction/Destruction
-    Message(MessageSeverity severity, const Location &location, const String &message);
+    Message(MessageSeverity severity, const Location &location,
+            const String &message, size_t ordinal);
 
     // Accessors
+    size_t getOrdinal() const;
     MessageSeverity getSeverity() const;
     const Location &getLocation() const;
     const String &getMessage() const;
@@ -89,6 +83,7 @@ private:
     // Internal Fields
     String _message;
     Location _location;
+    size_t _ordinal;
     MessageSeverity _severity;
 };
 
@@ -121,9 +116,8 @@ public:
     void appendFatal(const Location &location, utf8_cptr_t formatSpec,
                      const VariantList &values);
 
+    void sort();
 private:
-    // Internal Types
-
     // Internal Functions
     void appendFormatted(MessageSeverity severity, const Location &location,
                          utf8_cptr_t formatSpec, const VariantList &values);
@@ -132,13 +126,6 @@ private:
     MessageCollection _messages;
     bool _hasErrors;
 };
-////////////////////////////////////////////////////////////////////////////////
-// Function Declarations
-////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////
-// Templates
-////////////////////////////////////////////////////////////////////////////////
 
 }} // namespace Ag::Asm
 

@@ -13,10 +13,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 #include "InputSource.hpp"
 
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
-
 namespace Ag {
 namespace Asm {
 
@@ -42,38 +38,32 @@ public:
     {
         size_t bufferUsed = 0;
 
-        if (_input)
+        // Read characters until the buffer is full or the stream ended.
+        while (_input && (bufferUsed < bufferSize))
         {
-            // Read characters until the buffer is full or the stream ended.
+            Utf::FromWideConverter converter;
+            char32_t result;
+            bool hasError = false;
+
             while (bufferUsed < bufferSize)
             {
-                Utf::FromWideConverter converter;
-                char32_t result;
-                bool hasError = false;
-
+                // Get the next character.
                 wint_t next = fgetwc(_input.get());
-
-                while ((bufferUsed < bufferSize) && (next != WEOF))
-                {
-                    if (converter.tryConvert(static_cast<wchar_t>(next),
-                                             result, hasError))
-                    {
-                        buffer[bufferUsed++] = result;
-                    }
-                    else if (hasError)
-                    {
-                        converter.reset();
-                    }
-
-                    // Get the next character.
-                    next = fgetwc(_input.get());
-                }
 
                 if (next == WEOF)
                 {
                     // Close the file to ensure no further characters are read.
                     _input.reset();
                     break;
+                }
+                else if (converter.tryConvert(static_cast<wchar_t>(next),
+                                                result, hasError))
+                {
+                    buffer[bufferUsed++] = result;
+                }
+                else if (hasError)
+                {
+                    converter.reset();
                 }
             }
         }
@@ -143,19 +133,7 @@ public:
     }
 };
 
-////////////////////////////////////////////////////////////////////////////////
-// Local Data
-////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////
-// Local Functions
-////////////////////////////////////////////////////////////////////////////////
-
-} // TED
-
-////////////////////////////////////////////////////////////////////////////////
-// Class Method Definitions
-////////////////////////////////////////////////////////////////////////////////
+} // Anonymous namespace
 
 ////////////////////////////////////////////////////////////////////////////////
 // Global Function Definitions

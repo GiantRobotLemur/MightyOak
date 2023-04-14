@@ -15,16 +15,8 @@
 ////////////////////////////////////////////////////////////////////////////////
 #include "AsmTools/InstructionInfo.hpp"
 
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
-
 namespace Ag {
 namespace Asm {
-
-////////////////////////////////////////////////////////////////////////////////
-// Data Type Declarations
-////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////
 // Class Declarations
@@ -33,17 +25,24 @@ namespace Asm {
 struct DisassemblyParams
 {
     InstructionParams *Params;
-    uint32_t Instruction;
+    uint32_t Instructions[4];
     uint32_t LoadAddress;
     uint32_t Flags;
     ConditionCode Condition;
     InstructionMnemonic Mnemonic;
+    uint8_t MaxInstruction;
+    uint8_t Decoded;
 
     // Construction
     DisassemblyParams(uint32_t instruction, uint32_t flags,
                       uint32_t loadAddr, InstructionParams *params);
 
+    DisassemblyParams(const uint32_t *instructions, uint8_t count,
+                      uint32_t flags, uint32_t loadAddr,
+                      InstructionParams *params);
+
     // Operations
+    bool isNonOp() const noexcept;
     bool isSet(uint8_t offset) const noexcept;
     bool isClear(uint8_t offset) const noexcept;
     bool matches(uint32_t mask, uint32_t significantBits) const noexcept;
@@ -63,10 +62,6 @@ struct DisassemblyParams
 ////////////////////////////////////////////////////////////////////////////////
 OperationClass disassembleInstruction(DisassemblyParams &params);
 void fixDisasmShifterMode(ShifterOperand &shiftOperand);
-
-////////////////////////////////////////////////////////////////////////////////
-// Templates
-////////////////////////////////////////////////////////////////////////////////
 
 }} // namespace Ag::Asm
 
