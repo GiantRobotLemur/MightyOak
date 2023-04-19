@@ -62,7 +62,7 @@ MonotonicTicks getTime()
 
     if (clock_gettime(CLOCK_MONOTONIC_RAW, &nativeFreq) == 0)
     {
-        MonotonicTicks tickCount = static_cast<MonotonicTicks>(nativeFreq.tv_sec) * 1e9ll);
+        MonotonicTicks tickCount = static_cast<MonotonicTicks>(nativeFreq.tv_sec) * 1e9;
         tickCount += static_cast<MonotonicTicks>(nativeFreq.tv_nsec);
 
         return tickCount;

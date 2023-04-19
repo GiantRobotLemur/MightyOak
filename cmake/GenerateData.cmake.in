@@ -1,6 +1,7 @@
 # CMake script for embedding binary data files as static C++ data.
 
 function(add_static_data sourceFileName)
+    string(APPEND sourceCode "#include <cstddef>\n\n")
     string(APPEND sourceCode "#include <cstdint>\n\n")
 
     foreach(fullName IN ITEMS ${ARGN})

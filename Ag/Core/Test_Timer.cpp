@@ -26,6 +26,11 @@ constexpr uint32_t NoticablePause = 125;
 ////////////////////////////////////////////////////////////////////////////////
 // Local Functions
 ////////////////////////////////////////////////////////////////////////////////
+#ifdef __GNUC__
+// Disable warnings for code which is intended to induce runtime errors.
+#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
+#endif
+
 void busyWait(uint32_t cycles)
 {
     srand(123456);

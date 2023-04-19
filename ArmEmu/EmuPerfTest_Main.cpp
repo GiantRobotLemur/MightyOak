@@ -206,7 +206,7 @@ private:
         uint32_t endPC = testSystem->getCoreRegister(CoreRegister::PC) - 12;
         if (endPC < 0x20)
         {
-            char *reason = "Unknown";
+            const char *reason = "Unknown";
 
             switch (endPC >> 2)
             {
@@ -230,13 +230,13 @@ private:
         }
 
         double durationInSeconds = static_cast<double>(duration) / HighResMonotonicTimer::getFrequency();
-        printf("Executed %I64u cycles in %f seconds.\n", cycleCount,
-               durationInSeconds);
-
         double clockSpeedHz = cycleCount / durationInSeconds;
 
-        printf("Simulated clock speed: %f MHz\n", clockSpeedHz / 1000000.0);
+        String summary = String::format("Executed {0} cycles in {1:F2} seconds.\n"
+                                        "Simulated clock speed: {2:F2} MHz",
+                                        { cycleCount, durationInSeconds, clockSpeedHz / 1000000.0 });
 
+        puts(summary.getUtf8Bytes());
         return true;
     }
 public:

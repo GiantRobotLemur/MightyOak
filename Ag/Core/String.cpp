@@ -1709,8 +1709,9 @@ String getRuntimeLibraryErrorMessage(int errorCode)
 #else
     std::vector<char> buffer;
     buffer.resize(bufferSize);
+    char *result = strerror_r(errorCode, buffer.data(), bufferSize);
 
-    if (strerror_r(errorCode, buffer.data(), bufferSize) == nullptr)
+    if (result == nullptr)
     {
         return String::Empty;
     }
@@ -1724,11 +1725,11 @@ String getRuntimeLibraryErrorMessage(int errorCode)
             bufferSize *= 2;
             buffer.resize(bufferSize);
 
-            strerror_r(errorCode, buffer.data(), bufferSize);
+            result = strerror_r(errorCode, buffer.data(), bufferSize);
             length = strlen(buffer.data());
         }
 
-        return String(buffer.data(), length);
+        return String(result);
     }
 #endif
 }
