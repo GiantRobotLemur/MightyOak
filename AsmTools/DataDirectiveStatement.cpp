@@ -568,7 +568,7 @@ public:
             if (value.tryConvert(DataType::Float, converted))
             {
                 float realValue = converted.asFloat();
-                builder.writeWord(*reinterpret_cast<const uint32_t *>(&realValue));
+                builder.writeBytes(&realValue, sizeof(realValue));
                 isAssembled = true;
             }
             else
@@ -642,7 +642,7 @@ public:
             if (value.tryConvert(DataType::Float, converted))
             {
                 float realValue = converted.asFloat();
-                builder.writeWord(*reinterpret_cast<const uint32_t *>(&realValue));
+                builder.writeBytes(&realValue, sizeof(realValue));
                 isAssembled = true;
             }
             else

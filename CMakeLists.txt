@@ -32,6 +32,14 @@ include(CheckLanguage)
 find_package(GTest 1.10 REQUIRED)
 find_package(Doxygen 1.8 OPTIONAL_COMPONENTS dot)
 
+# Limit configurations
+get_property(isMultiConfig GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+
+if(isMultiConfig)
+    # Limit build configurations to Release with Debug Info and Debug.
+    set(CMAKE_CONFIGURATION_TYPES "Debug;RelWithDebInfo")
+endif()
+
 # Configure global compiler options.
 if (DEFINED MSVC)
     add_compile_options("/W4")

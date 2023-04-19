@@ -383,8 +383,10 @@
 ; */
 
 ; Accuracy of timings and human fatigue controlled by next two lines
-.LOOPS   50000       ; Use this for slow or 16 bit machines
-; .LOOPS 500000      ; Use this for faster machines
+;.LOOPS   50000       ; Use this for slow or 16 bit machines
+;.LOOPS 500000      ; Use this for faster machines
+.LOOPS 1000000      ; Specially for ArmEmu to ensure it runs for 20s.
+
 
 ;/* Compiler dependent options */
 ;#undef	NOENUM			/* Define if compiler has no enum's */
@@ -606,15 +608,15 @@ ALIGN
     LDRB a1,[a4],#1                 ; Copy byte-by-byte
     STRB a1,[a3],#1
     TST a1,#0xFF                    ; Check for null terminator
-    BNE Proc0_strcpy1
+    BNE Proc0_strcpy2
 
 ;        EnumLoc = Ident2;
     MOV a3,#2
     STR a3,[ip,#Proc0_EnumLoc]
 
 ;        BoolGlob = ! Func2(String1Loc, String2Loc);
-    ADD a1,ip,#-Proc0_String1Loc
-    ADD a2,ip,#-Proc0_String2Loc
+    SUB a1,ip,#-Proc0_String1Loc
+    SUB a2,ip,#-Proc0_String2Loc
     BL Func2
     MVN a1,a1
     STR a1,BoolGlob
@@ -635,7 +637,7 @@ ALIGN
     STR a1,[a3]                     ; Ensure the current value of IntLoc3 is in memory.
     MOV a1,v2
     MOV a2,v3
-    BL Proc7
+    BL Proc7                        ; *IntLoc3 = IntLoc1 + 2 + IntLoc2
 
 ;            ++IntLoc1;
     ADD v2,v2,#1
@@ -658,8 +660,8 @@ ALIGN
     BL Proc1
 
 ;        for (CharIndex = 'A'; CharIndex <= Char2Glob; ++CharIndex)
-    MOV v2,#'A'
-    SUB v3,ip,#-Proc0_EnumLoc       ; Get the address of EnumLoc
+    MOV v2,#'A'                     ; v2 = CharIndex
+    SUB v3,ip,#-Proc0_EnumLoc       ; v3 = &EnumLoc (for later)
 .Proc0_Loop2_Start
     LDRB a1,Char1Glob
     CMP v2,a1
@@ -1062,9 +1064,10 @@ ALIGN
 
 ;    ++Array2Par[IntLoc][IntLoc-1];
     SUB a1,v1,#1                    ; a1 = IntLoc - 1
-    LDR a2,[a1,v4,LSL #2]!
+    MOV a3,v4
+    LDR a2,[a3,a1,LSL #2]!
     ADD a2,a2,#1
-    STR a2,[a1]
+    STR a2,[a3]
 
 ;    Array2Par[IntLoc+20][IntLoc] = Array1Par[IntLoc];
     ADD a1,v1,#20 * Array2Dim_RowSize
@@ -1076,6 +1079,7 @@ ALIGN
     MOV a1,#5
     STR a1,IntGlob
 ;}
+    LDMFD sp!,{v1-v6,pc}^           ; Return
 
 .Func1
 ;Enumeration Func1(CapitalLetter CharPar1, CapitalLetter CharPar2)
@@ -1114,12 +1118,12 @@ ALIGN
     CMP v1,#1
     BGT Func2_Loop1_End
 ;    {
+;        if (Func1(StrParI1[IntLoc], StrParI2[IntLoc+1]) == Ident1)
     LDRB a1,[v1,v3]
     ADD a3,v3,#1
     LDRB a2,[v1,a3]
     BL Func1
     CMP a1,#1
-;        if (Func1(StrParI1[IntLoc], StrParI2[IntLoc+1]) == Ident1)
 ;        {
     MOVEQ v4,#'A'
     ADDEQ v3,v3,#1
@@ -1199,9 +1203,9 @@ ALIGN
 .strcmp_Loop
     LDRB a3,[v1],#1
     LDRB a4,[v2],#1
-    TEQ a3,#0
+    TST a3,#&FF
     BEQ strcmp_str1_Finished
-    TEQ a4,#0
+    TST a4,#&FF
     BEQ strcmp_str2_Finished
     CMP a3,a4
     BEQ strcmp_Loop
@@ -1210,7 +1214,7 @@ ALIGN
     B strcmp_End
 
 .strcmp_str1_Finished
-    TEQ a4,#0
+    TST a4,#&FF
     MOVEQ a1,#0                 ; str1 and str2 finished together
     MOVNE a1,#1                 ; str2 is longer, result = 1
     B strcmp_End

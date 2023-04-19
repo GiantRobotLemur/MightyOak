@@ -16,6 +16,7 @@
 // Ordered (loosely) by dependency.
 #include "Core/Configuration.hpp"
 #include "Core/Binary.hpp"
+#include "Core/Timer.hpp"
 #include "Core/ByteOrder.hpp"
 #include "Core/CodePoint.hpp"
 #include "Core/EnumInfo.hpp"

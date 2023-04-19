@@ -17,17 +17,10 @@
 
 #include "RegisterFile.hpp"
 
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
-
 namespace Ag {
 namespace Arm {
 
 namespace {
-////////////////////////////////////////////////////////////////////////////////
-// Local Data Types
-////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////
 // Local Data
@@ -56,11 +49,7 @@ static const uint8_t PsrIrqDisableShift26 = 26;
 //! @brief A mask of the IRQ and FIRQ disable bits in the 26-bit PSR.
 static const uint32_t IrqDisableMask26 = IrqDisableBit26 | FirqDisableBit26;
 
-////////////////////////////////////////////////////////////////////////////////
-// Local Functions
-////////////////////////////////////////////////////////////////////////////////
-
-} // TED
+} // Anonymous namespace
 
 ////////////////////////////////////////////////////////////////////////////////
 // RegisterFile Member Definitions
@@ -69,7 +58,7 @@ static const uint32_t IrqDisableMask26 = IrqDisableBit26 | FirqDisableBit26;
 //! @param[in] newMode The mode to change the processor to.
 //! @retval true The processor mode was changed.
 //! @retval false The processor was already in the requested mode.
-constexpr bool RegisterFile::changeMode(ProcessorMode newMode) noexcept
+bool RegisterFile::changeMode(ProcessorMode newMode) noexcept
 {
     bool isChanged = false;
 
@@ -276,7 +265,7 @@ void RegisterFile::setPC(uint32_t pc)
 }
 
 //! @brief Interprets the current processor mode from the PSR.
-constexpr ProcessorMode RegisterFile::getMode() const noexcept
+ProcessorMode RegisterFile::getMode() const noexcept
 {
     return fromScalar<ProcessorMode>(static_cast<uint8_t>(_coreRegisters[toScalar(CoreRegister::CPSR)] & PsrModeMask26));
 }

@@ -18,27 +18,8 @@
 #include "Hardware.hpp"
 #include "SystemResources.hpp"
 
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
-
 namespace Ag {
 namespace Arm {
-
-namespace {
-////////////////////////////////////////////////////////////////////////////////
-// Local Data Types
-////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////
-// Local Data
-////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////
-// Local Functions
-////////////////////////////////////////////////////////////////////////////////
-
-} // TED
 
 ////////////////////////////////////////////////////////////////////////////////
 // Hardware Member Definitions
@@ -579,6 +560,29 @@ uint32_t Hardware::rawReadLogicalMemory(uint32_t logicalAddr, void *data,
     }
 
     return bytesRead;
+}
+
+//! @brief Copies bytes to a range of addresses in guest memory.
+//! @param[in] logicalAddr The logical address of the first byte in the guest
+//! address space to overwrite.
+//! @param[in] data The buffer to containing the data to copy.
+//! @param[in] byteCount The maximum number of bytes to copy.
+void Hardware::rawWriteLogicalMemory(uint32_t logicalAddr, const void *data,
+                                     uint32_t byteCount)
+{
+    const uint8_t *source = reinterpret_cast<const uint8_t *>(data);
+    uint8_t *hostAddr = nullptr;
+    uint32_t runSize = 0;
+    uint32_t bytesWritten = 0;
+
+    while ((bytesWritten < byteCount) &&
+           tryDecodeWriteAddress(logicalAddr + bytesWritten, hostAddr, runSize))
+    {
+        uint32_t bytesToWrite = std::min(byteCount - bytesWritten, byteCount);;
+
+        std::memcpy(hostAddr, source + bytesWritten, bytesToWrite);
+        bytesWritten += bytesToWrite;
+    }
 }
 
 //! @brief Raises a debug interrupt in response to a bkpt instruction being executed.

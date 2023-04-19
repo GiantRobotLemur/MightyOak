@@ -20,10 +20,6 @@
 
 #include "SystemResources.hpp"
 
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
-
 namespace Ag {
 namespace Arm {
 
@@ -42,10 +38,6 @@ struct CompareGuestMappings
 };
 
 ////////////////////////////////////////////////////////////////////////////////
-// Local Data
-////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////
 // Local Functions
 ////////////////////////////////////////////////////////////////////////////////
 //! @brief A function to read a location in a range of guest addresses.
@@ -62,7 +54,6 @@ uint32_t readGuestMemory(uintptr_t context, uint32_t offset)
     return *guestAddr;
 }
 
-
 //! @brief A function to write up to 32-bits to a location in
 //! a range of guest addresses.
 //! @param[in] context The context value associated with the MMIO address
@@ -77,7 +68,7 @@ void writeGuestMemory(uintptr_t context, uint32_t offset, uint32_t value)
     *guestAddr = value;
 }
 
-} // TED
+} // Anonymous namespace
 
 ////////////////////////////////////////////////////////////////////////////////
 // SystemResources Member Definitions
@@ -87,8 +78,8 @@ void writeGuestMemory(uintptr_t context, uint32_t offset, uint32_t value)
 SystemResources::SystemResources(IIrqSink *irqSink) :
     _irqSink(irqSink)
 {
-    // Initially allocate 4 KB RAM.
-    _ram.resize(4096, 0);
+    // Initially allocate 32 KB RAM.
+    _ram.resize(32 * 1024, 0);
 }
 
 //! @brief Gets the size of the physical RAM in bytes.

@@ -223,11 +223,31 @@ endfunction()
 # changes to the source text files will force a re-generation and recompilation
 # of the generated code.
 function(add_static_data target headerName)
-    foreach(dataFileName IN ITEMS ${ARGN})
+    set(prefix data)
+    set(noValues BINARY)
+    set(singleValues)
+    set(multiValues SOURCES)
+
+    cmake_parse_arguments("${prefix}"
+                          "${noValues}"
+                          "${singleValues}"
+                          "${multiValues}"
+                          ${ARGN})
+
+    if (data_BINARY)
+        string(APPEND declarations "#include <cstdint>\n\n")
+    endif()
+
+    foreach(dataFileName IN ITEMS ${data_SOURCES})
         get_filename_component(fullName ${dataFileName} ABSOLUTE BASE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
         get_filename_component(baseName ${fullName} NAME_WLE)
 
-        string(APPEND declarations "const char *get${baseName}Text();\n")
+        if (data_BINARY)
+            string(APPEND declarations "const uint8_t *get${baseName}Data(size_t &byteCount);\n")
+        else()
+            string(APPEND declarations "const char *get${baseName}Text();\n")
+        endif()
+
         list(APPEND inputFiles ${fullName})
     endforeach()
 
@@ -251,8 +271,14 @@ function(add_static_data target headerName)
     # Schedule the source file to be generated at build time if any of
     # the data files are edited.
     set(buildTimeScript "${CMAKE_CURRENT_BINARY_DIR}/${headerBaseName}.cmake")
-    configure_file("${UtilsDir}/GenerateText.cmake.in" "${buildTimeScript}" @ONLY)
-    
+
+    message(STATUS "inputFiles: ${inputFiles}")
+    if (data_BINARY)
+        configure_file("${UtilsDir}/GenerateData.cmake.in" "${buildTimeScript}" @ONLY)
+    else()
+        configure_file("${UtilsDir}/GenerateText.cmake.in" "${buildTimeScript}" @ONLY)
+    endif()
+
     add_custom_command(OUTPUT ${fullSourceName}
                        COMMAND ${CMAKE_COMMAND} ARGS -P ${buildTimeScript}
                        DEPENDS ${inputFiles}

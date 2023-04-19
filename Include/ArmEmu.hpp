@@ -17,10 +17,6 @@
 
 #include <memory>
 
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
-
 namespace Ag {
 namespace Arm {
 
@@ -101,26 +97,32 @@ public:
     // Accessors
     virtual ProcessorMode getMode() const = 0;
     virtual uint32_t getCoreRegister(CoreRegister id) const = 0;
+    virtual void setCoreRegister(CoreRegister id, uint32_t value) = 0;
     virtual uint32_t readFromLogicalAddress(uint32_t logicalAddr, uint32_t length,
                                             void *buffer) const = 0;
+    virtual void writeToLogicalAddress(uint32_t logicalAddr, uint32_t length,
+                                       const void *buffer) = 0;
 
     // Operations
-    virtual uint32_t run() =0;
-    virtual uint32_t runSingleStep() = 0;
+    virtual uint64_t run() =0;
+    virtual uint64_t runSingleStep() = 0;
+};
+
+//! @brief A custom deleter for IArmSystem implementations.
+struct IArmSystemDeleter
+{
+    void operator()(IArmSystem *sys) const;
 };
 
 //! @brief An alias for a unique pointer to a simulated ARM system.
-using IArmSystemUPtr = std::unique_ptr<IArmSystem>;
+using IArmSystemUPtr = std::unique_ptr<IArmSystem, IArmSystemDeleter>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Function Declarations
 ////////////////////////////////////////////////////////////////////////////////
 IArmSystemUPtr createUserModeTestSystem(const char *assembler);
+IArmSystemUPtr createEmbeddedTestSystem(const uint8_t *program, size_t byteCount);
 const char *coreRegisterToString(CoreRegister regId);
-
-////////////////////////////////////////////////////////////////////////////////
-// Templates
-////////////////////////////////////////////////////////////////////////////////
 
 }} // namespace Ag::Arm
 

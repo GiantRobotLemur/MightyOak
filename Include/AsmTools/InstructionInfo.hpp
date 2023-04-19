@@ -614,24 +614,30 @@ public:
         //! opposed to absolute addresses.
         ShowOffsets             = 0x01,
 
-        //! @brief Indicates whether base aliases should be used for
+        //! @brief Indicates whether basic aliases should be used for
         //! core register names.
         //! @details If enabled R13 will be formatted as SP, R14 as Link,
         //! and R15 as PC.
         UseCoreRegAliases       = 0x02,
 
+        //! @brief Indicates whether APCS-R register names should be used
+        //! for expressing core register identifiers.
+        //! @details This means a1-a4 for R0-R3, v1-v6 for R4-R9,
+        //! sl = R10, fp= R11, ip = R12, sp = R13, lk = R14, pc = R15.
+        UseAPCSRegAliases       = 0x04,
+
         //! @brief Indicates that immediate constant values should be
         //! formatted as base-10 rather than base-16 values.
-        UseDecimalImmediates    = 0x04,
+        UseDecimalImmediates    = 0x08,
 
         //! @brief Indicates that memory offset values should be formatted as
         //! base-10 rather than base-16 values.
-        UseDecimalOffsets       = 0x08,
+        UseDecimalOffsets       = 0x10,
 
         //! @brief Indicates that comment values embedded in SWI and BKPT
         //! instructions should be formatted as base-10 rather than
         //! base-16 values.
-        UseDecimalComments      = 0x10,
+        UseDecimalComments      = 0x20,
     };
 
     // Construction/Destruction

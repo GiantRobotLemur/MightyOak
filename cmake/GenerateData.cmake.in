@@ -1,0 +1,50 @@
+# CMake script for embedding binary data files as static C++ data.
+
+function(add_static_data sourceFileName)
+    string(APPEND sourceCode "#include <cstddef>\n\n")
+    string(APPEND sourceCode "#include <cstdint>\n\n")
+
+    foreach(fullName IN ITEMS ${ARGN})
+        get_filename_component(baseName ${fullName} NAME_WLE)
+
+        # string(APPEND declarations "const uint8_t *get${baseName}Data(size_t &byteCount);\n")
+
+        string(APPEND sourceCode "// Imported from ${fullName}\n")
+        string(APPEND sourceCode
+               "const uint8_t *get${baseName}Data(size_t &byteCount)\n"
+               "{\n    static const uint8_t data[] = {\n")
+
+        file(READ ${fullName} binaryData HEX)
+
+        # Get the length of the hex string data in characters, there will be 2 per byte.
+        string(LENGTH ${binaryData} dataLength)
+
+        set(dataProcessed 0)
+        set(lineLength 0)
+        set(lineText "")
+        set(separator "        ")
+
+        while (dataProcessed LESS dataLength)
+            # Extract the next byte
+            string(SUBSTRING "${binaryData}" "${dataProcessed}" 2 byteText)
+            string(APPEND sourceCode "${separator}" "0x" "${byteText}")
+            set(separator ", ")
+            math(EXPR dataProcessed "${dataProcessed} + 2")
+            math(EXPR lineLength "${lineLength} + 1")
+            
+            if (${lineLength} GREATER 15)
+                set(separator ",\n        ")
+                set(lineLength 0)
+            endif()
+        endwhile()
+
+        string(APPEND sourceCode " };\n\n"
+               "    byteCount = sizeof(data);\n"
+               "    return data;\n}\n\n")
+    endforeach()
+
+    # Write the source code to a file.
+    configure_file("@UtilsDir@/StaticData.cpp.in" ${sourceFileName} @ONLY)
+endfunction()
+
+add_static_data("@fullSourceName@" "@inputFiles@")

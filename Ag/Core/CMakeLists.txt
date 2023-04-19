@@ -29,6 +29,7 @@ add_ag_library(AgCore SOURCES   CoreInternal.hpp
                                 FsSearchPathList.cpp
                                 FsDirectory.cpp
                                 Uri.cpp
+                                Timer.cpp
                                 Platform.hpp
                                 ${AG_INCLUDE_DIR}/Ag/Core/Configuration.hpp
                                 ${AG_INCLUDE_DIR}/Ag/Core/EnumInfo.hpp
@@ -58,6 +59,7 @@ add_ag_library(AgCore SOURCES   CoreInternal.hpp
                                 ${AG_INCLUDE_DIR}/Ag/Core/FsSearchPathList.hpp
                                 ${AG_INCLUDE_DIR}/Ag/Core/FsDirectory.hpp
                                 ${AG_INCLUDE_DIR}/Ag/Core/Uri.hpp
+                                ${AG_INCLUDE_DIR}/Ag/Core/Timer.hpp
                     WIN_SOURCES Win32API.hpp
                                 Win32API.cpp
                                 Core.natvis
@@ -87,5 +89,6 @@ add_ag_test_app(Core_Tests TEST_LIB AgCore
                                     Test_CommandLine.cpp
                                     Test_App.cpp
                                     Test_FileSystem.cpp
-                                    Test_Uri.cpp)
+                                    Test_Uri.cpp
+                                    Test_Timer.cpp)
 

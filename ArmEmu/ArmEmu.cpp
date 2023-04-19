@@ -56,6 +56,16 @@ public:
 
 } // Anonymous namespace
 
+//! @brief Disposes of a dynamically allocated IArmSystem implementation.
+//! @param[in] sys A pointer to the object to dispose of.
+void IArmSystemDeleter::operator()(IArmSystem *sys) const
+{
+    if (sys != nullptr)
+    {
+        delete sys;
+    }
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // Function Declarations
 ////////////////////////////////////////////////////////////////////////////////
@@ -142,7 +152,54 @@ IArmSystemUPtr createUserModeTestSystem(const char *assembler)
     testSystem->getProcessor().reset();
 
     // Return a unique pointer to the emulated system.
-    return std::unique_ptr<IArmSystem>(testSystem);
+    return IArmSystemUPtr(testSystem);
+}
+
+//! @brief Creates an instance of the test system with a program loaded into
+//! the bottom of the RAM and a descending stack created at the top.
+//! @param program The machine code of the program to load.
+//! @param byteCount The count of bytes in the program.
+//! @return The test system instance in a ready-to-run state.
+IArmSystemUPtr createEmbeddedTestSystem(const uint8_t *program, size_t byteCount)
+{
+    // Create a ROM image filled with breakpoints.
+    std::vector<uint32_t> rom;
+
+    std::generate_n(std::back_inserter(rom),
+                    Hardware::PhysicalRamBase / 4,
+                    GenerateBreakPoint());
+
+    // Create an instruction which at the hardware reset vector which
+    // branches to the first work in memory.
+    Asm::InstructionInfo resetBranch(Asm::InstructionMnemonic::B,
+                                     Asm::OperationClass::Branch);
+    resetBranch.getBranchParameters().Address = Hardware::PhysicalRamBase;
+
+    String error;
+    if (resetBranch.assemble(rom.front(), 0x0000, error) == false)
+    {
+        throw Ag::OperationException("Could not assemble reset vector.");
+    }
+
+    TestSystem *testSystem = new TestSystem();
+
+    // Fill the ROM with breakpoints and a branch to RAM on reset.
+    SystemResources &resources = testSystem->getResources();
+
+    resources.loadMainRom(rom.data(), static_cast<uint32_t>(rom.size() * 4));
+
+    // Copy the machine code into RAM.
+    std::memcpy(resources.getRam(), program, byteCount);
+
+    // Perform a hardware reset.
+    testSystem->getProcessor().reset();
+
+    // Setup a full-descending stack in R13 after the reset.
+    uint32_t ramEnd = Hardware::PhysicalRamBase + resources.getRamSize() - 4;
+    testSystem->setCoreRegister(CoreRegister::R13, ramEnd);
+
+    // Return a unique pointer to the emulated system.
+    return IArmSystemUPtr(testSystem);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
