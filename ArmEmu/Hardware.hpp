@@ -20,10 +20,6 @@
 
 #include "IrqSink.hpp"
 
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
-
 namespace Ag {
 namespace Arm {
 
@@ -110,6 +106,7 @@ public:
     uint8_t fetchInstructions(uint32_t logicalAddr, uint32_t *pipeline);
 
     uint32_t rawReadLogicalMemory(uint32_t logicalAddr, void *data, uint32_t byteCount) const;
+    void rawWriteLogicalMemory(uint32_t logicalAddr, const void *data, uint32_t byteCount);
 
     void raiseDebugIrq();
     void clearDebugIrq();
@@ -134,14 +131,6 @@ private:
     bool tryDecodeReadAddress(uint32_t addr, const uint8_t *&hostAddr, uint32_t &runSize) const;
     bool tryDecodeWriteAddress(uint32_t addr, uint8_t *&hostAddr, uint32_t &runSize) const;
 };
-
-////////////////////////////////////////////////////////////////////////////////
-// Function Declarations
-////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////
-// Templates
-////////////////////////////////////////////////////////////////////////////////
 
 }} // namespace Ag::Arm
 

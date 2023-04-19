@@ -18,16 +18,8 @@
 #include "InstructionPipeline.hpp"
 #include "SystemResources.hpp"
 
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
-
 namespace Ag {
 namespace Arm {
-
-////////////////////////////////////////////////////////////////////////////////
-// Data Type Declarations
-////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////
 // Class Declarations
@@ -49,30 +41,20 @@ public:
     // Overrides
     virtual ProcessorMode getMode() const override;
     virtual uint32_t getCoreRegister(CoreRegister id) const override;
+    virtual void setCoreRegister(CoreRegister id, uint32_t value) override;
     virtual uint32_t readFromLogicalAddress(uint32_t logicalAddr, uint32_t length,
                                             void *buffer) const override;
+    virtual void writeToLogicalAddress(uint32_t logicalAddr, uint32_t length,
+                                       const void *buffer) override;
 
-    virtual uint32_t run() override;
-    virtual uint32_t runSingleStep() override;
-
+    virtual uint64_t run() override;
+    virtual uint64_t runSingleStep() override;
 
 private:
-    // Internal Types
-
-    // Internal Functions
-
     // Internal Fields
     InstructionPipeline _processor;
     SystemResources _resources;
 };
-
-////////////////////////////////////////////////////////////////////////////////
-// Function Declarations
-////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////
-// Templates
-////////////////////////////////////////////////////////////////////////////////
 
 }} // namespace Ag::Arm
 

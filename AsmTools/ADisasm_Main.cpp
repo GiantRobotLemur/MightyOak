@@ -358,8 +358,7 @@ private:
                     formatter.setInstructionAddress(objAddr);
                     String statement = instruction.toString(&formatter);
 
-                    fputs(statement.getUtf8Bytes(), output);
-                    fputc('\n', output);
+                    fprintf(output, "0x%.6X: %s\n", objAddr, statement.getUtf8Bytes());
 
                     objAddr += 4;
                 }

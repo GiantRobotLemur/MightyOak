@@ -10,29 +10,12 @@
 ////////////////////////////////////////////////////////////////////////////////
 // Header File Includes
 ////////////////////////////////////////////////////////////////////////////////
-#include "TestSystem.hpp"
+#include "Ag/Core/Exception.hpp"
 
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
+#include "TestSystem.hpp"
 
 namespace Ag {
 namespace Arm {
-
-namespace {
-////////////////////////////////////////////////////////////////////////////////
-// Local Data Types
-////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////
-// Local Data
-////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////
-// Local Functions
-////////////////////////////////////////////////////////////////////////////////
-
-} // TED
 
 ////////////////////////////////////////////////////////////////////////////////
 // TestSystem Member Definitions
@@ -85,6 +68,28 @@ uint32_t TestSystem::getCoreRegister(CoreRegister id) const
 }
 
 // Inherited from IArmSystem.
+void TestSystem::setCoreRegister(CoreRegister id, uint32_t value)
+{
+    if (id <= CoreRegister::R15)
+    {
+        _processor.setRd(fromScalar<GeneralRegister>(toScalar(id)),
+                         value, true);
+    }
+    else if (id == CoreRegister::CPSR)
+    {
+        _processor.setPSR(value);
+    }
+    else if (id == CoreRegister::SPSR)
+    {
+        throw NotSupportedException("Setting SPSR on an ARMv2 processor");
+    }
+    else if (id == CoreRegister::PC)
+    {
+        _processor.setRn(GeneralRegister::R15, value);
+    }
+}
+
+// Inherited from IArmSystem.
 uint32_t TestSystem::readFromLogicalAddress(uint32_t logicalAddr, uint32_t length,
                                             void *buffer) const
 {
@@ -92,21 +97,23 @@ uint32_t TestSystem::readFromLogicalAddress(uint32_t logicalAddr, uint32_t lengt
 }
 
 // Inherited from IArmSystem.
-uint32_t TestSystem::run()
+void TestSystem::writeToLogicalAddress(uint32_t logicalAddr, uint32_t length,
+                                       const void *buffer)
+{
+    _processor.rawWriteLogicalMemory(logicalAddr, buffer, length);
+}
+
+// Inherited from IArmSystem.
+uint64_t TestSystem::run()
 {
     return _processor.runPipeline(false);
 }
 
 // Inherited from IArmSystem.
-uint32_t TestSystem::runSingleStep()
+uint64_t TestSystem::runSingleStep()
 {
     return _processor.runPipeline(true);
 }
-
-
-////////////////////////////////////////////////////////////////////////////////
-// Global Function Definitions
-////////////////////////////////////////////////////////////////////////////////
 
 }} // namespace Ag::Arm
 ////////////////////////////////////////////////////////////////////////////////

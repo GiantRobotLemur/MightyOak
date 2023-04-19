@@ -19,10 +19,6 @@
 
 #include "Hardware.hpp"
 
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
-
 namespace Ag {
 namespace Arm {
 
@@ -68,7 +64,7 @@ private:
     uint32_t _svcModeRegBank[2];    // R13-R14
 
     // Internal Functions
-    constexpr bool changeMode(ProcessorMode newMode) noexcept;
+    bool changeMode(ProcessorMode newMode) noexcept;
     void raiseException(uint32_t newPc) noexcept;
 
 protected:
@@ -102,7 +98,7 @@ public:
     uint32_t getPC() const;
     void setPC(uint32_t pc);
 
-    constexpr ProcessorMode getMode() const noexcept;
+    ProcessorMode getMode() const noexcept;
     uint32_t getRn(GeneralRegister regId) const;
     bool setRn(GeneralRegister regId, uint32_t value);
     uint32_t getUserRn(GeneralRegister regId) const noexcept;
@@ -138,10 +134,6 @@ inline constexpr GeneralRegister decodeReg(uint32_t instruction,
 {
     return fromScalar<GeneralRegister>(static_cast<uint8_t>(instruction >> lsb) & 0x0F);
 }
-
-////////////////////////////////////////////////////////////////////////////////
-// Templates
-////////////////////////////////////////////////////////////////////////////////
 
 }} // namespace Ag::Arm
 

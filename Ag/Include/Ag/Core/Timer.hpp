@@ -1,6 +1,5 @@
-//! @file Core/Platform.hpp
-//! @brief The includes platform specific headers hidden behind conditional
-//! compilation macros.
+//! @file Ag/Core/Timer.hpp
+//! @brief The declaration of various types of timer component.
 //! @author GiantRobotLemur@na-se.co.uk
 //! @date 2023
 //! @copyright This file is part of the Mighty Oak project which is released
@@ -8,33 +7,34 @@
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
 ////////////////////////////////////////////////////////////////////////////////
 
-#ifndef __AG_CORE_PLATFORM_HPP__
-#define __AG_CORE_PLATFORM_HPP__
+#ifndef __AG_CORE_TIMER_HPP__
+#define __AG_CORE_TIMER_HPP__
 
 ////////////////////////////////////////////////////////////////////////////////
 // Dependant Header Files
 ////////////////////////////////////////////////////////////////////////////////
-#ifdef _WIN32
-#include "Win32API.hpp"
-#else
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <errno.h>
-#include <fcntl.h>
-#include <dirent.h>
-#include <unistd.h>
-#include <execinfo.h>
-#include <time.h>
-#include "PosixAPI.hpp"
-#endif
+#include <cstdint>
+
+namespace Ag {
 
 ////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
+// Data Type Declarations
 ////////////////////////////////////////////////////////////////////////////////
-// Needed to implement the Win32 file system schema, even under Linux.
-#ifndef _MAX_PATH
-#define _MAX_PATH 260
-#endif
+using MonotonicTicks = int64_t;
+
+////////////////////////////////////////////////////////////////////////////////
+// Function Declarations
+////////////////////////////////////////////////////////////////////////////////
+//! @brief A namespace representing a high resolution measurement of the passage
+//! of time.
+namespace HighResMonotonicTimer
+{
+MonotonicTicks getFrequency();
+MonotonicTicks getTime();
+MonotonicTicks getDuration(const MonotonicTicks &start);
+};
+
+} // namespace Ag
 
 #endif // Header guard
 ////////////////////////////////////////////////////////////////////////////////

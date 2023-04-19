@@ -18,10 +18,6 @@
 
 #include "TestTools.hpp"
 
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
-
 namespace Ag {
 namespace Arm {
 
@@ -34,7 +30,6 @@ using RegRequirement = std::pair<CoreRegister, uint32_t>;
 using RegReqList = std::initializer_list<RegRequirement>;
 using MemRequirement = std::pair<uint32_t, uint32_t>;
 using MemReqList = std::initializer_list<MemRequirement>;
-
 
 struct DTPoint
 {
@@ -86,7 +81,7 @@ TEST_P(DataTransfer, ExecuteCode)
             EXPECT_TRUE(isEqualReg(resultReq.first, initialValue, expectedValue));
         }
 
-        uint32_t cycles = specimen->run();
+        uint64_t cycles = specimen->run();
 
         EXPECT_GT(cycles, 1u);
 
@@ -117,9 +112,6 @@ TEST_P(DataTransfer, ExecuteCode)
     }
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// Local Data
-////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////
 // Unit Tests
@@ -998,7 +990,6 @@ DTPoint testPoints[] = {
 };
 
 } // Anonymous
-
 
 INSTANTIATE_TEST_SUITE_P(CPU, DataTransfer, testing::ValuesIn(testPoints));
 

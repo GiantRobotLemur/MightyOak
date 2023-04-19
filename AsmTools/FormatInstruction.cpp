@@ -18,21 +18,10 @@
 #include "Disassembly.hpp"
 #include "FormatInstruction.hpp"
 
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
-
 namespace Ag {
 namespace Asm {
 
 namespace {
-////////////////////////////////////////////////////////////////////////////////
-// Local Data Types
-////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////
-// Local Data
-////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////
 // Local Functions
@@ -578,7 +567,7 @@ void FormatParams::appendSuffix(char suffix, bool hasSuffix)
 //! @param[in] reg The identifier of the register to append.
 void FormatParams::append(CoreRegister reg)
 {
-    static const char *basicIds[] = {
+    static char const *basicIds[] = {
         "R0", "R1", "R2", "R3",
         "R4", "R5", "R6", "R7",
         "R8", "R9", "R10", "R11",
@@ -586,7 +575,15 @@ void FormatParams::append(CoreRegister reg)
         "CPSR", "SPSR"
     };
 
-    static const char *aliasIds[] = {
+    static char const *apcsIds[] = {
+        "a1", "a2", "a3", "a4",
+        "v1", "v2", "v3", "v4",
+        "v5", "v6", "sl", "fp",
+        "ip", "sp", "lk", "pc",
+        "cpsr", "spsr"
+    };
+
+    static char const *aliasIds[] = {
         "R0", "R1", "R2", "R3",
         "R4", "R5", "R6", "R7",
         "R8", "R9", "R10", "R11",
@@ -594,8 +591,16 @@ void FormatParams::append(CoreRegister reg)
         "CPSR", "SPSR"
     };
 
-    const char **ids = hasOption(FormatterOptions::UseCoreRegAliases) ? aliasIds :
-                                                                        basicIds;
+    const char **ids = basicIds;
+
+    if (hasOption(FormatterOptions::UseAPCSRegAliases))
+    {
+        ids = apcsIds;
+    }
+    else if (hasOption(FormatterOptions::UseCoreRegAliases))
+    {
+        ids = aliasIds;
+    }
 
     Builder.append(ids[toScalar(reg)]);
 }

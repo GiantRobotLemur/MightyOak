@@ -13,29 +13,34 @@
 ////////////////////////////////////////////////////////////////////////////////
 #include <algorithm>
 
-#include "InstructionPipeline.hpp"
+#include "AsmTools.hpp"
 
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
+#include "InstructionPipeline.hpp"
 
 namespace Ag {
 namespace Arm {
 
 namespace {
-////////////////////////////////////////////////////////////////////////////////
-// Local Data Types
-////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////
-// Local Data
-////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////
 // Local Functions
 ////////////////////////////////////////////////////////////////////////////////
+// Useful for single-step instruction debugging.
+//void outputDebug(uint32_t addr, uint32_t instruction)
+//{
+//    Asm::InstructionInfo info;
+//    info.disassemble(instruction, addr);
+//
+//    Asm::FormatterOptions opts;
+//    opts.setInstructionAddress(addr);
+//    opts.setFlags(Asm::FormatterOptions::UseCoreRegAliases);
+//
+//    String instructionText = info.toString(&opts);
+//
+//     printf("0x%.6X: %s\n", addr, instructionText.getUtf8Bytes());
+//}
 
-} // TED
+} // Anonymous namespace
 
 ////////////////////////////////////////////////////////////////////////////////
 // InstructionPipeline Member Definitions
@@ -120,8 +125,8 @@ void InstructionPipeline::initialiseConditionMatrix() noexcept
         }
 
         // Condition GE (10).
-        if ((statusFlagState & NV) == NV)
-
+        if (((statusFlagState & NV) == NV) ||
+            ((statusFlagState & NV) == 0))
         {
             state |= 0x0400;
         }
@@ -180,6 +185,8 @@ void InstructionPipeline::flushPipeline()
 {
     uint32_t pc = getPC();
     _pipelineState = fetchInstructions(pc, _pipeline);
+    _pipelineSources[0] = pc;
+    _pipelineSources[1] = pc + 4;
     setPC(pc + 8);
     _currentSlot = 0;
 }
@@ -398,6 +405,7 @@ InstructionPipeline::InstructionPipeline() :
     _currentSlot(0)
 {
     std::fill_n(_pipeline, PipelineStageCount, 0);
+    std::fill_n(_pipelineSources, PipelineStageCount, 0);
     std::fill_n(_conditionMatrix, 16, static_cast<uint16_t>(0));
 
     initialiseConditionMatrix();
@@ -408,9 +416,9 @@ InstructionPipeline::InstructionPipeline() :
 //! @param[in] singleStep True to only run the pipeline once, false to run
 //! until a host or debug interrupt is triggered.
 //! @returns The count of simulated CPU cycles executed before exit.
-uint32_t InstructionPipeline::runPipeline(bool singleStep)
+uint64_t InstructionPipeline::runPipeline(bool singleStep)
 {
-    uint32_t cycleCount = 0;
+    uint64_t cycleCount = 0;
 
     // Ensure the pipeline only runs once in single-step mode.
     bool runPipeline = (singleStep == false);
@@ -460,6 +468,9 @@ uint32_t InstructionPipeline::runPipeline(bool singleStep)
                 if (canExecute(_pipeline[_currentSlot]))
                 {
                     // Perform decode and execute in a single step.
+                    //outputDebug(_pipelineSources[_currentSlot],
+                    //            _pipeline[_currentSlot]);
+
                     result = decodeAndExec(_pipeline[_currentSlot]);
                 }
                 else
@@ -481,6 +492,7 @@ uint32_t InstructionPipeline::runPipeline(bool singleStep)
                     // Fetch the instruction 8 bytes on from the one just
                     // executed.
                     uint32_t nextPC = getPC();
+                    _pipelineSources[_currentSlot] = nextPC;
 
                     // Overwrite the executed instruction with the next one
                     // fetched from memory.
