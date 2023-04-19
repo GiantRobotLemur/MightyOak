@@ -47,8 +47,8 @@ on the STL and C Runtime on which to build the system. Some unit test coverage.
 32-bit ARM assembly language up to the ARMv4 architecture. This includes a
 fully fledged assembler akin to the one integrated into BBC BASIC. Plenty of
 unit test coverage.
-* Arm Emu - A library which emulates the core of an ARM processor, but
-without MMU. Some unit test coverage.
+* [Arm Emu](Doc/ArmEmu.md) - A library which emulates the core of an ARM
+processor, but not MMU or any other hardware yet. Some unit test coverage.
 
 ## Dependencies
 
