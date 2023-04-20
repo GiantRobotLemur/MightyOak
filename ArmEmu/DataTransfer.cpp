@@ -549,7 +549,7 @@ uint32_t DataTransfer::execStoreMultiple(uint32_t instruction, uint32_t baseAddr
 //! InstructionResult enumeration.
 uint32_t DataTransfer::execSwap(uint32_t instruction)
 {
-    uint32_t result = 2;
+    uint32_t result = 3;
     uint32_t addr = getRd(decodeReg(instruction, 16));
     bool isOK = false;
 

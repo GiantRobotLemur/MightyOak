@@ -377,10 +377,18 @@
 ; *
 ; *	The combination of these three aspects is balanced only approximately.
 ; *
-; *	The program does not compute anything meaningfull, but it is
+; *	The program does not compute anything meaningful, but it is
 ; *	syntactically and semantically correct.
 ; *
 ; */
+
+; ARM Implementation Note
+; The initial implementation uses the APCS calling convention.
+; Stack is Full Descending and pointed to by sp (R13).
+; On entry to a subroutine:     Arguments 1-4 are in regs a1-a4, the rest on the stack.
+;                               Arguments 5+ on the stack
+; On exit from a subroutine:    All registers except a1-a4, ip and link must be preserved.
+;                               Status flags must be preserved between calls.
 
 ; Accuracy of timings and human fatigue controlled by next two lines
 ;.LOOPS   50000       ; Use this for slow or 16 bit machines
