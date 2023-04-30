@@ -135,8 +135,8 @@ public:
                                        const void *buffer) = 0;
 
     // Operations
-    virtual uint64_t run() =0;
-    virtual uint64_t runSingleStep() = 0;
+    virtual ExecutionMetrics run() =0;
+    virtual ExecutionMetrics runSingleStep() = 0;
 };
 
 //! @brief A custom deleter for IArmSystem implementations.

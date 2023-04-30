@@ -294,10 +294,13 @@ private:
         // Pass the look count to the program.
         testSystem.setCoreRegister(CoreRegister::R0, loops);
 
-        printf("Running %u loops of the Dhrystone 2.1 benchmark...\n", loops);
-        MonotonicTicks start = HighResMonotonicTimer::getTime();
-        uint64_t cycleCount = testSystem.run();
-        MonotonicTicks duration = HighResMonotonicTimer::getDuration(start);
+        std::string output;
+        appendFormat(FormatInfo::getDisplay(),
+                     "Running {0} loops of the Dhrystone 2.1 benchmark...",
+                     output, { loops });
+
+        puts(output.c_str());
+        ExecutionMetrics metrics = testSystem.run();
 
         uint32_t endPC = testSystem.getCoreRegister(CoreRegister::PC) - 12;
 
@@ -326,12 +329,15 @@ private:
             }
         }
 
-        double durationInSeconds = static_cast<double>(duration) / HighResMonotonicTimer::getFrequency();
-        double clockSpeedHz = cycleCount / durationInSeconds;
+        double durationInSeconds = HighResMonotonicTimer::getTimeSpan(metrics.ElapsedTime);
+        double clockSpeedHz = metrics.calculateClockFrequency();
 
         String summary = String::format("Executed {0} cycles in {1:F2} seconds.\n"
-                                        "Simulated clock speed: {2:F2} MHz",
-                                        { cycleCount, durationInSeconds, clockSpeedHz / 1000000.0 });
+                                        "Simulated clock speed: {2:F2} MHz\n"
+                                        "Simulated performance: {3:F2} MIPs\n",
+                                        { metrics.CycleCount, durationInSeconds,
+                                          clockSpeedHz / 1.0e6,
+                                          metrics.calculateSpeedInMIPS() });
 
         puts(summary.getUtf8Bytes());
         return true;

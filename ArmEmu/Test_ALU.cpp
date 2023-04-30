@@ -78,9 +78,9 @@ TEST_P(ALU, ExecuteCode)
     // Put here to ensure that getMode() wasn't labelled as unused.
     EXPECT_EQ(specimen->getMode(), ProcessorMode::Svc26);
 
-    uint64_t cycles = specimen->run();
+    ExecutionMetrics metrics = specimen->run();
 
-    EXPECT_GT(cycles, 1u);
+    EXPECT_GT(metrics.CycleCount, 1u);
 
     for (const auto &resultReq : GetParam().Requirements)
     {

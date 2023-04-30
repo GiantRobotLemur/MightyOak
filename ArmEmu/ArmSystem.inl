@@ -194,14 +194,14 @@ public:
     }
 
     // Operations
-    virtual uint64_t run()  override
+    virtual ExecutionMetrics run()  override
     {
-        return _execUnit.runPipeline(false).CycleCount;
+        return _execUnit.runPipeline(false);
     }
 
-    virtual uint64_t runSingleStep() override
+    virtual ExecutionMetrics runSingleStep() override
     {
-        return _execUnit.runPipeline(true).CycleCount;
+        return _execUnit.runPipeline(true);
     }
 };
 

@@ -82,9 +82,9 @@ TEST_P(DataTransfer, ExecuteCode)
             EXPECT_TRUE(isEqualReg(resultReq.first, initialValue, expectedValue));
         }
 
-        uint64_t cycles = specimen->run();
+        ExecutionMetrics metrics = specimen->run();
 
-        EXPECT_GT(cycles, 1u);
+        EXPECT_GT(metrics.CycleCount, 1u);
 
         for (const auto &resultReg : testInfo.Registers)
         {
