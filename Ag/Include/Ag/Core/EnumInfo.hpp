@@ -112,7 +112,7 @@ public:
     //! @param[in] displayName The symbol as text to be displayed to the user.
     //! @param[in] description A description of the meaning of the symbol
     //! which can be displayed to the user.
-    //! @note All strings should be UTF-8 encoded.
+    //! @note All strings should be static and UTF-8 encoded.
     EnumSymbol(TEnum id, const char *symbol, const char *displayName = nullptr,
                const char *description = nullptr) :
         _symbol(Utf::ensureNotNull(symbol)),

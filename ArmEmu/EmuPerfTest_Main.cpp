@@ -198,7 +198,17 @@ private:
 
         IArmSystemUPtr testSystem = createEmbeddedTestSystem(benchmarkProgram, programSize);
 
-        puts("Running Dhrystone 2.1 benchmark...");
+        // Set count of loops to execute.
+#ifdef _DEBUG
+        constexpr uint32_t loops = 500000;
+#else
+        constexpr uint32_t loops = 3000000;
+#endif
+
+        // Pass the look count to the program.
+        testSystem->setCoreRegister(CoreRegister::R0, loops);
+
+        printf("Running %u loops of the Dhrystone 2.1 benchmark...\n", loops);
         MonotonicTicks start = HighResMonotonicTimer::getTime();
         uint64_t cycleCount = testSystem->run();
         MonotonicTicks duration = HighResMonotonicTimer::getDuration(start);

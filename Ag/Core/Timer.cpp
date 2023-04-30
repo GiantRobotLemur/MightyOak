@@ -83,7 +83,31 @@ MonotonicTicks getDuration(const MonotonicTicks &start)
 {
     return getTime() - start;
 }
-};
+
+//! @brief Calculates the span of time represented by a tick count, in
+//! fractional seconds.
+//! @param[in] tickCount The count of timer ticks as might be returned by
+//! getDuration().
+//! @return The span of time represented by tickCount as a count of fractional
+//! seconds.
+double getTimeSpan(MonotonicTicks tickCount)
+{
+    double timeSpanInSeconds = 0.0;
+
+    if (tickCount != 0)
+    {
+        MonotonicTicks ticksPerSecond = getFrequency();
+
+        if (ticksPerSecond > 0)
+        {
+            timeSpanInSeconds = tickCount / static_cast<double>(ticksPerSecond);
+        }
+    }
+
+    return timeSpanInSeconds;
+}
+
+} // namespace HighResMonotonicTimer
 
 } // namespace Ag
 ////////////////////////////////////////////////////////////////////////////////

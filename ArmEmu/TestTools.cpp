@@ -36,12 +36,64 @@ namespace {
 // Local Functions
 ////////////////////////////////////////////////////////////////////////////////
 
-} // TED
+
+} // Anonymous namespace
 
 ////////////////////////////////////////////////////////////////////////////////
 // Global Function Definitions
 ////////////////////////////////////////////////////////////////////////////////
+::testing::AssertionResult isEqualHex(uint8_t lhs, uint8_t rhs)
+{
+    if (lhs == rhs)
+    {
+        return ::testing::AssertionSuccess();
+    }
+    else
+    {
+        std::string message;
+        appendFormat(FormatInfo::getNeutral(),
+                     "0x{0:X2} vs 0x{1:X2}",
+                     message, { lhs, rhs });
+
+        return ::testing::AssertionFailure() << message;
+    }
+}
+
+::testing::AssertionResult isEqualHex(uint16_t lhs, uint16_t rhs)
+{
+    if (lhs == rhs)
+    {
+        return ::testing::AssertionSuccess();
+    }
+    else
+    {
+        std::string message;
+        appendFormat(FormatInfo::getNeutral(),
+                     "0x{0:X4} vs 0x{1:X4}",
+                     message, { lhs, rhs });
+
+        return ::testing::AssertionFailure() << message;
+    }
+}
+
 ::testing::AssertionResult isEqualHex(uint32_t lhs, uint32_t rhs)
+{
+    if (lhs == rhs)
+    {
+        return ::testing::AssertionSuccess();
+    }
+    else
+    {
+        std::string message;
+        appendFormat(FormatInfo::getNeutral(),
+                     "0x{0:X8} vs 0x{1:X8}",
+                     message, { lhs, rhs });
+
+        return ::testing::AssertionFailure() << message;
+    }
+}
+
+::testing::AssertionResult isEqualHex(uint64_t lhs, uint64_t rhs)
 {
     if (lhs == rhs)
     {

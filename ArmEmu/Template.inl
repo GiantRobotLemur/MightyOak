@@ -1,41 +1,57 @@
-//! @file Ag/Core/Timer.hpp
-//! @brief The declaration of various types of timer component.
+//! @file ArmEmu/name_here.inl
+//! @brief The declaration of 
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2023
+//! @date xxxx-yyyy
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
 ////////////////////////////////////////////////////////////////////////////////
 
-#ifndef __AG_CORE_TIMER_HPP__
-#define __AG_CORE_TIMER_HPP__
+#ifndef __ARM_EMU_XXX_INL__
+#define __ARM_EMU_XXX_INL__
 
 ////////////////////////////////////////////////////////////////////////////////
 // Dependant Header Files
 ////////////////////////////////////////////////////////////////////////////////
-#include <cstdint>
+
+////////////////////////////////////////////////////////////////////////////////
+// Macro Definitions
+////////////////////////////////////////////////////////////////////////////////
 
 namespace Ag {
+namespace Arm {
 
 ////////////////////////////////////////////////////////////////////////////////
 // Data Type Declarations
 ////////////////////////////////////////////////////////////////////////////////
-using MonotonicTicks = int64_t;
 
 ////////////////////////////////////////////////////////////////////////////////
-// Function Declarations
+// Templates
 ////////////////////////////////////////////////////////////////////////////////
-//! @brief A namespace representing a high resolution measurement of the passage
-//! of time.
-namespace HighResMonotonicTimer
+//! @brief 
+template<typename Xxx>
+class XXX
 {
-MonotonicTicks getFrequency();
-MonotonicTicks getTime();
-MonotonicTicks getDuration(const MonotonicTicks &start);
-double getTimeSpan(MonotonicTicks tickCount);
+public:
+    // Public Types
+
+private:
+    // Internal Types
+
+    // Internal Fields
+
+    // Internal Functions
+
+public:
+    // Construction/Destruction
+
+    // Accessors
+
+    // Operations
+
 };
 
-} // namespace Ag
+}} // namespace Ag::Arm
 
 #endif // Header guard
 ////////////////////////////////////////////////////////////////////////////////

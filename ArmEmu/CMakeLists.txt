@@ -3,6 +3,18 @@
 # Define the library.
 add_ag_library(ArmEmu   FOLDER      ARM
                         SOURCES     ArmCore.hpp
+                                    ArmCore.cpp
+                                    Hardware.inl
+                                    TestBedHardware.inl
+                                    RegisterFile.inl
+                                    ARMv2CoreRegisterFile.inl
+                                    AluInstructions.inl
+                                    DataTransferInstructions.inl
+                                    InstructionPipeline.inl
+                                    ExecutionUnit.inl
+                                    SystemConfigurations.inl
+                                    ArmSystem.inl
+
                                     IrqSink.hpp
                                     SystemResources.hpp
                                     SystemResources.cpp
@@ -33,7 +45,12 @@ endif()
 add_ag_test_app(ArmEmu_Tests    TEST_LIB ArmEmu
                                 SOURCES  TestTools.cpp
                                          TestTools.hpp
+                                         TestConstraints.cpp
+                                         TestConstraints.hpp
+                                         Test_Constraints.cpp
                                          Test_Core.cpp
+                                         Test_RegisterFile.cpp
+                                         Test_Hardware.cpp
                                          Test_AluOperations.cpp
                                          Test_ALU.cpp
                                          Test_DataTransfer.cpp)

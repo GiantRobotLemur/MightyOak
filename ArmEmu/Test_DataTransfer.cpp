@@ -70,11 +70,12 @@ TEST_P(DataTransfer, ExecuteCode)
         {
             uint32_t initialValue = specimen->getCoreRegister(resultReq.first);
             uint32_t expectedValue = 0;
-            
+
             switch (resultReq.first)
             {
+            case CoreRegister::R14: expectedValue = 0x0C000003u; break; // The results of raising reset.
             case CoreRegister::CPSR: expectedValue = 0x0C000003u; break;
-            case CoreRegister::PC: expectedValue = 0x00000008u; break;
+            case CoreRegister::PC: expectedValue = 0x00000000u; break; // Before pipelining.
             default: break;
             }
 
