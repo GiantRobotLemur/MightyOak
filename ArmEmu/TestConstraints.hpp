@@ -21,6 +21,7 @@
 #include <gtest/gtest.h>
 
 #include "Ag/Core/Binary.hpp"
+#include "Ag/Core/Format.hpp"
 
 namespace Ag {
 namespace Arm {
@@ -120,7 +121,7 @@ template<typename TTarget, typename TInterpretor>
 testing::AssertionResult applyConstraints(TTarget &target, const std::string_view &constraintsExpr)
 {
     ConstraintCollection items;
-    testing::AssertionResult result = parseConstraints(constraintExpr, items);
+    testing::AssertionResult result = parseConstraints(constraintsExpr, items);
 
     if (result)
     {
@@ -153,7 +154,7 @@ testing::AssertionResult verifyConstraints(const TTarget &target,
                                            const std::string_view &constraintsExpr)
 {
     ConstraintCollection items;
-    testing::AssertionResult result = parseConstraints(constraintExpr, items);
+    testing::AssertionResult result = parseConstraints(constraintsExpr, items);
 
     if (result)
     {
@@ -226,7 +227,7 @@ testing::AssertionResult verifyConstraints(const TTarget &target,
                     result = testing::AssertionFailure();
                 }
 
-                result << "Failed to extract a constraint value from " << item.toIdString();
+                result << "Failed to extract a constraint value from " << item.idToString();
                 hasErrors = true;
             }
         }

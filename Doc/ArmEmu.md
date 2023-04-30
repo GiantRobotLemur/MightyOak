@@ -21,12 +21,20 @@ to determine the maximum simulated processor clock speed for a given
 configuration.
 
 Currently only the ARMv2 test system configuration is supported and no
-optimisation has been performed as a result of testing. Running in
-release on my 11th Gen i7 on Windows 11, it manages ~60MHz.
-Running on a (circa 2009) 1st Gen i7 running Linux it manages ~30MHz.
+performance profiling has been performed as a result of testing. Running on
+two control machines, A) an 11th Gen i7 on Windows 11, and B) a 1st Gen i7
+running x64 Linux, we get the following results:
 
-The intention is to refactor the core emulator into template components
-which can be combined as required without having to resort to virtual function
+A) ~60 MHz
+B) ~30 MHz
+
+After refactoring the code to use templates and less branching:
+
+A) ~180 MHz
+B) ~60 MHz
+
+The refactoring will allow the emulator components to be combined in various
+different ways without having to resort to virtual function
 calls, therefore making it possible to support lots of different processor
 configurations without a performance penalty. These will be used to expand
 the EmuPerfTest tool.

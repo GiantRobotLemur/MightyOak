@@ -416,7 +416,7 @@ uint32_t execDataProcOpStatus(TRegisterFile &regs, uint32_t instruction,
 
     GeneralRegister rd = extractEnum<GeneralRegister, 12, 4>(instruction);
 
-    if constexpr (HasCombinedPcPsr<TRegisterFile>::value)
+    if constexpr (TRegisterFile::HasCombinedPcPsr)
     {
         // It's 26-bit mode where 26-bit PC is combined with PSR.
         // PSR can be updated by comparison instructions with the
@@ -470,7 +470,7 @@ uint32_t execDataProcOpStatus(TRegisterFile &regs, uint32_t instruction,
         else
         {
             // For 32-bit mode, only set status flags, R15 updates PC.
-            setStatusFlags(status);
+            regs.setStatusFlags(status);
             cycleCount |= regs.setRn(rd, result);
         }
     }
@@ -653,7 +653,7 @@ uint32_t execLongMultiply(TRegisterFile &regs, uint32_t instruction) noexcept
     LongWord result;
 
     // Inherit the C and V status flags.
-    uint8_t status = extractBits<uint8_t, PsrShift::Status, 2>(getPSR());
+    uint8_t status = extractBits<uint8_t, PsrShift::Status, 2>(regs.getPSR());
 
     switch (extractBits<uint8_t, 21, 2>(instruction))
     {
@@ -685,8 +685,8 @@ uint32_t execLongMultiply(TRegisterFile &regs, uint32_t instruction) noexcept
 
     // Write the result, choosing to update the PC-only portion of R15 in this
     // implementation.
-    setRn(rdLo, result.Components.LoWord);
-    setRn(rdHi, result.Components.HiWord);
+    regs.setRn(rdLo, result.Components.LoWord);
+    regs.setRn(rdHi, result.Components.HiWord);
 
     if (instruction & 0x100000)
     {
@@ -717,7 +717,7 @@ uint32_t execBranch(TRegisterFile &regs, uint32_t instruction) noexcept
         // Save the address of the instruction after the current one, noting
         // that the PC is 8 bytes ahead of the current instruction.
 
-        if constexpr (HasCombinedPcPsr<TRegisterFile>::value)
+        if constexpr (TRegisterFile::HasCombinedPcPsr)
         {
             // NOTE: Ensure the PSR flags are also stored so that they can be
             // optionally restored on return.

@@ -94,25 +94,15 @@ struct PsrMask26
 ////////////////////////////////////////////////////////////////////////////////
 // Templates
 ////////////////////////////////////////////////////////////////////////////////
-//! @brief Determines if a register file implementation has a combined PC/PSR
-//! in R15. This exists for 26-bit mode register files. 32-bit register files
-//! have separate PC and status registers.
-template<typename TRegisterFile>
-struct HasCombinedPcPsr
-{
-    static constexpr bool value = false;
-};
-
 //! @brief An example of an implementation of a register file supporting the
 //! core registers.
 class GenericCoreRegisterFile
 {
 public:
-    // Constants
-    //! @brief Defines whether the register file operates on the principle
-    //! of a combined PC/PSR in R15, therefore making comparison instructions
-    //! with the 'P' suffix legal.
-    static constexpr bool IsCombinedPcPsr = true; // Or false for 32-bit modes.
+    // Public Constants
+    //! @brief Indicates whether the register file assumes R15 contains a
+    //! combined 26-bit PC and PSR, false if the PSR is separate from the PC.
+    static constexpr bool HasCombinedPcPsr = false; // true for 26-bit modes.
 
     // Accessors
     //! @brief Gets the current Program Status Register value.

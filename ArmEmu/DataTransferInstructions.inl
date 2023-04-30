@@ -54,7 +54,7 @@ uint32_t execLoad(THardware &hardware, TRegisterFile &regs,
         // Pre-indexed addressing.
         bool isOK = false;
 
-        if constexpr (HasCombinedPcPsr<TRegisterFile>::value)
+        if constexpr (TRegisterFile::HasCombinedPcPsr)
         {
             // For 26-bit mode, ensure the top 6 bits are clear.
             if (baseAddr >> 26)
@@ -111,7 +111,7 @@ uint32_t execLoad(THardware &hardware, TRegisterFile &regs,
     else
     {
         // Post-indexed addressing.
-        if constexpr (HasCombinedPcPsr<TRegisterFile>::value)
+        if constexpr (TRegisterFile::HasCombinedPcPsr)
         {
             // For 26-bit mode, ensure the top 6 bits are clear.
             if (baseAddr >> 26)
@@ -206,7 +206,7 @@ uint32_t execStore(THardware &hardware, TRegisterFile &regs,
     if (instruction & 0x1000000)
     {
         // Pre-indexed addressing.
-        if constexpr (HasCombinedPcPsr<TRegisterFile>::value)
+        if constexpr (TRegisterFile::HasCombinedPcPsr)
         {
             // For 26-bit mode, ensure the top 6 bits are clear.
             if (effectiveAddr >> 26)
@@ -246,7 +246,7 @@ uint32_t execStore(THardware &hardware, TRegisterFile &regs,
     else
     {
         // Post-indexed addressing.
-        if constexpr (HasCombinedPcPsr<TRegisterFile>::value)
+        if constexpr (TRegisterFile::HasCombinedPcPsr)
         {
             // For 26-bit mode, ensure the top 6 bits are clear.
             if (effectiveAddr >> 26)
@@ -345,7 +345,7 @@ uint32_t execLoadMultiple(THardware &hardware, TRegisterFile &regs,
         break;
     }
 
-    if constexpr (HasCombinedPcPsr<TRegisterFile>::value)
+    if constexpr (TRegisterFile::HasCombinedPcPsr)
     {
         // For 26-bit mode, ensure the top 6 bits are clear.
         if (blockStart >> 26)
@@ -528,7 +528,7 @@ uint32_t execStoreMultiple(THardware &hardware, TRegisterFile &regs,
         break;
     }
 
-    if constexpr (HasCombinedPcPsr<TRegisterFile>::value)
+    if constexpr (TRegisterFile::HasCombinedPcPsr)
     {
         // For 26-bit mode, ensure the top 6 bits are clear.
         if (blockStart >> 26)
@@ -604,7 +604,7 @@ uint32_t execSwap(THardware &hardware, TRegisterFile &regs, uint32_t instruction
 {
     uint32_t addr = regs.getRd(extractEnum<GeneralRegister, 16, 4>(instruction));
 
-    if constexpr (HasCombinedPcPsr<TRegisterFile>::value)
+    if constexpr (TRegisterFile::HasCombinedPcPsr)
     {
         // For 26-bit mode, ensure the top 6 bits are clear.
         if (addr >> 26)
@@ -632,7 +632,7 @@ uint32_t execSwap(THardware &hardware, TRegisterFile &regs, uint32_t instruction
     {
         // Swap word.
         // The underlying hardware will deal with unaligned addresses.
-        uint32_t readValue;
+        uint32_t readValue = 0;
         isOK = hardware.exchange(addr, value, readValue);
 
         // Rotate the bits read from an unaligned address.

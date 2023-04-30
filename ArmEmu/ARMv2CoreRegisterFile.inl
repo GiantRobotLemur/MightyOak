@@ -150,6 +150,9 @@ private:
     }
 
 public:
+    // Public Constants
+    static constexpr bool HasCombinedPcPsr = true;
+
     // Construction/Destruction
     ARMv2CoreRegisterFile(THardware &hw) :
         _hardware(hw),
@@ -192,7 +195,10 @@ public:
     }
 
     // 32-bit modes only!
-    // void savePSR() noexcept;
+    void savePSR() // noexcept
+    {
+        throw Ag::NotSupportedException("Saving PSR on an ARMv2.");
+    }
 
     void setStatusFlags(uint8_t flags) noexcept
     {
@@ -480,16 +486,6 @@ public:
         return result | ExecResult::FlushPipeline;
     }
 };
-
-//! @brief A specialisation which indicates that all instances derived from
-//! the ARMv2CoreRegisterFile template include a combined PC/PSR register.
-//! @tparam THardware 
-template<typename THardware>
-struct HasCombinedPcPsr<typename ARMv2CoreRegisterFile<THardware>>
-{
-    static constexpr bool value = true;
-};
-
 
 }} // namespace Ag::Arm
 

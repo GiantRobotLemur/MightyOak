@@ -54,12 +54,12 @@ public:
 };
 
 // Explicitly instantiate the whole class to ensure it at least compiles.
-template class ARMv2CoreRegisterFile<BasicHardware>;
+template class Ag::Arm::ARMv2CoreRegisterFile<::BasicHardware>;
 
 struct ARMv2RegisterTraits
 {
-    using Hardware = BasicHardware;
-    using RegisterFile = ARMv2CoreRegisterFile<BasicHardware>;
+    using Hardware = ::BasicHardware;
+    using RegisterFile = ARMv2CoreRegisterFile<::BasicHardware>;
 };
 
 using RegisterFile26Implementations = testing::Types<ARMv2RegisterTraits>;
@@ -68,8 +68,8 @@ TYPED_TEST_SUITE(RegisterFile26, RegisterFile26Implementations);
 
 TYPED_TEST(RegisterFile26, Reset)
 {
-    TypeParam::Hardware platform;
-    TypeParam::RegisterFile specimen(platform);
+    typename TypeParam::Hardware platform;
+    typename TypeParam::RegisterFile specimen(platform);
 
     // Set to UsrMode26 at 32K, IRQs enabled.
     specimen.setPSR(0x0);
@@ -88,8 +88,8 @@ TYPED_TEST(RegisterFile26, Reset)
 
 TYPED_TEST(RegisterFile26, ResetNoModeChange)
 {
-    TypeParam::Hardware platform;
-    TypeParam::RegisterFile specimen(platform);
+    typename TypeParam::Hardware platform;
+    typename TypeParam::RegisterFile specimen(platform);
 
     // Set to SvcMode26 at 32K, IRQs enabled.
     specimen.setPSR(Ag::toScalar(ProcessorMode::Svc26));
@@ -108,8 +108,8 @@ TYPED_TEST(RegisterFile26, ResetNoModeChange)
 
 TYPED_TEST(RegisterFile26, UndefinedInstruction)
 {
-    TypeParam::Hardware platform;
-    TypeParam::RegisterFile specimen(platform);
+    typename TypeParam::Hardware platform;
+    typename TypeParam::RegisterFile specimen(platform);
 
     // Set to UsrMode26 at 32K, IRQs enabled.
     specimen.setPSR(0x0);
@@ -128,8 +128,8 @@ TYPED_TEST(RegisterFile26, UndefinedInstruction)
 
 TYPED_TEST(RegisterFile26, UndefinedInstructionNoModeChange)
 {
-    TypeParam::Hardware platform;
-    TypeParam::RegisterFile specimen(platform);
+    typename TypeParam::Hardware platform;
+    typename TypeParam::RegisterFile specimen(platform);
 
     // Set to SvcMode26 at 32K, IRQs enabled.
     specimen.setPSR(Ag::toScalar(ProcessorMode::Svc26));
@@ -148,8 +148,8 @@ TYPED_TEST(RegisterFile26, UndefinedInstructionNoModeChange)
 
 TYPED_TEST(RegisterFile26, SoftwareInterrupt)
 {
-    TypeParam::Hardware platform;
-    TypeParam::RegisterFile specimen(platform);
+    typename TypeParam::Hardware platform;
+    typename TypeParam::RegisterFile specimen(platform);
 
     // Set to UsrMode26 at 32K, IRQs enabled.
     specimen.setPSR(0x0);
@@ -168,8 +168,8 @@ TYPED_TEST(RegisterFile26, SoftwareInterrupt)
 
 TYPED_TEST(RegisterFile26, SoftwareInterruptNoModeChange)
 {
-    TypeParam::Hardware platform;
-    TypeParam::RegisterFile specimen(platform);
+    typename TypeParam::Hardware platform;
+    typename TypeParam::RegisterFile specimen(platform);
 
     // Set to SvcMode26 at 32K, IRQs enabled.
     specimen.setPSR(Ag::toScalar(ProcessorMode::Svc26));
@@ -188,8 +188,8 @@ TYPED_TEST(RegisterFile26, SoftwareInterruptNoModeChange)
 
 TYPED_TEST(RegisterFile26, PreFetchAbort)
 {
-    TypeParam::Hardware platform;
-    TypeParam::RegisterFile specimen(platform);
+    typename TypeParam::Hardware platform;
+    typename TypeParam::RegisterFile specimen(platform);
 
     // Set to UsrMode26 at 32K, IRQs enabled.
     specimen.setPSR(0x0);
@@ -208,8 +208,8 @@ TYPED_TEST(RegisterFile26, PreFetchAbort)
 
 TYPED_TEST(RegisterFile26, PreFetchAbortNoModeChange)
 {
-    TypeParam::Hardware platform;
-    TypeParam::RegisterFile specimen(platform);
+    typename TypeParam::Hardware platform;
+    typename TypeParam::RegisterFile specimen(platform);
 
     // Set to SvcMode26 at 32K, IRQs enabled.
     specimen.setPSR(Ag::toScalar(ProcessorMode::Svc26));
@@ -228,8 +228,8 @@ TYPED_TEST(RegisterFile26, PreFetchAbortNoModeChange)
 
 TYPED_TEST(RegisterFile26, DataAbort)
 {
-    TypeParam::Hardware platform;
-    TypeParam::RegisterFile specimen(platform);
+    typename TypeParam::Hardware platform;
+    typename TypeParam::RegisterFile specimen(platform);
 
     // Set to UsrMode26 at 32K, IRQs enabled.
     specimen.setPSR(0x0);
@@ -248,8 +248,8 @@ TYPED_TEST(RegisterFile26, DataAbort)
 
 TYPED_TEST(RegisterFile26, DataAbortNoModeChange)
 {
-    TypeParam::Hardware platform;
-    TypeParam::RegisterFile specimen(platform);
+    typename TypeParam::Hardware platform;
+    typename TypeParam::RegisterFile specimen(platform);
 
     // Set to SvcMode26 at 32K, IRQs enabled.
     specimen.setPSR(Ag::toScalar(ProcessorMode::Svc26));
@@ -268,8 +268,8 @@ TYPED_TEST(RegisterFile26, DataAbortNoModeChange)
 
 TYPED_TEST(RegisterFile26, AddressException)
 {
-    TypeParam::Hardware platform;
-    TypeParam::RegisterFile specimen(platform);
+    typename TypeParam::Hardware platform;
+    typename TypeParam::RegisterFile specimen(platform);
 
     // Set to UsrMode26 at 32K, IRQs enabled.
     specimen.setPSR(0x0);
@@ -288,8 +288,8 @@ TYPED_TEST(RegisterFile26, AddressException)
 
 TYPED_TEST(RegisterFile26, AddressExceptionNoModeChange)
 {
-    TypeParam::Hardware platform;
-    TypeParam::RegisterFile specimen(platform);
+    typename TypeParam::Hardware platform;
+    typename TypeParam::RegisterFile specimen(platform);
 
     // Set to SvcMode26 at 32K, IRQs enabled.
     specimen.setPSR(Ag::toScalar(ProcessorMode::Svc26));
@@ -308,8 +308,8 @@ TYPED_TEST(RegisterFile26, AddressExceptionNoModeChange)
 
 TYPED_TEST(RegisterFile26, HandleInterrupt)
 {
-    TypeParam::Hardware platform;
-    TypeParam::RegisterFile specimen(platform);
+    typename TypeParam::Hardware platform;
+    typename TypeParam::RegisterFile specimen(platform);
 
     // Set to UsrMode26 at 32K, IRQs enabled.
     specimen.setPSR(0x0);
@@ -328,8 +328,8 @@ TYPED_TEST(RegisterFile26, HandleInterrupt)
 
 TYPED_TEST(RegisterFile26, HandleInterruptNoModeChange)
 {
-    TypeParam::Hardware platform;
-    TypeParam::RegisterFile specimen(platform);
+    typename TypeParam::Hardware platform;
+    typename TypeParam::RegisterFile specimen(platform);
 
     // Set to SvcMode26 at 32K, IRQs enabled.
     specimen.setPSR(Ag::toScalar(ProcessorMode::Irq26));
@@ -348,8 +348,8 @@ TYPED_TEST(RegisterFile26, HandleInterruptNoModeChange)
 
 TYPED_TEST(RegisterFile26, HandleFastInterrupt)
 {
-    TypeParam::Hardware platform;
-    TypeParam::RegisterFile specimen(platform);
+    typename TypeParam::Hardware platform;
+    typename TypeParam::RegisterFile specimen(platform);
 
     // Set to UsrMode26 at 32K, IRQs enabled.
     specimen.setPSR(0x0);
@@ -368,8 +368,8 @@ TYPED_TEST(RegisterFile26, HandleFastInterrupt)
 
 TYPED_TEST(RegisterFile26, HandleFastInterruptNoModeChange)
 {
-    TypeParam::Hardware platform;
-    TypeParam::RegisterFile specimen(platform);
+    typename TypeParam::Hardware platform;
+    typename TypeParam::RegisterFile specimen(platform);
 
     // Set to SvcMode26 at 32K, IRQs enabled.
     specimen.setPSR(Ag::toScalar(ProcessorMode::FastIrq26));
@@ -388,8 +388,8 @@ TYPED_TEST(RegisterFile26, HandleFastInterruptNoModeChange)
 
 TYPED_TEST(RegisterFile26, GetPSR)
 {
-    TypeParam::Hardware platform;
-    TypeParam::RegisterFile specimen(platform);
+    typename TypeParam::Hardware platform;
+    typename TypeParam::RegisterFile specimen(platform);
 
     // Set to Srv26, IRQs disabled.
     specimen.raiseReset();
@@ -399,8 +399,8 @@ TYPED_TEST(RegisterFile26, GetPSR)
 
 TYPED_TEST(RegisterFile26, SetPSR)
 {
-    TypeParam::Hardware platform;
-    TypeParam::RegisterFile specimen(platform);
+    typename TypeParam::Hardware platform;
+    typename TypeParam::RegisterFile specimen(platform);
 
     // Set to Srv26, IRQs disabled.
     specimen.raiseReset();
@@ -427,8 +427,8 @@ TYPED_TEST(RegisterFile26, SetPSR)
 
 TYPED_TEST(RegisterFile26, SetStatusFlags)
 {
-    TypeParam::Hardware platform;
-    TypeParam::RegisterFile specimen(platform);
+    typename TypeParam::Hardware platform;
+    typename TypeParam::RegisterFile specimen(platform);
 
     // Set to Srv26, IRQs disabled.
     specimen.raiseReset();
@@ -447,8 +447,8 @@ TYPED_TEST(RegisterFile26, SetStatusFlags)
 
 TYPED_TEST(RegisterFile26, UpdatePSR)
 {
-    TypeParam::Hardware platform;
-    TypeParam::RegisterFile specimen(platform);
+    typename TypeParam::Hardware platform;
+    typename TypeParam::RegisterFile specimen(platform);
 
     // Set to Srv26, IRQs disabled.
     specimen.raiseReset();
@@ -483,8 +483,8 @@ TYPED_TEST(RegisterFile26, UpdatePSR)
 
 TYPED_TEST(RegisterFile26, GetAndSetPC)
 {
-    TypeParam::Hardware platform;
-    TypeParam::RegisterFile specimen(platform);
+    typename TypeParam::Hardware platform;
+    typename TypeParam::RegisterFile specimen(platform);
 
     // Set to Srv26, IRQs disabled.
     specimen.raiseReset();
@@ -503,8 +503,8 @@ TYPED_TEST(RegisterFile26, GetAndSetPC)
 
 TYPED_TEST(RegisterFile26, GetRn)
 {
-    TypeParam::Hardware platform;
-    TypeParam::RegisterFile specimen(platform);
+    typename TypeParam::Hardware platform;
+    typename TypeParam::RegisterFile specimen(platform);
 
     // Set to Srv26, IRQs disabled, R4 = &DEADBEEF, PC = 0x8000
     specimen.raiseReset();
@@ -521,8 +521,8 @@ TYPED_TEST(RegisterFile26, GetRn)
 
 TYPED_TEST(RegisterFile26, SetRn)
 {
-    TypeParam::Hardware platform;
-    TypeParam::RegisterFile specimen(platform);
+    typename TypeParam::Hardware platform;
+    typename TypeParam::RegisterFile specimen(platform);
 
     // Set to Srv26, IRQs disabled, R4 = &DEADBEEF, PC = 0x8000
     specimen.raiseReset();
@@ -546,8 +546,8 @@ TYPED_TEST(RegisterFile26, SetRn)
 
 TYPED_TEST(RegisterFile26, GetUserRn)
 {
-    TypeParam::Hardware platform;
-    TypeParam::RegisterFile specimen(platform);
+    typename TypeParam::Hardware platform;
+    typename TypeParam::RegisterFile specimen(platform);
 
     // Set to Usr26, IRQs enabled, R4 = &DEADBEEF, R13 = 0xCAFEBABE
     specimen.raiseReset();
@@ -581,8 +581,8 @@ TYPED_TEST(RegisterFile26, GetUserRn)
 
 TYPED_TEST(RegisterFile26, SetUserRn)
 {
-    TypeParam::Hardware platform;
-    TypeParam::RegisterFile specimen(platform);
+    typename TypeParam::Hardware platform;
+    typename TypeParam::RegisterFile specimen(platform);
 
     // Set to Firq26 mode, IRQs disabled, R4 = &DEADBEEF, R13 = 0xCAFEBABE
     specimen.raiseReset();
@@ -618,8 +618,8 @@ TYPED_TEST(RegisterFile26, SetUserRn)
 
 TYPED_TEST(RegisterFile26, GetRm)
 {
-    TypeParam::Hardware platform;
-    TypeParam::RegisterFile specimen(platform);
+    typename TypeParam::Hardware platform;
+    typename TypeParam::RegisterFile specimen(platform);
 
     // Set to Srv26, IRQs disabled, R4 = &DEADBEEF, PC = 0x8000
     specimen.raiseReset();
@@ -638,8 +638,8 @@ TYPED_TEST(RegisterFile26, GetRm)
 
 TYPED_TEST(RegisterFile26, GetRs)
 {
-    TypeParam::Hardware platform;
-    TypeParam::RegisterFile specimen(platform);
+    typename TypeParam::Hardware platform;
+    typename TypeParam::RegisterFile specimen(platform);
 
     // Set to Srv26, IRQs disabled, R4 = &DEADBEEF, PC = 0x8000
     specimen.raiseReset();
@@ -656,8 +656,8 @@ TYPED_TEST(RegisterFile26, GetRs)
 
 TYPED_TEST(RegisterFile26, GetRd)
 {
-    TypeParam::Hardware platform;
-    TypeParam::RegisterFile specimen(platform);
+    typename TypeParam::Hardware platform;
+    typename TypeParam::RegisterFile specimen(platform);
 
     // Set to Srv26, IRQs disabled, R4 = &DEADBEEF, PC = 0x8000
     specimen.raiseReset();
@@ -676,8 +676,8 @@ TYPED_TEST(RegisterFile26, GetRd)
 
 //TYPED_TEST(RegisterFile26, SetRdNoStatusUpdatePrivilaged)
 //{
-//    TypeParam::Hardware platform;
-//    TypeParam::RegisterFile specimen(platform);
+//    typename TypeParam::Hardware platform;
+//    typename TypeParam::RegisterFile specimen(platform);
 //
 //    // Set to Srv26, IRQs disabled, R4 = &DEADBEEF, PC = 0x8000
 //    specimen.raiseReset();
@@ -714,8 +714,8 @@ TYPED_TEST(RegisterFile26, GetRd)
 
 //TYPED_TEST(RegisterFile26, SetRdNoStatusUpdateNonPrivilaged)
 //{
-//    TypeParam::Hardware platform;
-//    TypeParam::RegisterFile specimen(platform);
+//    typename TypeParam::Hardware platform;
+//    typename TypeParam::RegisterFile specimen(platform);
 //
 //    // Set to User26, IRQs enabled, R4 = &DEADBEEF, PC = 0x8000
 //    specimen.raiseReset();
@@ -750,8 +750,8 @@ TYPED_TEST(RegisterFile26, GetRd)
 
 TYPED_TEST(RegisterFile26, SetRdPsrUpdatePrivilaged)
 {
-    TypeParam::Hardware platform;
-    TypeParam::RegisterFile specimen(platform);
+    typename TypeParam::Hardware platform;
+    typename TypeParam::RegisterFile specimen(platform);
 
     // Set to Srv26, IRQs disabled, R4 = &DEADBEEF, PC = 0x8000
     specimen.raiseReset();
@@ -788,8 +788,8 @@ TYPED_TEST(RegisterFile26, SetRdPsrUpdatePrivilaged)
 
 TYPED_TEST(RegisterFile26, SetRdPsrUpdateNonPrivilaged)
 {
-    TypeParam::Hardware platform;
-    TypeParam::RegisterFile specimen(platform);
+    typename TypeParam::Hardware platform;
+    typename TypeParam::RegisterFile specimen(platform);
 
     // Set to User26, IRQs enabled, R4 = &DEADBEEF, PC = 0x8000
     specimen.raiseReset();
@@ -824,8 +824,8 @@ TYPED_TEST(RegisterFile26, SetRdPsrUpdateNonPrivilaged)
 
 TYPED_TEST(RegisterFile26, GetRx)
 {
-    TypeParam::Hardware platform;
-    TypeParam::RegisterFile specimen(platform);
+    typename TypeParam::Hardware platform;
+    typename TypeParam::RegisterFile specimen(platform);
 
     // Set to Srv26, IRQs disabled, R4 = &DEADBEEF, PC = 0x8000
     specimen.raiseReset();

@@ -48,19 +48,19 @@ struct GenericSystemTraits
 
     //! @brief The data type of the object which holds state of the processor
     //! in terms of register contents, this includes co-processor state.
-    using RegisterFileType = ARMv2CoreRegisterFile<typename HardwareType>;
+    using RegisterFileType = ARMv2CoreRegisterFile<typename GenericSystemTraits::HardwareType>;
 
     //! @brief Specifies the traits of the primary mode of operation intended
     //! to create an appropriate instruction pipeline type.
     struct PrimaryPipelineTraits
     {
-        using HardwareType = HardwareType;
-        using RegisterFileType = RegisterFileType;
+        using HardwareType = typename GenericSystemTraits::HardwareType;
+        using RegisterFileType = typename GenericSystemTraits::RegisterFileType;
         using InstructionWordType = uint32_t; // or uint16_t
         static constexpr uint8_t InstructionSizePow2 = 2; // or 1
     };
 
-    using PrimaryPipelineType = InstructionPipeline<typename PrimaryPipelineTraits>;
+    using PrimaryPipelineType = InstructionPipeline<typename GenericSystemTraits::PrimaryPipelineTraits>;
 
     //struct SecondaryPipelineTraits {};
     //using SecondaryPipelineType = InstructionPipeline<typename SecondaryPipelineTraits>;
@@ -71,9 +71,9 @@ struct GenericSystemTraits
     //! @brief The data type of the object which manages the instruction
     //! pipeline(s), i.e. one which can handle one, two or three instruction
     //! pipeline modes.
-    using ExecutionUnitType = SingleModeExecutionUnit<typename HardwareType,
-                                                      typename RegisterFileType,
-                                                      typename PrimaryPipelineType>;
+    using ExecutionUnitType = SingleModeExecutionUnit<typename GenericSystemTraits::HardwareType,
+                                                      typename GenericSystemTraits::RegisterFileType,
+                                                      typename GenericSystemTraits::PrimaryPipelineType>;
 };
 
 //! @brief Defines the traits of a basic ARMv2-based system with test bed hardware.
@@ -86,21 +86,21 @@ struct ArmV2TestSystemTraits
 
     //! @brief The data type of the object which holds state of the processor
     //! in terms of register contents, this includes co-processor state.
-    using RegisterFileType = ARMv2CoreRegisterFile<typename HardwareType>;
+    using RegisterFileType = ARMv2CoreRegisterFile<typename ArmV2TestSystemTraits::HardwareType>;
 
     struct PrimaryPipelineTraits
     {
-        using HardwareType = HardwareType;
-        using RegisterFileType = RegisterFileType;
+        using HardwareType = ArmV2TestSystemTraits::HardwareType;
+        using RegisterFileType = ArmV2TestSystemTraits::RegisterFileType;
         using InstructionWordType = uint32_t;
         static constexpr uint8_t InstructionSizePow2 = 2;
     };
 
-    using PrimaryPipelineType = InstructionPipeline<typename PrimaryPipelineTraits>;
+    using PrimaryPipelineType = InstructionPipeline<typename ArmV2TestSystemTraits::PrimaryPipelineTraits>;
 
-    using ExecutionUnitType = SingleModeExecutionUnit<typename HardwareType,
-                                                      typename RegisterFileType,
-                                                      typename PrimaryPipelineType>;
+    using ExecutionUnitType = SingleModeExecutionUnit<typename ArmV2TestSystemTraits::HardwareType,
+                                                      typename ArmV2TestSystemTraits::RegisterFileType,
+                                                      typename ArmV2TestSystemTraits::PrimaryPipelineType>;
 };
 
 
