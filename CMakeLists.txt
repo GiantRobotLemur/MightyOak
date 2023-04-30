@@ -48,7 +48,7 @@ else()
     
     # Ensure _DEBUG is defined for debug builds, this is done automatically
     # for MSVC.
-    add_compile_definitions($<$<CONFIG:Debug>_DEBUG>)
+    add_compile_definitions($<$<CONFIG:Debug>:_DEBUG>)
 endif()
 
 include("${CMAKE_CURRENT_LIST_DIR}/cmake/Utilities.cmake")

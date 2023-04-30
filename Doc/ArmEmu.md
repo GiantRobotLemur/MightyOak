@@ -25,10 +25,10 @@ performance profiling has been performed as a result of testing. Running on
 two test machines, A) an 11th Gen i7 running Windows 11, and B) a 1st Gen i7
 running x64 Linux, we get the following results:
 
-| Milestone              | 1st Gen i7 |    11th Gen i7    |
-| ---------------------- | ---------- | ----------------- |
-| Initial implementation |     30 MHz |            60 MHz |
-| Template refactor      |     60 MHz | 180 MHz / 98 MIPS |
+| Milestone              |    1st Gen i7    |    11th Gen i7    |
+| ---------------------- | ---------------- | ----------------- |
+| Initial implementation |           30 MHz |            60 MHz |
+| Template refactor      | 60 MHz / 33 MIPS | 180 MHz / 98 MIPS |
 
 The refactoring allows the emulator components (when they are written) to be
 combined in various different ways without having to resort to virtual function

@@ -332,14 +332,16 @@ private:
         double durationInSeconds = HighResMonotonicTimer::getTimeSpan(metrics.ElapsedTime);
         double clockSpeedHz = metrics.calculateClockFrequency();
 
-        String summary = String::format("Executed {0} cycles in {1:F2} seconds.\n"
-                                        "Simulated clock speed: {2:F2} MHz\n"
-                                        "Simulated performance: {3:F2} MIPs\n",
-                                        { metrics.CycleCount, durationInSeconds,
-                                          clockSpeedHz / 1.0e6,
-                                          metrics.calculateSpeedInMIPS() });
+        output.clear();
+        appendFormat(FormatInfo::getDisplay(),
+                     "Executed {0} cycles in {1:F2} seconds.\n"
+                     "Simulated clock speed: {2:F2} MHz\n"
+                     "Simulated performance: {3:F2} MIPS\n", output,
+                     { metrics.CycleCount, durationInSeconds,
+                       clockSpeedHz / 1.0e6,
+                       metrics.calculateSpeedInMIPS() });
 
-        puts(summary.getUtf8Bytes());
+        puts(output.c_str());
         return true;
     }
 public:
