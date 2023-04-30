@@ -4,42 +4,50 @@
 add_ag_library(ArmEmu   FOLDER      ARM
                         SOURCES     ArmCore.hpp
                                     ArmCore.cpp
+                                    IrqSink.hpp
                                     Hardware.inl
                                     TestBedHardware.inl
                                     RegisterFile.inl
                                     ARMv2CoreRegisterFile.inl
                                     AluInstructions.inl
+                                    AluOperations.h
                                     DataTransferInstructions.inl
                                     InstructionPipeline.inl
                                     ExecutionUnit.inl
                                     SystemConfigurations.inl
                                     ArmSystem.inl
-
-                                    IrqSink.hpp
-                                    SystemResources.hpp
-                                    SystemResources.cpp
                                     ArmEmu.cpp
-                                    Hardware.hpp
-                                    Hardware.cpp
-                                    RegisterFile.hpp
-                                    RegisterFile.cpp
-                                    AluOperations.h
-                                    ArithmeticLogicUnit.hpp
-                                    ArithmeticLogicUnit.cpp
-                                    DataTransfer.hpp
-                                    DataTransfer.cpp
-                                    InstructionPipeline.hpp
-                                    InstructionPipeline.cpp
-                                    TestSystem.hpp
-                                    TestSystem.cpp
                         HEADERS     ${MO_INCLUDE_DIR}/ArmEmu.hpp
-                        PUBLIC_LIBS AgCore AsmTools)
+                        PUBLIC_LIBS AgCore)
 
 if(DEFINED CMAKE_ASM_MASM_COMPILER AND "${USE_ASM}")
     target_sources(ArmEmu PRIVATE AluOperations_Win32_x64.asm)
+    source_group(Emulation FILES AluOperations_Win32_x64.asm)
 else()
     target_sources(ArmEmu PRIVATE AluOperations_NoArch.cpp)
+    source_group(Emulation FILES AluOperations_NoArch.cpp)
 endif()
+
+source_group(Tools FILES
+             ArmCore.hpp
+             ArmCore.cpp)
+
+source_group(Emulation FILES
+             Hardware.inl
+             TestBedHardware.inl
+             RegisterFile.inl
+             ARMv2CoreRegisterFile.inl
+             AluInstructions.inl
+             AluOperations.h
+             DataTransferInstructions.inl
+             InstructionPipeline.inl
+             ExecutionUnit.inl
+             SystemConfigurations.inl
+             ArmSystem.inl)
+
+source_group(Interface FILES
+             IrqSink.hpp
+             ${MO_INCLUDE_DIR}/ArmEmu.hpp)
 
 # Define the unit test harness.
 add_ag_test_app(ArmEmu_Tests    TEST_LIB ArmEmu
@@ -63,9 +71,9 @@ add_cli_app(EmuPerf_Test FOLDER ARM
                          DESCRIPTION "Measures the performance of different emulated system configurations."
                          VERSION "${PROJECT_VERSION}"
                          SOURCES EmuPerfTest_Main.cpp
-                         LIBS AgCore ArmEmu)
+                         LIBS AgCore AsmTools ArmEmu)
 
-set(DhyrstoneSourceIn "${CMAKE_CURRENT_SOURCE_DIR}/../Tests/ArmEmu/Dhrystone2_1.arm")
+set(DhyrstoneSourceIn "${PROJECT_SOURCE_DIR}/Tests/ArmEmu/Dhrystone2_1.arm")
 
 cmake_path(ABSOLUTE_PATH DhyrstoneSourceIn
            NORMALIZE OUTPUT_VARIABLE DhrystoneSource)

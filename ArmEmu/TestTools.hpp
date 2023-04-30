@@ -31,6 +31,8 @@ namespace Arm {
 ::testing::AssertionResult isEqualReg(CoreRegister regId, uint32_t lhs, uint32_t rhs);
 ::testing::AssertionResult isEqualMemWord(uint32_t addr, uint32_t lhs, uint32_t rhs);
 
+IArmSystemUPtr createUserModeTestSystem(const char *assembler);
+
 }} // namespace Ag::Arm
 
 #endif // Header guard

@@ -167,8 +167,8 @@ using ProcessorModeEnumInfo = Ag::EnumInfo<ProcessorMode, ProcessorModeInfo>;
 ////////////////////////////////////////////////////////////////////////////////
 // Function Declarations
 ////////////////////////////////////////////////////////////////////////////////
-IArmSystemUPtr createUserModeTestSystem(const char *assembler);
-IArmSystemUPtr createEmbeddedTestSystem(const uint8_t *program, size_t byteCount);
+//IArmSystemUPtr createUserModeTestSystem(const char *assembler);
+//IArmSystemUPtr createEmbeddedTestSystem(const uint8_t *program, size_t byteCount);
 const char *coreRegisterToString(CoreRegister regId);
 
 const ProcessorModeEnumInfo &getProcessorModeType();
