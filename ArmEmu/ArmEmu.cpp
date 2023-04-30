@@ -17,45 +17,12 @@
 #include "ArmEmu.hpp"
 #include "AsmTools.hpp"
 
-#include "TestSystem.hpp"
-
 namespace Ag {
 namespace Arm {
 
-namespace {
 ////////////////////////////////////////////////////////////////////////////////
-// Local Data Types
+// IArmSystemDeleter Member Definitions
 ////////////////////////////////////////////////////////////////////////////////
-struct GenerateBreakPoint
-{
-private:
-    Asm::InstructionInfo _instruction;
-    uint16_t _index;
-public:
-    GenerateBreakPoint() :
-        _index(0)
-    {
-        _instruction.reset(Asm::InstructionMnemonic::Bkpt,
-                           Asm::OperationClass::Breakpoint);
-    }
-
-    uint32_t operator()()
-    {
-        _instruction.getBreakpointParameters().Comment = _index++;
-
-        String error;
-        uint32_t instruction = 0;
-        if (_instruction.assemble(instruction, 0x0000, error) == false)
-        {
-            throw Ag::OperationException("Could not assemble numbered breakpoint.");
-        }
-
-        return instruction;
-    }
-};
-
-} // Anonymous namespace
-
 //! @brief Disposes of a dynamically allocated IArmSystem implementation.
 //! @param[in] sys A pointer to the object to dispose of.
 void IArmSystemDeleter::operator()(IArmSystem *sys) const
@@ -67,139 +34,123 @@ void IArmSystemDeleter::operator()(IArmSystem *sys) const
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// Function Declarations
+// ExecutionMetrics Member Definitions
 ////////////////////////////////////////////////////////////////////////////////
-//! @brief Constructs an implementation of an object representing an emulation
-//! of an ARM-based system for testing to run specified code assembled at the
-//! 32KB address mark in user mode.
-//! @param[in] assembler The assembly language source code to assemble into
-//! the RAM at 32KB and run up to the first breakpoint.
-IArmSystemUPtr createUserModeTestSystem(const char *assembler)
+//! @brief Creates an empty set of execution metrics.
+ExecutionMetrics::ExecutionMetrics() :
+    CycleCount(0),
+    InstructionCount(0),
+    ElapsedTime(0)
 {
-    // Assemble code into emulated RAM.
-    Asm::Options opts;
-    opts.setLoadAddress(Hardware::PhysicalRamBase);
-    opts.setInstructionSet(Asm::InstructionSet::ArmV4);
-
-    std::string source;
-    source.append("%26bit\n");
-    source.append("TSTP PC,#0\n"); // Force a switch to User mode with IRQs enabled.
-    source.append(assembler);
-
-    Asm::Messages log;
-    Asm::ObjectCode ramObjectCode = Asm::assembleText(source, opts, log);
-
-    if (log.hasErrors())
-    {
-        std::string builder;
-
-        for (const auto &msg : log.getMessages())
-        {
-            if (builder.empty() == false)
-            {
-                builder.push_back('\n');
-            }
-
-            appendAgString(builder, msg.toString());
-        }
-
-        throw Ag::CustomException("Assembly", "Could not assemble test code.",
-                                  builder);
-    }
-
-    // Create a ROM image filled with breakpoints.
-    std::vector<uint32_t> rom;
-
-    std::generate_n(std::back_inserter(rom),
-                    Hardware::PhysicalRamBase / 4,
-                    GenerateBreakPoint());
-
-    // Create an instruction which at the hardware reset vector which
-    // branches to the first work in memory.
-    Asm::InstructionInfo resetBranch(Asm::InstructionMnemonic::B,
-                                     Asm::OperationClass::Branch);
-    resetBranch.getBranchParameters().Address = Hardware::PhysicalRamBase;
-
-    String error;
-    if (resetBranch.assemble(rom.front(), 0x0000, error) == false)
-    {
-        throw Ag::OperationException("Could not assemble reset vector.");
-    }
-
-    TestSystem *testSystem = new TestSystem();
-
-    // Fill the ROM with breakpoints and a branch to RAM on reset.
-    testSystem->getResources().loadMainRom(rom.data(),
-                                           static_cast<uint32_t>(rom.size() * 4));
-
-    // Copy the assembled code into RAM.
-    std::memcpy(testSystem->getResources().getRam(),
-                ramObjectCode.getCode(),
-                ramObjectCode.getCodeSize());
-
-    // Assemble a breakpoint at the end of the program.
-    resetBranch.reset(Asm::InstructionMnemonic::Bkpt,
-                      Asm::OperationClass::Breakpoint);
-    resetBranch.getBreakpointParameters().Comment = 0xFFFF;
-
-    if (resetBranch.assemble(*reinterpret_cast<uint32_t *>(testSystem->getResources().getRam() + ramObjectCode.getCodeSize()),
-                             0x0000, error) == false)
-    {
-        throw Ag::OperationException("Could not assemble final break point.");
-    }
-
-    // Perform a hardware reset.
-    testSystem->getProcessor().reset();
-
-    // Return a unique pointer to the emulated system.
-    return IArmSystemUPtr(testSystem);
 }
 
-//! @brief Creates an instance of the test system with a program loaded into
-//! the bottom of the RAM and a descending stack created at the top.
-//! @param program The machine code of the program to load.
-//! @param byteCount The count of bytes in the program.
-//! @return The test system instance in a ready-to-run state.
-IArmSystemUPtr createEmbeddedTestSystem(const uint8_t *program, size_t byteCount)
+//! @brief Calculates the simulated processor clock frequency from the metrics.
+//! @returns The simulated frequency in Hz (cycles per second).
+double ExecutionMetrics::calculateClockFrequency() const
 {
-    // Create a ROM image filled with breakpoints.
-    std::vector<uint32_t> rom;
+    double frequency = 0.0;
 
-    std::generate_n(std::back_inserter(rom),
-                    Hardware::PhysicalRamBase / 4,
-                    GenerateBreakPoint());
-
-    // Create an instruction which at the hardware reset vector which
-    // branches to the first work in memory.
-    Asm::InstructionInfo resetBranch(Asm::InstructionMnemonic::B,
-                                     Asm::OperationClass::Branch);
-    resetBranch.getBranchParameters().Address = Hardware::PhysicalRamBase;
-
-    String error;
-    if (resetBranch.assemble(rom.front(), 0x0000, error) == false)
+    if ((CycleCount > 0) && (ElapsedTime > 0))
     {
-        throw Ag::OperationException("Could not assemble reset vector.");
+        // Express the elapsed time as a value in seconds.
+        double timeSpan = HighResMonotonicTimer::getTimeSpan(ElapsedTime);
+
+        // Calculate the simulated frequency in Hz.
+        frequency = CycleCount / timeSpan;
     }
 
-    TestSystem *testSystem = new TestSystem();
+    return frequency;
+}
 
-    // Fill the ROM with breakpoints and a branch to RAM on reset.
-    SystemResources &resources = testSystem->getResources();
+//! @brief Calculates the simulated speed of the processor in Millions of
+//! Instructions Per Second (MIPS)
+//! @return The average count of instructions executed per second.
+double ExecutionMetrics::calculateSpeedInMIPS() const
+{
+    double mips = 0.0;
 
-    resources.loadMainRom(rom.data(), static_cast<uint32_t>(rom.size() * 4));
+    if ((InstructionCount > 0) && (ElapsedTime > 0))
+    {
+        double timeSpan = HighResMonotonicTimer::getTimeSpan(ElapsedTime);
 
-    // Copy the machine code into RAM.
-    std::memcpy(resources.getRam(), program, byteCount);
+        mips = InstructionCount / timeSpan;
+        mips /= 1e6;
+    }
 
-    // Perform a hardware reset.
-    testSystem->getProcessor().reset();
+    return mips;
+}
 
-    // Setup a full-descending stack in R13 after the reset.
-    uint32_t ramEnd = Hardware::PhysicalRamBase + resources.getRamSize() - 4;
-    testSystem->setCoreRegister(CoreRegister::R13, ramEnd);
+//! @brief Resets all metric properties back to zero.
+void ExecutionMetrics::reset()
+{
+    CycleCount = 0;
+    InstructionCount = 0;
+    ElapsedTime = 0;
+}
 
-    // Return a unique pointer to the emulated system.
-    return IArmSystemUPtr(testSystem);
+//! @brief Calculates the sum of the current and another set of metrics.
+//! @param[in] rhs The metrics to add to the current set.
+//! @return The summed execution properties.
+ExecutionMetrics ExecutionMetrics::operator+(const ExecutionMetrics &rhs) const
+{
+    ExecutionMetrics result = rhs;
+    result.CycleCount += CycleCount;
+    result.InstructionCount += InstructionCount;
+    result.ElapsedTime += ElapsedTime;
+
+    return result;
+}
+
+//! @brief Adds another set of metric properties to the current object.
+//! @param[in] rhs The metrics to add to the current set.
+//! @return A reference to the current set.
+ExecutionMetrics &ExecutionMetrics::operator+=(const ExecutionMetrics &rhs)
+{
+    CycleCount += rhs.CycleCount;
+    InstructionCount += rhs.InstructionCount;
+    ElapsedTime += rhs.ElapsedTime;
+
+    return *this;
+}
+
+
+////////////////////////////////////////////////////////////////////////////////
+// ProcessorModeInfo Member Definitions
+////////////////////////////////////////////////////////////////////////////////
+//! @brief Constructs an object to use as a look-up key.
+//! @param[in] id The processor mode being looked up.
+ProcessorModeInfo::ProcessorModeInfo(ProcessorMode id) :
+    EnumSymbol<ProcessorMode>(id),
+    _minArchVersion(0)
+{
+}
+
+//! @brief Constructs a description of an ARM processor mode.
+//! @param[in] id The identifier of the processor mode.
+//! @param[in] symbol The internal symbol definition as text.
+//! @param[in] displayName The symbol as text to be displayed to the user.
+//! @param[in] description A description of the meaning of the symbol
+//! which can be displayed to the user.
+//! @note All strings should be static and UTF-8 encoded.
+ProcessorModeInfo::ProcessorModeInfo(ProcessorMode id, const char *symbol,
+                                     const char *displayName,
+                                     const char *description,
+                                     uint8_t minArchVersion) :
+    EnumSymbol<ProcessorMode>(id, symbol, displayName, description),
+    _minArchVersion(minArchVersion)
+{
+}
+
+//! @brief Determines if the mode operates with 26-bit addressing.
+bool ProcessorModeInfo::is26Bit() const
+{
+    return _minArchVersion < 3;
+}
+
+//! @brief Gets the minimum ARM architecture in which the mode is valid.
+uint8_t ProcessorModeInfo::getMinimumArchitectureVersion() const
+{
+    return _minArchVersion;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -229,6 +180,26 @@ const char *coreRegisterToString(CoreRegister regId)
     {
         return "(unknown Core Register)";
     }
+}
+
+//! @brief Gets static metadata for the ProcessorMode enumeration.
+const ProcessorModeEnumInfo &getProcessorModeType()
+{
+    static const ProcessorModeEnumInfo instance({
+        ProcessorModeInfo(ProcessorMode::User26, "USR26", "User Mode (26-bit)", nullptr, 2),
+        ProcessorModeInfo(ProcessorMode::FastIrq26, "FIQ26", "Fast Interrupt Mode (26-bit)", nullptr, 2),
+        ProcessorModeInfo(ProcessorMode::Irq26, "IRQ26", "Interrupt Mode (26-bit)", nullptr, 2),
+        ProcessorModeInfo(ProcessorMode::Svc26, "SVC26", "Supervisor Mode (26-bit)", nullptr, 2),
+        ProcessorModeInfo(ProcessorMode::User32, "USR32", "User Mode (32-bit)", nullptr, 3), // ARMv3+
+        ProcessorModeInfo(ProcessorMode::FastIrq32, "FIQ32", "Fast Interrupt Mode (32-bit)", nullptr, 3), // ARMv3+
+        ProcessorModeInfo(ProcessorMode::Irq32, "IRQ32", "Interrupt Mode (32-bit)", nullptr, 3), // ARMv3+
+        ProcessorModeInfo(ProcessorMode::Svc32, "SVC32", "Supervisor Mode (32-bit)", nullptr, 3), // ARMv3+
+        ProcessorModeInfo(ProcessorMode::Abort, "ABT", "Abort Mode", nullptr, 3), // ARMv3+
+        ProcessorModeInfo(ProcessorMode::Undefined, "UND", "Undefined Mode", nullptr, 3), // ARMv3+
+        ProcessorModeInfo(ProcessorMode::System, "SYS", "System Mode", nullptr, 4), // ARMv4+
+    });
+
+    return instance;
 }
 
 }} // namespace Ag::Arm

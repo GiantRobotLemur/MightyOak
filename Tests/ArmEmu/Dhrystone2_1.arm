@@ -393,7 +393,7 @@
 ; Accuracy of timings and human fatigue controlled by next two lines
 ;.LOOPS   50000       ; Use this for slow or 16 bit machines
 ;.LOOPS 500000      ; Use this for faster machines
-.LOOPS 1000000      ; Specially for ArmEmu to ensure it runs for 20s.
+; LOOPS value has been made variable and is passed in in the a1 register.
 
 
 ;/* Compiler dependent options */
@@ -479,6 +479,7 @@
 ;main()
 ;{
 .main
+    STR a1,Loops                ; Store the count of loops to execute.
     BL Proc0
 ;    Proc0();
     BKPT 0
@@ -492,7 +493,7 @@
 .PtrGlb:    EQUD 0              ; RecordPtr PtrGlb;             // Offset 0 - 4 bytes
 .PtrGlbNext:EQUD 0              ; RecordPtr PtrGlbNext;         // Offset 4 - 4 bytes
 .IntGlob:   EQUD 0              ; int IntGlob;                  // Offset 8 - 4 bytes
-.Loops:     EQUD LOOPS
+.Loops:     EQUD 0
 .BoolGlob:  EQUD 0              ; boolean     BoolGlob;         // Offset 12 - 4 bytes
 .Char1Glob: EQUB 0              ; char        Char1Glob;        // Offset 16 - 1 byte
 .Char2Glob: EQUB 0              ; char        Char2Glob;        // Offset 17 - 1 byte

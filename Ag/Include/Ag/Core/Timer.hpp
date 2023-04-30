@@ -32,6 +32,7 @@ namespace HighResMonotonicTimer
 MonotonicTicks getFrequency();
 MonotonicTicks getTime();
 MonotonicTicks getDuration(const MonotonicTicks &start);
+double getTimeSpan(MonotonicTicks tickCount);
 };
 
 } // namespace Ag

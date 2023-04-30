@@ -12,9 +12,13 @@
 // Header File Includes
 ////////////////////////////////////////////////////////////////////////////////
 #include "Ag/Core.hpp"
+#include "AsmTools.hpp"
 
 #include "ArmEmu.hpp"
 #include "DhrystoneProgram.hpp"
+
+#include "ArmSystem.inl"
+#include "SystemConfigurations.inl"
 
 namespace Ag {
 namespace Arm {
@@ -173,6 +177,34 @@ protected:
     }
 };
 
+struct GenerateBreakPoint
+{
+private:
+    Asm::InstructionInfo _instruction;
+    uint16_t _index;
+public:
+    GenerateBreakPoint() :
+        _index(0)
+    {
+        _instruction.reset(Asm::InstructionMnemonic::Bkpt,
+                           Asm::OperationClass::Breakpoint);
+    }
+
+    uint32_t operator()()
+    {
+        _instruction.getBreakpointParameters().Comment = _index++;
+
+        String error;
+        uint32_t instruction = 0;
+        if (_instruction.assemble(instruction, 0x0000, error) == false)
+        {
+            throw Ag::OperationException("Could not assemble numbered breakpoint.");
+        }
+
+        return instruction;
+    }
+};
+
 //! @brief The object representing the root application object.
 class EmuPerfTestApp : public App
 {
@@ -182,6 +214,62 @@ private:
     Configuration _config;
 
     // Internal Functions
+    static void initialiseEmbeddedTestSystem(IArmSystem *testSystem)
+    {
+        // Create a ROM image filled with breakpoints.
+        std::vector<uint32_t> rom;
+
+        std::generate_n(std::back_inserter(rom),
+                        TestBedHardware::RomSize / 4,
+                        GenerateBreakPoint());
+
+        // Create an instruction which at the hardware reset vector which
+        // branches to the first work in memory.
+        Asm::InstructionInfo resetBranch(Asm::InstructionMnemonic::B,
+                                         Asm::OperationClass::Branch);
+        resetBranch.getBranchParameters().Address = TestBedHardware::RamBase;
+
+        String error;
+        if (resetBranch.assemble(rom.front(), TestBedHardware::RomBase, error) == false)
+        {
+            throw Ag::OperationException("Could not assemble reset vector.");
+        }
+
+        //auto *testSystem = new ArmSystem<ArmV2TestSystemTraits>();
+
+        // Fill the ROM with breakpoints and a branch to RAM on reset.
+        testSystem->writeToLogicalAddress(TestBedHardware::RomBase,
+                                          static_cast<uint32_t>(rom.size() * 4),
+                                          rom.data());
+
+        // Copy the assembled code into RAM.
+        size_t byteCount;
+        const void *program = getDhrystoneData(byteCount);
+
+        testSystem->writeToLogicalAddress(TestBedHardware::RamBase,
+                                          static_cast<uint32_t>(byteCount),
+                                          program);
+
+        // Assemble a breakpoint at the end of the program.
+        resetBranch.reset(Asm::InstructionMnemonic::Bkpt,
+                          Asm::OperationClass::Breakpoint);
+        resetBranch.getBreakpointParameters().Comment = 0xFFFF;
+
+        uint32_t bkptInstruction;
+        if (resetBranch.assemble(bkptInstruction, 0x0000, error) == false)
+        {
+            throw Ag::OperationException("Could not assemble final break point.");
+        }
+
+        // Write the final breakpoint to RAM.
+        testSystem->writeToLogicalAddress(static_cast<uint32_t>(TestBedHardware::RamBase + byteCount),
+                                          4, &bkptInstruction);
+
+        // Setup a full-descending stack in R13 after the reset.
+        uint32_t ramEnd = TestBedHardware::RamEnd - 4;
+        testSystem->setCoreRegister(CoreRegister::R13, ramEnd);
+    }
+
     void displayConfigs() const
     {
         std::string buffer;
@@ -193,17 +281,29 @@ private:
 
     bool runTest() const
     {
-        size_t programSize;
-        const uint8_t *benchmarkProgram = getDhrystoneData(programSize);
+        ArmSystem<ArmV2TestSystemTraits> testSystem;
+        initialiseEmbeddedTestSystem(&testSystem);
 
-        IArmSystemUPtr testSystem = createEmbeddedTestSystem(benchmarkProgram, programSize);
+        // Set count of loops to execute.
+#ifdef _DEBUG
+        constexpr uint32_t loops = 500000;
+#else
+        constexpr uint32_t loops = 3000000;
+#endif
 
-        puts("Running Dhrystone 2.1 benchmark...");
-        MonotonicTicks start = HighResMonotonicTimer::getTime();
-        uint64_t cycleCount = testSystem->run();
-        MonotonicTicks duration = HighResMonotonicTimer::getDuration(start);
+        // Pass the look count to the program.
+        testSystem.setCoreRegister(CoreRegister::R0, loops);
 
-        uint32_t endPC = testSystem->getCoreRegister(CoreRegister::PC) - 12;
+        std::string output;
+        appendFormat(FormatInfo::getDisplay(),
+                     "Running {0} loops of the Dhrystone 2.1 benchmark...",
+                     output, { loops });
+
+        puts(output.c_str());
+        ExecutionMetrics metrics = testSystem.run();
+
+        uint32_t endPC = testSystem.getCoreRegister(CoreRegister::PC) - 12;
+
         if (endPC < 0x20)
         {
             const char *reason = "Unknown";
@@ -224,19 +324,24 @@ private:
             for (uint8_t i = 0; i < 16; i += 2)
             {
                 printf("\tR%u = 0x%.8X, R%u = 0x%.8X\n",
-                       i, testSystem->getCoreRegister(fromScalar<CoreRegister>(i)),
-                       i + 1, testSystem->getCoreRegister(fromScalar<CoreRegister>(i + 1)));
+                       i, testSystem.getCoreRegister(fromScalar<CoreRegister>(i)),
+                       i + 1, testSystem.getCoreRegister(fromScalar<CoreRegister>(i + 1)));
             }
         }
 
-        double durationInSeconds = static_cast<double>(duration) / HighResMonotonicTimer::getFrequency();
-        double clockSpeedHz = cycleCount / durationInSeconds;
+        double durationInSeconds = HighResMonotonicTimer::getTimeSpan(metrics.ElapsedTime);
+        double clockSpeedHz = metrics.calculateClockFrequency();
 
-        String summary = String::format("Executed {0} cycles in {1:F2} seconds.\n"
-                                        "Simulated clock speed: {2:F2} MHz",
-                                        { cycleCount, durationInSeconds, clockSpeedHz / 1000000.0 });
+        output.clear();
+        appendFormat(FormatInfo::getDisplay(),
+                     "Executed {0} cycles in {1:F2} seconds.\n"
+                     "Simulated clock speed: {2:F2} MHz\n"
+                     "Simulated performance: {3:F2} MIPS\n", output,
+                     { metrics.CycleCount, durationInSeconds,
+                       clockSpeedHz / 1.0e6,
+                       metrics.calculateSpeedInMIPS() });
 
-        puts(summary.getUtf8Bytes());
+        puts(output.c_str());
         return true;
     }
 public:
