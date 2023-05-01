@@ -64,7 +64,7 @@ GTEST_TEST(ScalarParser, ParseIntegers)
     EXPECT_EQ(int8, -128);
 }
 
-} // TED
+} // Anonymous namespace
 
 } // namespace Ag
 ////////////////////////////////////////////////////////////////////////////////

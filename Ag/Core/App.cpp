@@ -118,7 +118,7 @@ void guardedTryParse(CommandLineInfo &info)
     }
 }
 
-} // TED
+} // Anonymous namespace
 
 ////////////////////////////////////////////////////////////////////////////////
 // Class Method Definitions

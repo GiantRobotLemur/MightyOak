@@ -12,12 +12,12 @@
 #define __ASM_TOOLS_EXPR_CONTEXTS_HPP__
 
 ////////////////////////////////////////////////////////////////////////////////
-// Dependant Header Files
+// Dependent Header Files
 ////////////////////////////////////////////////////////////////////////////////
 #include "Expr.hpp"
 #include "SymbolTable.hpp"
 
-namespace Ag {
+namespace Mo {
 namespace Asm {
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -35,7 +35,7 @@ public:
 
     // Accessors
     //! @brief Gets the name of the current scope.
-    virtual string_cref_t getScopeName() const = 0;
+    virtual Ag::string_cref_t getScopeName() const = 0;
 
     //! @brief Gets the address at which the object code is expected to be loaded.
     virtual uint32_t getBaseAddress() const = 0;
@@ -50,7 +50,7 @@ public:
     //! describe where.
     //! @retval false The symbol is not defined in the current or any
     //! ancestor scope.
-    virtual bool isSymbolDefined(string_cref_t id, string_ref_t scope,
+    virtual bool isSymbolDefined(Ag::string_cref_t id, Ag::string_ref_t scope,
                                  Location &source) const = 0;
 
     //! @brief Sets the offset of the instruction currently being assembled.
@@ -64,7 +64,7 @@ public:
     //! @param[in] value The value to associate with the symbol.
     //! @param[in] isAddress True if the symbol value represents a position
     //! in code, false if it represent an arbitrary value.
-    virtual void defineSymbol(string_cref_t id, const Location &source,
+    virtual void defineSymbol(Ag::string_cref_t id, const Location &source,
                               const Value &value, bool isAddress) = 0;
 };
 
@@ -83,16 +83,16 @@ public:
     const SymbolTable &getSymbols() const;
 
     // Overrides
-    virtual bool tryLookupSymbol(string_cref_t &id, Value &value) const override;
+    virtual bool tryLookupSymbol(Ag::string_cref_t &id, Value &value) const override;
     virtual uint32_t getAssemblyOffset() const override;
     virtual uint32_t getAssemblyAddress() const override;
 
-    virtual string_cref_t getScopeName() const override;
+    virtual Ag::string_cref_t getScopeName() const override;
     virtual uint32_t getBaseAddress() const override;
-    virtual bool isSymbolDefined(string_cref_t id, string_ref_t scope,
+    virtual bool isSymbolDefined(Ag::string_cref_t id, Ag::string_ref_t scope,
                                  Location &source) const override;
     virtual void setAssemblyOffset(uint32_t offset) override;
-    virtual void defineSymbol(string_cref_t id, const Location &source,
+    virtual void defineSymbol(Ag::string_cref_t id, const Location &source,
                               const Value &value, bool isAddress) override;
 private:
     // Internal Fields
@@ -107,27 +107,27 @@ class InnerEvalContext : public IScopedContext
 {
 public:
     // Construction/Destruction
-    InnerEvalContext(IScopedContext *parentContext, string_cref_t name);
+    InnerEvalContext(IScopedContext *parentContext, Ag::string_cref_t name);
     virtual ~InnerEvalContext() = default;
 
     // Accessors
 
     // Overrides
-    virtual bool tryLookupSymbol(string_cref_t &id, Value &value) const override;
+    virtual bool tryLookupSymbol(Ag::string_cref_t &id, Value &value) const override;
     virtual uint32_t getAssemblyOffset() const override;
     virtual uint32_t getAssemblyAddress() const override;
 
-    virtual string_cref_t getScopeName() const override;
+    virtual Ag::string_cref_t getScopeName() const override;
     virtual uint32_t getBaseAddress() const override;
-    virtual bool isSymbolDefined(string_cref_t id, string_ref_t scope,
+    virtual bool isSymbolDefined(Ag::string_cref_t id, Ag::string_ref_t scope,
                                  Location &source) const override;
     virtual void setAssemblyOffset(uint32_t offset) override;
-    virtual void defineSymbol(string_cref_t id, const Location &source,
+    virtual void defineSymbol(Ag::string_cref_t id, const Location &source,
                               const Value &value, bool isAddress) override;
 private:
     // Internal Fields
     IScopedContext *_parentContext;
-    String _name;
+    Ag::String _name;
     SymbolTable _localSymbols;
 };
 
@@ -143,7 +143,7 @@ public:
     virtual ~ConstantWrapperEvalContext() = default;
 
     // Overrides
-    virtual bool tryLookupSymbol(string_cref_t &id, Value &value) const override;
+    virtual bool tryLookupSymbol(Ag::string_cref_t &id, Value &value) const override;
     virtual uint32_t getAssemblyOffset() const override;
 private:
     // Internal Fields
@@ -151,7 +151,7 @@ private:
     const ConstantSet &_constants;
 };
 
-}} // namespace Ag::Asm
+}} // namespace Mo::Asm
 
 #endif // Header guard
 ////////////////////////////////////////////////////////////////////////////////

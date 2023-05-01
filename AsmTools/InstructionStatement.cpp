@@ -19,27 +19,8 @@
 #include "InstructionStatement.hpp"
 #include "ObjectCodeBuilder.hpp"
 
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
-
-namespace Ag {
+namespace Mo {
 namespace Asm {
-
-namespace {
-////////////////////////////////////////////////////////////////////////////////
-// Local Data Types
-////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////
-// Local Data
-////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////
-// Local Functions
-////////////////////////////////////////////////////////////////////////////////
-
-} // TED
 
 ////////////////////////////////////////////////////////////////////////////////
 // InstructionStatement Member Function Definitions
@@ -95,7 +76,7 @@ bool InstructionStatement::assemble(const AssemblyState &state,
         isAssembled = true;
 
         // Encode the instruction description as machine code.
-        String errorMessage;
+        Ag::String errorMessage;
         uint32_t instructions[4];
         size_t count = 0;
 
@@ -174,10 +155,10 @@ bool InstructionStatement::validateInstructionSet(const AssemblyState &state,
     {
         isOK = false;
         log.appendError(_start,
-                        String::format("The instruction is invalid in the "
-                                       "selected instruction set ({0}). "
-                                       "It requires at least the {1} "
-                                       "instruction set.", {
+                        Ag::String::format("The instruction is invalid in the "
+                                           "selected instruction set ({0}). "
+                                           "It requires at least the {1} "
+                                           "instruction set.", {
                             instructionSetToString(state.getInstructionSet()),
                             instructionSetToString(minInstructionSet)
                         }));
@@ -207,13 +188,13 @@ bool InstructionStatement::validateProcessorMode(const AssemblyState &state,
         isOK = false;
 
         log.appendError(_start,
-                        String::format("The instruction is expected to be executed in "
-                                       "the {0} processing mode, but instructions "
-                                       "currently being assembled are expected to "
-                                       "operate in the {1} mode.", {
+                        Ag::String::format("The instruction is expected to be executed in "
+                                           "the {0} processing mode, but instructions "
+                                           "currently being assembled are expected to "
+                                           "operate in the {1} mode.", {
                             processorModeToString(mode),
                             processorModeToString(state.getProcessorMode())
-                                       }));
+        }));
     }
 
     return isOK;
@@ -238,9 +219,9 @@ bool InstructionStatement::validateExtension(const AssemblyState &state,
         isOK = false;
 
         log.appendError(_start,
-                        String::format("The instruction requires the {0} processor "
-                                       "extension to be enabled.",
-                                       { processorExtensionToString(extension) }));
+                        Ag::String::format("The instruction requires the {0} processor "
+                                           "extension to be enabled.",
+                                           { processorExtensionToString(extension) }));
     }
 
     return isOK;
@@ -267,9 +248,9 @@ bool InstructionStatement::validateAddressMode(const AssemblyState &state,
         uint32_t bits[] = { 26, 32 };
 
         log.appendError(_start,
-                        String::format("The instruction requires the processor "
-                                       "is expected to be in a {0}-bit address mode.",
-                                       { bits[toScalar(mode)] }));
+                        Ag::String::format("The instruction requires the processor "
+                                           "is expected to be in a {0}-bit address mode.",
+                                           { bits[Ag::toScalar(mode)] }));
     }
 
     return isOK;
@@ -291,10 +272,6 @@ bool InstructionStatement::validate(const InstructionInfo &/*instruction*/,
     return true;
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// Global Function Definitions
-////////////////////////////////////////////////////////////////////////////////
-
-}} // namespace Ag::Asm
+}} // namespace Mo::Asm
 ////////////////////////////////////////////////////////////////////////////////
 

@@ -17,7 +17,7 @@
 #include "ArmEmu.hpp"
 #include "AsmTools.hpp"
 
-namespace Ag {
+namespace Mo {
 namespace Arm {
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -53,7 +53,7 @@ double ExecutionMetrics::calculateClockFrequency() const
     if ((CycleCount > 0) && (ElapsedTime > 0))
     {
         // Express the elapsed time as a value in seconds.
-        double timeSpan = HighResMonotonicTimer::getTimeSpan(ElapsedTime);
+        double timeSpan = Ag::HighResMonotonicTimer::getTimeSpan(ElapsedTime);
 
         // Calculate the simulated frequency in Hz.
         frequency = CycleCount / timeSpan;
@@ -71,7 +71,7 @@ double ExecutionMetrics::calculateSpeedInMIPS() const
 
     if ((InstructionCount > 0) && (ElapsedTime > 0))
     {
-        double timeSpan = HighResMonotonicTimer::getTimeSpan(ElapsedTime);
+        double timeSpan = Ag::HighResMonotonicTimer::getTimeSpan(ElapsedTime);
 
         mips = InstructionCount / timeSpan;
         mips /= 1e6;
@@ -169,12 +169,12 @@ const char *coreRegisterToString(CoreRegister regId)
         "SPSR", "CPSR", "PC",
     };
 
-    static_assert(arraySize(coreRegIds) == toScalar(CoreRegister::Max),
+    static_assert(std::size(coreRegIds) == Ag::toScalar(CoreRegister::Max),
                   "CoreRegister type out of sync with strings.");
 
     if (regId < CoreRegister::Max)
     {
-        return coreRegIds[toScalar(regId)];
+        return coreRegIds[Ag::toScalar(regId)];
     }
     else
     {
@@ -202,6 +202,6 @@ const ProcessorModeEnumInfo &getProcessorModeType()
     return instance;
 }
 
-}} // namespace Ag::Arm
+}} // namespace Mo::Arm
 ////////////////////////////////////////////////////////////////////////////////
 

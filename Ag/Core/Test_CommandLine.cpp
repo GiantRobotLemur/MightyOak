@@ -261,7 +261,7 @@ GTEST_TEST(CommandLine, ParsePOSIXCommandLineSuccess)
         "-?",
         "Options" };
 #endif
-    int argc = static_cast<int>(arraySize(argv));
+    int argc = static_cast<int>(std::size(argv));
 
     EXPECT_TRUE(specimen.tryParse(argc, argv, error));
     EXPECT_FALSE(specimen.getProgramFile().isEmpty());
@@ -283,7 +283,7 @@ GTEST_TEST(CommandLine, ParseMultipleShortOptions)
         "Input.doc",
         "-hvi",
         "C:\\Users\\My Documents\\Table.csv" };
-    int argc = static_cast<int>(arraySize(argv));
+    int argc = static_cast<int>(std::size(argv));
 
     EXPECT_TRUE(specimen.tryParse(argc, argv, error));
     EXPECT_TRUE(error.isEmpty());
@@ -363,7 +363,7 @@ GTEST_TEST(CommandLine, MalFormedOptionWithValue)
     EXPECT_FALSE(error.isEmpty());
 }
 
-} // TED
+} // Anonymous namespace
 
 } // namespace Ag
 ////////////////////////////////////////////////////////////////////////////////

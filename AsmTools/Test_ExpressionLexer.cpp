@@ -18,7 +18,7 @@
 #include "LexicalContext.hpp"
 #include "AsmTools/Options.hpp"
 
-namespace Ag {
+namespace Mo {
 namespace Asm {
 
 namespace {
@@ -27,9 +27,9 @@ namespace {
 ////////////////////////////////////////////////////////////////////////////////
 InputContext createInput(const char *sourceCode)
 {
-    IInputSourcePtr source = createBufferInputSource(String(sourceCode));
+    IInputSourcePtr source = createBufferInputSource(Ag::String(sourceCode));
     Location position("MyProject/Libs/Here.asm");
-    String sourceId("MyProject/Libs/Lib.asm");
+    Ag::String sourceId("MyProject/Libs/Lib.asm");
 
     return InputContext(source, position, sourceId, 2);
 }
@@ -529,8 +529,8 @@ GTEST_TEST(ExpressionLexer, RecogniseStringLiteralUtf32Escape)
     EXPECT_FALSE(specimen->tryGetNextToken(input, token));
 }
 
-} // TED
+} // Anonymous namespace
 
-}} // namespace Ag::Asm
+}} // namespace Mo::Asm
 ////////////////////////////////////////////////////////////////////////////////
 

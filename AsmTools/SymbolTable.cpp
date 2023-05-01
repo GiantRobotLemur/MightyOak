@@ -14,7 +14,7 @@
 
 #include "SymbolTable.hpp"
 
-namespace Ag {
+namespace Mo {
 namespace Asm {
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -22,7 +22,7 @@ namespace Asm {
 ////////////////////////////////////////////////////////////////////////////////
 //! @brief Constructs a symbol definition to be used as a lookup key.
 //! @param[in] id The value used to identify the symbol.
-SymbolDefinition::SymbolDefinition(string_cref_t id) :
+SymbolDefinition::SymbolDefinition(Ag::string_cref_t id) :
     _id(id),
     _isAddress(false)
 {
@@ -32,7 +32,7 @@ SymbolDefinition::SymbolDefinition(string_cref_t id) :
 //! its value.
 //! @param[in] id The value used to identify the symbol.
 //! @param[in] source The location at which the symbol was defined.
-SymbolDefinition::SymbolDefinition(string_cref_t id, const Location &source) :
+SymbolDefinition::SymbolDefinition(Ag::string_cref_t id, const Location &source) :
     _id(id),
     _source(source),
     _isAddress(false)
@@ -45,7 +45,7 @@ SymbolDefinition::SymbolDefinition(string_cref_t id, const Location &source) :
 //! @param[in] value The initial value of the symbol.
 //! @param[in] isAddress True if the symbol value represents a position in
 //! code, false if it represent an arbitrary value.
-SymbolDefinition::SymbolDefinition(string_cref_t id, const Location &source,
+SymbolDefinition::SymbolDefinition(Ag::string_cref_t id, const Location &source,
                                    const Value &value, bool isAddress) :
     _id(id),
     _source(source),
@@ -55,7 +55,7 @@ SymbolDefinition::SymbolDefinition(string_cref_t id, const Location &source,
 }
 
 //! @brief Gets the value used to identify the symbol in source code.
-string_cref_t SymbolDefinition::getId() const { return _id; }
+Ag::string_cref_t SymbolDefinition::getId() const { return _id; }
 
 //! @brief Gets the location at which the symbol was defined.
 const Location &SymbolDefinition::getSource() const { return _source; }
@@ -89,7 +89,6 @@ void SymbolDefinition::setIsAddress(bool isAddress)
     _isAddress = isAddress;
 }
 
-
 //! @brief Determines if the identifier for the current symbol is the same as
 //! the identifier for another.
 //! @param[in] rhs The symbol to compare against.
@@ -113,7 +112,7 @@ bool SymbolDefinition::operator!=(const SymbolDefinition &rhs) const
 //! @brief Calculates the hash code of a symbol identifier.
 //! @param[in] sym The symbol to analyse.
 //! @return The hash code of the symbol.
-size_t SymbolDefinitionIDHash::operator()(const Ag::Asm::SymbolDefinition &sym) const
+size_t SymbolDefinitionIDHash::operator()(const Mo::Asm::SymbolDefinition &sym) const
 {
     return sym.getId().getHashCode();
 }
@@ -123,8 +122,8 @@ size_t SymbolDefinitionIDHash::operator()(const Ag::Asm::SymbolDefinition &sym) 
 //! @param[in] rhs The second symbol to analyse.
 //! @retval true The two symbols have the same identifier.
 //! @retval false The two symbols have different identifiers.
-bool SymbolDefinitionIDEqual::operator()(const Ag::Asm::SymbolDefinition &lhs,
-                                         const Ag::Asm::SymbolDefinition &rhs) const
+bool SymbolDefinitionIDEqual::operator()(const Mo::Asm::SymbolDefinition &lhs,
+                                         const Mo::Asm::SymbolDefinition &rhs) const
 {
     return lhs.getId() == rhs.getId();
 }
@@ -144,7 +143,7 @@ const SymbolTable::Symbols &SymbolTable::getAllSymbols() const
 //! symbol, if one was found.
 //! @retval true The table contains a definition for the named symbol.
 //! @retval false The table does not contain a matching definition.
-bool SymbolTable::contains(string_cref_t id, Location &at) const
+bool SymbolTable::contains(Ag::string_cref_t id, Location &at) const
 {
     SymbolDefinition key(id);
     auto pos = _symbols.find(key);
@@ -165,7 +164,7 @@ bool SymbolTable::contains(string_cref_t id, Location &at) const
 //! @retval true The table contains a definition for the named symbol and its
 //! value was returned, although his maybe null.
 //! @retval false The table does not contain a matching definition.
-bool SymbolTable::tryLookupValue(string_cref_t id, Value &value) const
+bool SymbolTable::tryLookupValue(Ag::string_cref_t id, Value &value) const
 {
     SymbolDefinition key(id);
     auto pos = _symbols.find(id);
@@ -189,7 +188,7 @@ bool SymbolTable::tryLookupValue(string_cref_t id, Value &value) const
 //! @param[in] source The source code location of the symbol.
 //! @retval true The symbol unique and thus added to the table.
 //! @retval false The symbol was a duplicate and not added.
-bool SymbolTable::declareSymbol(string_cref_t id, const Location &source)
+bool SymbolTable::declareSymbol(Ag::string_cref_t id, const Location &source)
 {
     auto insertPair = _symbols.emplace(id, source);
 
@@ -204,7 +203,7 @@ bool SymbolTable::declareSymbol(string_cref_t id, const Location &source)
 //! @retval false The symbol was a duplicate and not added.
 //! @param[in] isAddress True if the symbol value represents a position in
 //! code, false if it represent an arbitrary value.
-bool SymbolTable::defineSymbol(string_cref_t id, const Location &source,
+bool SymbolTable::defineSymbol(Ag::string_cref_t id, const Location &source,
                                const Value &value, bool isAddress)
 {
     auto insertPair = _symbols.emplace(id, source, value, isAddress);
@@ -212,6 +211,6 @@ bool SymbolTable::defineSymbol(string_cref_t id, const Location &source,
     return insertPair.second;
 }
 
-}} // namespace Ag::Asm
+}} // namespace Mo::Asm
 ////////////////////////////////////////////////////////////////////////////////
 

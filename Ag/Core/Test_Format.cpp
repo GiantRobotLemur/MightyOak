@@ -395,7 +395,7 @@ GTEST_TEST(FormattedOutput, EmbedInt)
     EXPECT_STREQ(buffer.c_str(), "Does a radioactive cat have 9 half-lives?");
 }
 
-} // TED
+} // Anonymous namespace
 
 } // namespace Ag
 ////////////////////////////////////////////////////////////////////////////////

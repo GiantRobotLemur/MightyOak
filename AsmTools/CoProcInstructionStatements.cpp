@@ -20,11 +20,7 @@
 #include "LexicalAnalysers.hpp"
 #include "ParseContext.hpp"
 
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
-
-namespace Ag {
+namespace Mo {
 namespace Asm {
 
 namespace {
@@ -89,22 +85,22 @@ public:
             if (isCDP)
             {
                 auto &params = instruction.getCoProcDataProcessingParameters();
-                params.CoProcessor = forceFromScalar<CoProcId>(results[0]);
+                params.CoProcessor = Ag::forceFromScalar<CoProcId>(results[0]);
                 params.OpCode1 = static_cast<uint8_t>(results[1]);
                 params.OpCode2 = static_cast<uint8_t>(results[2]);
-                params.Rd = forceFromScalar<CoProcRegister>(results[3]);
-                params.Rn = forceFromScalar<CoProcRegister>(results[4]);
-                params.Rm = forceFromScalar<CoProcRegister>(results[5]);
+                params.Rd = Ag::forceFromScalar<CoProcRegister>(results[3]);
+                params.Rn = Ag::forceFromScalar<CoProcRegister>(results[4]);
+                params.Rm = Ag::forceFromScalar<CoProcRegister>(results[5]);
             }
             else
             {
                 auto &params = instruction.getCoProcRegisterTransferParameters();
-                params.CoProcessor = forceFromScalar<CoProcId>(results[0]);
+                params.CoProcessor = Ag::forceFromScalar<CoProcId>(results[0]);
                 params.OpCode1 = static_cast<uint8_t>(results[1]);
                 params.OpCode2 = static_cast<uint8_t>(results[2]);
-                params.Rd = forceFromScalar<CoreRegister>(results[3]);
-                params.Rn = forceFromScalar<CoProcRegister>(results[4]);
-                params.Rm = forceFromScalar<CoProcRegister>(results[5]);
+                params.Rd = Ag::forceFromScalar<CoreRegister>(results[3]);
+                params.Rn = Ag::forceFromScalar<CoProcRegister>(results[4]);
+                params.Rm = Ag::forceFromScalar<CoProcRegister>(results[5]);
             }
         }
 
@@ -154,8 +150,8 @@ public:
             isOK = true;
 
             auto &info = instruction.getCoProcDataTransferParameters();
-            info.CoProcessor = forceFromScalar<CoProcId>(results[0]);
-            info.Rd = forceFromScalar<CoProcRegister>(results[1]);
+            info.CoProcessor = Ag::forceFromScalar<CoProcId>(results[0]);
+            info.Rd = Ag::forceFromScalar<CoProcRegister>(results[1]);
             info.IsLong = _longMode;
         }
 
@@ -171,7 +167,7 @@ public:
 // Local Functions
 ////////////////////////////////////////////////////////////////////////////////
 
-} // TED
+} // Anonymous namespace
 
 ////////////////////////////////////////////////////////////////////////////////
 // CoProcDataProcInstructionNode Member Function Definitions
@@ -469,11 +465,6 @@ Statement *CoProcDataTransferInstructionNode::compile(Messages &output) const
     return statement;
 }
 
-
-////////////////////////////////////////////////////////////////////////////////
-// Global Function Definitions
-////////////////////////////////////////////////////////////////////////////////
-
-}} // namespace Ag::Asm
+}} // namespace Mo::Asm
 ////////////////////////////////////////////////////////////////////////////////
 

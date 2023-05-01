@@ -20,7 +20,12 @@
 #include "ArmSystem.inl"
 #include "SystemConfigurations.inl"
 
-namespace Ag {
+// A bit lazy, but it's only one file.
+// TODO: If EmuPerfTest is expanded to more than a single file, resolve the Ag
+// namespaced element references.
+using namespace Ag;
+
+namespace Mo {
 namespace Arm {
 
 namespace {
@@ -419,12 +424,12 @@ protected:
 
 } // Anonymous namespace
 
-}} // namespace Ag::Arm
+}} // namespace Mo::Arm
 
 ////////////////////////////////////////////////////////////////////////////////
 // Global Function Definitions
 ////////////////////////////////////////////////////////////////////////////////
-IMPLEMENT_MAIN(Ag::Arm::EmuPerfTestApp);
+IMPLEMENT_MAIN(Mo::Arm::EmuPerfTestApp);
 
 ////////////////////////////////////////////////////////////////////////////////
 

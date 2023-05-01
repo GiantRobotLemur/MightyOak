@@ -18,11 +18,7 @@
 #include "ParseContext.hpp"
 #include "ShifterOperandNode.hpp"
 
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
-
-namespace Ag {
+namespace Mo {
 namespace Asm {
 
 namespace {
@@ -66,7 +62,7 @@ protected:
         CoreRegister rd = CoreRegister::R0;
         CoreRegister rn = CoreRegister::R0;
         ShifterOperand op2;
-        String error;
+        Ag::String error;
         bool wasNegated = false;
 
         // Evaluate operand 2 (the barrel shifter operand).
@@ -77,9 +73,9 @@ protected:
         {
             // The shifter operand could not be configured.
             std::string message("Could not configure barrel shifter operand: ");
-            appendAgString(message, error);
+            Ag::appendAgString(message, error);
 
-            log.appendError(getStart(), String(message));
+            log.appendError(getStart(), message);
         }
 
         // Evaluate the destination register.
@@ -92,9 +88,9 @@ protected:
             {
                 // The shifter operand could not be configured.
                 std::string message("Could not evaluate base register expression: ");
-                appendAgString(message, error);
+                Ag::appendAgString(message, error);
 
-                log.appendError(getStart(), String(message));
+                log.appendError(getStart(), message);
             }
         }
 
@@ -108,9 +104,9 @@ protected:
             {
                 // The shifter operand could not be configured.
                 std::string message("Could not evaluate source register expression: ");
-                appendAgString(message, error);
+                Ag::appendAgString(message, error);
 
-                log.appendError(getStart(), String(message));
+                log.appendError(getStart(), message);
             }
         }
 
@@ -171,7 +167,7 @@ protected:
 // Local Functions
 ////////////////////////////////////////////////////////////////////////////////
 
-} // TED
+} // Anonymous namespace
 
 ////////////////////////////////////////////////////////////////////////////////
 // AluInstructionNode Member Definitions
@@ -320,7 +316,7 @@ ISyntaxNode *AluInstructionNode::applyNode(ParseContext &context,
     {
     case State::AfterMnemonic:
         // Expect a register expression.
-        if (tryCast(childNode, expr))
+        if (Ag::tryCast(childNode, expr))
         {
             _destRegExpr.reset(expr);
             _state = State::AfterDestReg;
@@ -335,7 +331,7 @@ ISyntaxNode *AluInstructionNode::applyNode(ParseContext &context,
 
     case State::BeforeOperand1:
         // Expect a register expression.
-        if (tryCast(childNode, expr))
+        if (Ag::tryCast(childNode, expr))
         {
             _operand1Expr.reset(expr);
             _state = State::AfterOperand1;
@@ -350,7 +346,7 @@ ISyntaxNode *AluInstructionNode::applyNode(ParseContext &context,
 
     case State::BeforeOperand2:
         // Expect the shifter operand node to have been completed.
-        if (tryCast(childNode, shifterNode))
+        if (Ag::tryCast(childNode, shifterNode))
         {
             // Take ownership of the completed shifter operand.
             _operand2.reset(shifterNode);
@@ -431,10 +427,6 @@ Statement *AluInstructionNode::compile(Messages &output) const
     return statement;
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// Global Function Definitions
-////////////////////////////////////////////////////////////////////////////////
-
-}} // namespace Ag::Asm
+}} // namespace Mo::Asm
 ////////////////////////////////////////////////////////////////////////////////
 

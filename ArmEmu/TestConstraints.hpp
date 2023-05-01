@@ -12,7 +12,7 @@
 #define __ARM_EMU_TEST_CONSTRAINTS_HPP__
 
 ////////////////////////////////////////////////////////////////////////////////
-// Dependant Header Files
+// Dependent Header Files
 ////////////////////////////////////////////////////////////////////////////////
 #include <cstdint>
 
@@ -23,7 +23,7 @@
 #include "Ag/Core/Binary.hpp"
 #include "Ag/Core/Format.hpp"
 
-namespace Ag {
+namespace Mo {
 namespace Arm {
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -180,7 +180,7 @@ testing::AssertionResult verifyConstraints(const TTarget &target,
 
                     result << "Constraint not met. " << item.idToString() << ": ";
 
-                    FormatInfo fmt;
+                    Ag::FormatInfo fmt;
                     uint32_t maxValue = std::max(value, item.Value);
                     std::string values;
                     values.reserve(32);
@@ -199,16 +199,16 @@ testing::AssertionResult verifyConstraints(const TTarget &target,
                         }
 
                         values.append("0x");
-                        appendValue(fmt, values, item.Value);
+                        Ag::appendValue(fmt, values, item.Value);
                         values.append(" != 0x");
-                        appendValue(fmt, values, value);
+                        Ag::appendValue(fmt, values, value);
                     }
                     else
                     {
                         // For small decimal values.
-                        appendValue(fmt, values, item.Value);
+                        Ag::appendValue(fmt, values, item.Value);
                         values.append(" != ");
-                        appendValue(fmt, values, value);
+                        Ag::appendValue(fmt, values, value);
                     }
 
                     values.push_back('.');
@@ -236,7 +236,7 @@ testing::AssertionResult verifyConstraints(const TTarget &target,
     return result;
 }
 
-}} // namespace Ag::Arm
+}} // namespace Mo::Arm
 
 #endif // Header guard
 ////////////////////////////////////////////////////////////////////////////////

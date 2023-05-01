@@ -199,7 +199,7 @@ GTEST_TEST(PopCount, Verify16Bit)
 //    } while (i != 0);
 //}
 
-} // TED
+} // Anonymous namespace
 
 }} // namespace Ag::Bin
 ////////////////////////////////////////////////////////////////////////////////

@@ -13,7 +13,12 @@
 #include "Ag/Core.hpp"
 #include "AsmTools.hpp"
 
-namespace Ag {
+// A bit lazy, but it's only one file.
+// TODO: If AAsm is expanded to more than a single file, resolve the Ag
+// namespaced element references.
+using namespace Ag;
+
+namespace Mo {
 namespace Asm {
 
 namespace {
@@ -28,7 +33,7 @@ enum class AAsmCommand
 };
 
 //! @brief Defines command line arguments for the AAsm tools.
-class AAsmArgs : public Cli::ProgramArguments
+class AAsmArgs : public Ag::Cli::ProgramArguments
 {
 private:
     // Internal Types
@@ -452,12 +457,12 @@ protected:
 
 } // Anonymous namespace
 
-}} // namespace Ag::Asm
+}} // namespace Mo::Asm
 
 ////////////////////////////////////////////////////////////////////////////////
 // Global Function Definitions
 ////////////////////////////////////////////////////////////////////////////////
-IMPLEMENT_MAIN(Ag::Asm::AAsmApp);
+IMPLEMENT_MAIN(Mo::Asm::AAsmApp);
 
 ////////////////////////////////////////////////////////////////////////////////
 

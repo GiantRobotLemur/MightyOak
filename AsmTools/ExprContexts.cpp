@@ -16,7 +16,7 @@
 #include "ConstantSet.hpp"
 #include "ExprContexts.hpp"
 
-namespace Ag {
+namespace Mo {
 namespace Asm {
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -37,7 +37,7 @@ const SymbolTable &RootEvalContext::getSymbols() const
 }
 
 // Inherited from IEvalContext.
-bool RootEvalContext::tryLookupSymbol(string_cref_t &id, Value &value) const
+bool RootEvalContext::tryLookupSymbol(Ag::string_cref_t &id, Value &value) const
 {
     return _globalSymbols.tryLookupValue(id, value);
 }
@@ -55,9 +55,9 @@ uint32_t RootEvalContext::getAssemblyAddress() const
 }
 
 // Inherited from IScopedContext.
-string_cref_t RootEvalContext::getScopeName() const
+Ag::string_cref_t RootEvalContext::getScopeName() const
 {
-    static const String name("global scope");
+    static const Ag::String name("global scope");
 
     return name;
 }
@@ -69,7 +69,7 @@ uint32_t RootEvalContext::getBaseAddress() const
 }
 
 // Inherited from IScopedContext.
-bool RootEvalContext::isSymbolDefined(string_cref_t id, string_ref_t scope,
+bool RootEvalContext::isSymbolDefined(Ag::string_cref_t id, Ag::string_ref_t scope,
                                       Location &source) const
 {
     bool isDefined = false;
@@ -90,7 +90,7 @@ void RootEvalContext::setAssemblyOffset(uint32_t offset)
 }
 
 // Inherited from IScopedContext.
-void RootEvalContext::defineSymbol(string_cref_t id, const Location &source,
+void RootEvalContext::defineSymbol(Ag::string_cref_t id, const Location &source,
                                    const Value &value, bool isAddress)
 {
     _globalSymbols.defineSymbol(id, source, value, isAddress);
@@ -101,22 +101,22 @@ void RootEvalContext::defineSymbol(string_cref_t id, const Location &source,
 ////////////////////////////////////////////////////////////////////////////////
 //! @brief Constructs a context which inherits from a parent.
 InnerEvalContext::InnerEvalContext(IScopedContext *parentContext,
-                                   string_cref_t name) :
+                                   Ag::string_cref_t name) :
     _parentContext(parentContext),
     _name(name)
 {
     if (_parentContext == nullptr)
     {
-        throw ArgumentException("parentContext");
+        throw Ag::ArgumentException("parentContext");
     }
     else if (_name.isEmpty())
     {
-        throw ArgumentException("name");
+        throw Ag::ArgumentException("name");
     }
 }
 
 // Inherited from IEvalContext.
-bool InnerEvalContext::tryLookupSymbol(string_cref_t &id, Value &value) const
+bool InnerEvalContext::tryLookupSymbol(Ag::string_cref_t &id, Value &value) const
 {
     bool hasSymbol = false;
 
@@ -147,7 +147,7 @@ uint32_t InnerEvalContext::getAssemblyAddress() const
 }
 
 // Inherited from IScopedContext.
-string_cref_t InnerEvalContext::getScopeName() const
+Ag::string_cref_t InnerEvalContext::getScopeName() const
 {
     return _name;
 }
@@ -159,7 +159,7 @@ uint32_t InnerEvalContext::getBaseAddress() const
 }
 
 // Inherited from IScopedContext.
-bool InnerEvalContext::isSymbolDefined(string_cref_t id, string_ref_t scope,
+bool InnerEvalContext::isSymbolDefined(Ag::string_cref_t id, Ag::string_ref_t scope,
                                        Location &source) const
 {
     bool isDefined = false;
@@ -186,7 +186,7 @@ void InnerEvalContext::setAssemblyOffset(uint32_t offset)
 }
 
 // Inherited from IScopedContext.
-void InnerEvalContext::defineSymbol(string_cref_t id, const Location &source,
+void InnerEvalContext::defineSymbol(Ag::string_cref_t id, const Location &source,
                                     const Value &value, bool isAddress)
 {
     _localSymbols.defineSymbol(id, source, value, isAddress);
@@ -207,7 +207,8 @@ ConstantWrapperEvalContext::ConstantWrapperEvalContext(IEvalContext *innerContex
 }
 
 // Inherited from IEvalContext.
-bool ConstantWrapperEvalContext::tryLookupSymbol(string_cref_t &id, Value &value) const
+bool ConstantWrapperEvalContext::tryLookupSymbol(Ag::string_cref_t &id,
+                                                 Value &value) const
 {
     // See if the symbol is one of the constants.
     bool hasValue = _constants.tryLookupValue(id, value);
@@ -227,5 +228,5 @@ uint32_t ConstantWrapperEvalContext::getAssemblyOffset() const
     return _innerContext->getAssemblyOffset();
 }
 
-}} // namespace Ag::Asm
+}} // namespace Mo::Asm
 ////////////////////////////////////////////////////////////////////////////////

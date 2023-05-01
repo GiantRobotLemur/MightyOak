@@ -520,7 +520,7 @@ size_t utf32Length(const std::u16string &utf16Text)
     return length;
 }
 
-} // TED
+} // Anonymous namespace
 
 ////////////////////////////////////////////////////////////////////////////////
 // Class Method Definitions

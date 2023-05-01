@@ -20,7 +20,7 @@
 #include "Disassembly.hpp"
 #include "FormatInstruction.hpp"
 
-namespace Ag {
+namespace Mo {
 namespace Asm {
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -451,7 +451,7 @@ CoProcDataTransfer &InstructionInfo::getCoProcDataTransferParameters()
 //! @retval true An instruction was successfully assembled.
 //! @retval false The instruction specification was invalid, nothing was assembled.
 bool InstructionInfo::assemble(uint32_t &instruction, uint32_t loadAddr,
-                               string_ref_t error) const
+                               Ag::string_ref_t error) const
 {
     // Define the parameters for assembly.
     AssemblyParams params(_opClass, _mnemonic, _condition, loadAddr, &_params);
@@ -494,7 +494,7 @@ bool InstructionInfo::assemble(uint32_t &instruction, uint32_t loadAddr,
 //! @returns The count of instruction words stored. At most this should be 4 to
 //! store a maximal ADR directive.
 size_t InstructionInfo::assemble(uint32_t *instructions, uint32_t loadAddr,
-                                 size_t maxCount, string_ref_t error) const
+                                 size_t maxCount, Ag::string_ref_t error) const
 {
     // Define the parameters for assembly.
     AssemblyParams params(_opClass, _mnemonic, _condition, loadAddr, &_params);
@@ -595,7 +595,7 @@ uint8_t InstructionInfo::disassemble(const uint32_t *instructions,
 //! @param[in] options An optional object which specifies how the instruction
 //! should be formatted and which can resolve symbols. Nullptr to use the
 //! default options.
-String InstructionInfo::toString(const FormatterOptions *options /*= nullptr*/) const
+Ag::String InstructionInfo::toString(const FormatterOptions *options /*= nullptr*/) const
 {
     static FormatterOptions defaultOptions(0x0000, FormatterOptions::ShowOffsets);
 
@@ -606,11 +606,11 @@ String InstructionInfo::toString(const FormatterOptions *options /*= nullptr*/) 
     // Format the instruction elsewhere (because it takes a lot of code).
     if (formatInstruction(params))
     {
-        return String(params.Builder);
+        return Ag::String(params.Builder);
     }
     else
     {
-        return String::Empty;
+        return Ag::String::Empty;
     }
 }
 
@@ -618,7 +618,7 @@ String InstructionInfo::toString(const FormatterOptions *options /*= nullptr*/) 
 //! @param[in] loadAddr The address at which the instruction is executed.
 //! @param[in] formatterOptionsFlags Formatting option flags as defined by
 //! the FormatterOptions::Flags enumeration type.
-String InstructionInfo::toString(uint32_t loadAddr, uint32_t formatterOptionsFlags) const
+Ag::String InstructionInfo::toString(uint32_t loadAddr, uint32_t formatterOptionsFlags) const
 {
     FormatterOptions options(loadAddr, formatterOptionsFlags);
 
@@ -656,11 +656,11 @@ void InstructionInfo::validateInstructionClass(OperationClass classification) co
 {
     if (_opClass != classification)
     {
-        throw OperationException(
+        throw Ag::OperationException(
             "Getting the wrong type of instruction parameters for the instruction class.");
     }
 }
 
-}} // namespace Ag::Asm
+}} // namespace Mo::Asm
 ////////////////////////////////////////////////////////////////////////////////
 

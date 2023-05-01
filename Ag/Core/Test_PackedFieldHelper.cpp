@@ -134,7 +134,7 @@ GTEST_TEST(PackedFieldHelper, ThreeFields)
     EXPECT_EQ(specimen.getField<int>(2), 0xF1);
 }
 
-} // TED
+} // Anonymous namespace
 
 } // namespace Ag
 ////////////////////////////////////////////////////////////////////////////////

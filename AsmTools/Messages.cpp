@@ -14,7 +14,7 @@
 #include "Ag/Core/Format.hpp"
 #include "AsmTools/Messages.hpp"
 
-namespace Ag {
+namespace Mo {
 namespace Asm {
 
 namespace {
@@ -24,9 +24,9 @@ namespace {
 struct CompareMessages
 {
 private:
-    const std::unordered_map<String, size_t> &_ordinalById;
+    const std::unordered_map<Ag::String, size_t> &_ordinalById;
 public:
-    CompareMessages(const std::unordered_map<String, size_t> &ordinalById) :
+    CompareMessages(const std::unordered_map<Ag::String, size_t> &ordinalById) :
         _ordinalById(ordinalById)
     {
     }
@@ -76,7 +76,7 @@ Location::Location() :
 }
 
 //! @brief Constructs a location representing the beginning of a file.
-Location::Location(const String &fileName) :
+Location::Location(const Ag::String &fileName) :
     FileName(fileName),
     LineNo(1),
     Offset(0)
@@ -102,7 +102,7 @@ bool Location::isValid() const
 //! @param[in] ordinal A scalar value defining relative when the message was
 //! created.
 Message::Message(MessageSeverity severity, const Location &location,
-                 const String &message, size_t ordinal) :
+                 const Ag::String &message, size_t ordinal) :
     _message(message),
     _location(location),
     _ordinal(ordinal),
@@ -130,14 +130,14 @@ const Location &Message::getLocation() const
 }
 
 //! @brief Gets the message text.
-const String &Message::getMessage() const
+const Ag::String &Message::getMessage() const
 {
     return _message;
 }
 
 //! @brief Summarises the message object as a single string.
 //! @return A single line summary of the message.
-String Message::toString() const
+Ag::String Message::toString() const
 {
     std::string builder;
 
@@ -166,13 +166,13 @@ String Message::toString() const
     builder.append(_location.FileName.getUtf8Bytes(),
                    _location.FileName.getUtf8Length());
 
-    FormatInfo defaultFormat;
-    appendFormat("({0}+{1}): ", builder, { _location.LineNo, _location.Offset });
+    Ag::FormatInfo defaultFormat;
+    Ag::appendFormat("({0}+{1}): ", builder, { _location.LineNo, _location.Offset });
 
     builder.append(_message.getUtf8Bytes(),
                    _message.getUtf8Length());
 
-    return String(builder);
+    return Ag::String(builder);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -210,7 +210,7 @@ const Messages::MessageCollection &Messages::getMessages() const
 //! @brief Appends a static informational message to the collection.
 //! @param[in] location The location in source code associated with the message.
 //! @param[in] message The message text.
-void Messages::appendInfo(const Location &location, const String &message)
+void Messages::appendInfo(const Location &location, const Ag::String &message)
 {
     _messages.emplace_back(MessageSeverity::Info, location, message,
                            _messages.size());
@@ -220,8 +220,8 @@ void Messages::appendInfo(const Location &location, const String &message)
 //! @param[in] location The location in source code associated with the message.
 //! @param[in] formatSpec The format specification to process.
 //! @param[in] values The values to be formatted into the message text.
-void Messages::appendInfo(const Location &location, utf8_cptr_t formatSpec,
-                          const VariantList &values)
+void Messages::appendInfo(const Location &location, Ag::utf8_cptr_t formatSpec,
+                          const Ag::VariantList &values)
 {
     appendFormatted(MessageSeverity::Info, location, formatSpec, values);
 }
@@ -229,7 +229,7 @@ void Messages::appendInfo(const Location &location, utf8_cptr_t formatSpec,
 //! @brief Appends a static warning message to the collection.
 //! @param[in] location The location in source code associated with the message.
 //! @param[in] message The message text.
-void Messages::appendWarning(const Location &location, const String &message)
+void Messages::appendWarning(const Location &location, const Ag::String &message)
 {
     _messages.emplace_back(MessageSeverity::Warning, location, message,
                            _messages.size());
@@ -239,8 +239,8 @@ void Messages::appendWarning(const Location &location, const String &message)
 //! @param[in] location The location in source code associated with the message.
 //! @param[in] formatSpec The format specification to process.
 //! @param[in] values The values to be formatted into the message text.
-void Messages::appendWarning(const Location &location, utf8_cptr_t formatSpec,
-                             const VariantList &values)
+void Messages::appendWarning(const Location &location, Ag::utf8_cptr_t formatSpec,
+                             const Ag::VariantList &values)
 {
     appendFormatted(MessageSeverity::Warning, location, formatSpec, values);
 }
@@ -248,7 +248,7 @@ void Messages::appendWarning(const Location &location, utf8_cptr_t formatSpec,
 //! @brief Appends a static error message to the collection.
 //! @param[in] location The location in source code associated with the message.
 //! @param[in] message The message text.
-void Messages::appendError(const Location &location, const String &message)
+void Messages::appendError(const Location &location, const Ag::String &message)
 {
     _messages.emplace_back(MessageSeverity::Error, location,
                            message, _messages.size());
@@ -259,8 +259,8 @@ void Messages::appendError(const Location &location, const String &message)
 //! @param[in] location The location in source code associated with the message.
 //! @param[in] formatSpec The format specification to process.
 //! @param[in] values The values to be formatted into the message text.
-void Messages::appendError(const Location &location, utf8_cptr_t formatSpec,
-                           const VariantList &values)
+void Messages::appendError(const Location &location, Ag::utf8_cptr_t formatSpec,
+                           const Ag::VariantList &values)
 {
     appendFormatted(MessageSeverity::Error, location, formatSpec, values);
     _hasErrors = true;
@@ -269,7 +269,7 @@ void Messages::appendError(const Location &location, utf8_cptr_t formatSpec,
 //! @brief Appends a static fatal error message to the collection.
 //! @param[in] location The location in source code associated with the message.
 //! @param[in] message The message text.
-void Messages::appendFatal(const Location &location, const String &message)
+void Messages::appendFatal(const Location &location, const Ag::String &message)
 {
     _messages.emplace_back(MessageSeverity::Fatal, location,
                            message, _messages.size());
@@ -280,8 +280,8 @@ void Messages::appendFatal(const Location &location, const String &message)
 //! @param[in] location The location in source code associated with the message.
 //! @param[in] formatSpec The format specification to process.
 //! @param[in] values The values to be formatted into the message text.
-void Messages::appendFatal(const Location &location, utf8_cptr_t formatSpec,
-                           const VariantList &values)
+void Messages::appendFatal(const Location &location, Ag::utf8_cptr_t formatSpec,
+                           const Ag::VariantList &values)
 {
     appendFormatted(MessageSeverity::Fatal, location, formatSpec, values);
     _hasErrors = true;
@@ -294,13 +294,13 @@ void Messages::appendFatal(const Location &location, utf8_cptr_t formatSpec,
 //! @param[in] values A set of values to be formatted into the final message.
 void Messages::appendFormatted(MessageSeverity severity,
                                const Location &location,
-                               utf8_cptr_t formatSpec,
-                               const VariantList &values)
+                               Ag::utf8_cptr_t formatSpec,
+                               const Ag::VariantList &values)
 {
-    FormatInfo formatInfo(LocaleInfo::getDisplay());
+    Ag::FormatInfo formatInfo = Ag::FormatInfo::getDisplay();
 
-    String message = String::format(LocaleInfo::getDisplay(),
-                                    formatSpec, values);
+    Ag::String message = Ag::String::format(Ag::LocaleInfo::getDisplay(),
+                                            formatSpec, values);
 
     _messages.emplace_back(severity, location, message, _messages.size());
 }
@@ -309,7 +309,7 @@ void Messages::appendFormatted(MessageSeverity severity,
 void Messages::sort()
 {
     // Determine the order of input sources.
-    std::unordered_map<String, size_t> sourceOrdinalById;
+    std::unordered_map<Ag::String, size_t> sourceOrdinalById;
 
     for (const Message &message : _messages)
     {
@@ -322,6 +322,6 @@ void Messages::sort()
               CompareMessages(sourceOrdinalById));
 }
 
-}} // namespace Ag::Asm
+}} // namespace Mo::Asm
 ////////////////////////////////////////////////////////////////////////////////
 

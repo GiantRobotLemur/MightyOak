@@ -15,21 +15,10 @@
 
 #include "ConstantSet.hpp"
 
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
-
-namespace Ag {
+namespace Mo {
 namespace Asm {
 
 namespace {
-////////////////////////////////////////////////////////////////////////////////
-// Local Data Types
-////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////
-// Local Data
-////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////
 // Local Functions
@@ -44,7 +33,8 @@ namespace {
 //! @retval true The identifier was in the form of a based symbol and its prefix
 //! and ordinal were returned.
 //! @retval false The identifier was not a valid based symbol.
-bool tryParseBasedSymbol(string_cref_t id, string_ref_t prefix, uint32_t &ordinal)
+bool tryParseBasedSymbol(Ag::string_cref_t id, Ag::string_ref_t prefix,
+                         uint32_t &ordinal)
 {
     auto firstDigit = id.end();
     size_t digitCount = 0;
@@ -54,7 +44,7 @@ bool tryParseBasedSymbol(string_cref_t id, string_ref_t prefix, uint32_t &ordina
     {
         if (hasDigits)
         {
-            if (CodePoint::isNumeric(*pos))
+            if (Ag::CodePoint::isNumeric(*pos))
             {
                 // Keep track of how many digits in the ordinal.
                 ++digitCount;
@@ -67,7 +57,7 @@ bool tryParseBasedSymbol(string_cref_t id, string_ref_t prefix, uint32_t &ordina
                 break;
             }
         }
-        else if (CodePoint::isNumeric(*pos))
+        else if (Ag::CodePoint::isNumeric(*pos))
         {
             prefix = id.substring(id.begin(), pos).toUpper();
             firstDigit = pos;
@@ -80,25 +70,25 @@ bool tryParseBasedSymbol(string_cref_t id, string_ref_t prefix, uint32_t &ordina
     // leading zeros.
     if (hasDigits && ((*firstDigit != U'0') || (digitCount == 1)))
     {
-        String digits = id.substring(firstDigit, id.end());
+        Ag::String digits = id.substring(firstDigit, id.end());
 
         if (digits.tryParseScalar(ordinal, 10) == false)
         {
-            prefix = String::Empty;
+            prefix = Ag::String::Empty;
             ordinal = 0;
             hasDigits = false;
         }
     }
     else
     {
-        prefix = String::Empty;
+        prefix = Ag::String::Empty;
         ordinal = 0;
     }
 
     return hasDigits;
 }
 
-} // TED
+} // Anonymous namespace
 
 ////////////////////////////////////////////////////////////////////////////////
 // ConstantSet Member Definitions
@@ -117,9 +107,9 @@ bool ConstantSet::isEmpty() const
 //! @param[in] id The identifier of the constant to query the existence of.
 //! @retval true The constant is defined, possibly as a prefix followed by digits.
 //! @retval false The constant is not defined in the current set.
-bool ConstantSet::contains(string_cref_t id) const
+bool ConstantSet::contains(Ag::string_cref_t id) const
 {
-    String prefix;
+    Ag::String prefix;
     uint32_t ordinal;
     bool hasMatch = false;
 
@@ -143,9 +133,9 @@ bool ConstantSet::contains(string_cref_t id) const
 //! @param[out] value The value of the constant if a match was found.
 //! @retval true A matching constant definition was found.
 //! @retval false No matches were found.
-bool ConstantSet::tryLookupValue(string_cref_t id, Value &value) const
+bool ConstantSet::tryLookupValue(Ag::string_cref_t id, Value &value) const
 {
-    String prefix;
+    Ag::String prefix;
     uint32_t ordinal;
     bool hasMatch = false;
 
@@ -178,7 +168,7 @@ bool ConstantSet::tryLookupValue(string_cref_t id, Value &value) const
 //! @brief Adds the definition of a constant with a fixed name.
 //! @param[in] id The case-insensitive name of the constant.
 //! @param[in] value The value the constant represents.
-void ConstantSet::addConstant(string_cref_t id, const Value &value)
+void ConstantSet::addConstant(Ag::string_cref_t id, const Value &value)
 {
     _fixedConstants[id.toUpper()] = value;
 }
@@ -190,7 +180,7 @@ void ConstantSet::addConstant(string_cref_t id, const Value &value)
 //! @param[in] maxOrdinal The maximum ordinal value specified with the prefix.
 //! @param[in] valueOffset Value to offset the ordinal by to produce the
 //! final value.
-void ConstantSet::addBasedConstant(string_cref_t id, uint32_t minOrdinal,
+void ConstantSet::addBasedConstant(Ag::string_cref_t id, uint32_t minOrdinal,
                                    uint32_t maxOrdinal, int32_t valueOffset /* = 0 */)
 {
     _basedConstants[id.toUpper()] = BaseConstant(valueOffset, minOrdinal, maxOrdinal);
@@ -290,7 +280,6 @@ const ConstantSet &getFPARegSymbols()
     return fpaRegs;
 }
 
-
-}} // namespace Ag::Asm
+}} // namespace Mo::Asm
 ////////////////////////////////////////////////////////////////////////////////
 

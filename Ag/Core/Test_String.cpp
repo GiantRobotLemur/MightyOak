@@ -47,7 +47,7 @@ GTEST_TEST(StringValue, ConstructNullTerminatedUTF8)
     // 0xC2 0xA3 is the UTF-8 encoding of UK pounds
     // 0xF0 0x9F 0x8D 0xBA is the UTF-8 encoding of the beer mug emoji.
     char sample[] = { "Hello \xC2\xA3 World \xF0\x9F\x8D\xBA!" };
-    size_t byteCount = arraySize(sample) - 1;
+    size_t byteCount = std::size(sample) - 1;
 
     String specimen(sample);
 
@@ -65,7 +65,7 @@ GTEST_TEST(StringValue, ConstructBoundedUTF8)
     // 0xC2 0xA3 is the UTF-8 encoding of UK pounds
     // 0xF0 0x9F 0x8D 0xBA is the UTF-8 encoding of the beer mug emoji.
     char sample[] = { "Hello \xC2\xA3 World \xF0\x9F\x8D\xBA!" };
-    size_t byteCount = arraySize(sample) - 2;
+    size_t byteCount = std::size(sample) - 2;
 
     String specimen(sample, byteCount);
 
@@ -178,7 +178,7 @@ GTEST_TEST(StringValue, ConstructNullTerminatedUTF16)
     // 0xF0 0x9F 0x8D 0xBA is the UTF-8 encoding of the beer mug emoji.
     char sample[] = "Hello \xC2\xA3 World \xF0\x9F\x8D\xBA!";
     char16_t sample16[] = u"Hello \x00A3 World \xd83c\xdf7a!";
-    size_t wordCount = arraySize(sample16) - 1;
+    size_t wordCount = std::size(sample16) - 1;
 
     String specimen(sample16);
 
@@ -197,7 +197,7 @@ GTEST_TEST(StringValue, ConstructBoundedUTF16)
     // 0xF0 0x9F 0x8D 0xBA is the UTF-8 encoding of the beer mug emoji.
     char sample[] = "Hello \xC2\xA3 World \xF0\x9F\x8D\xBA";
     char16_t sample16[] = u"Hello \x00A3 World \xd83c\xdf7a!";
-    size_t wordCount = arraySize(sample16) - 2;
+    size_t wordCount = std::size(sample16) - 2;
 
     String specimen(sample16, wordCount);
 
@@ -260,7 +260,7 @@ GTEST_TEST(StringValue, ConstructNullTerminatedUTF32)
     // 0xF0 0x9F 0x8D 0xBA is the UTF-8 encoding of the beer mug emoji.
     char sample[] = "Hello \xC2\xA3 World \xF0\x9F\x8D\xBA!";
     char32_t sample32[] = U"Hello \x00A3 World \x0001f37a!";
-    size_t codePointCount = arraySize(sample32) - 1;
+    size_t codePointCount = std::size(sample32) - 1;
 
     String specimen(sample32);
 
@@ -279,7 +279,7 @@ GTEST_TEST(StringValue, ConstructBoundedUTF32)
     // 0xF0 0x9F 0x8D 0xBA is the UTF-8 encoding of the beer mug emoji.
     char sample[] = { "Hello \xC2\xA3 World \xF0\x9F\x8D\xBA" };
     char32_t sample32[] = U"Hello \x00A3 World \x0001f37a!";
-    size_t codePointCount = arraySize(sample32) - 2;
+    size_t codePointCount = std::size(sample32) - 2;
 
     String specimen(sample32, codePointCount);
 
@@ -357,7 +357,7 @@ GTEST_TEST(StringValue, IteratorRetreat)
     char32_t source[] = U"Hello World \x0001f37a!";
 
     String specimen(source);
-    const char32_t *sourcePtr = source + arraySize(source) - 1;
+    const char32_t *sourcePtr = source + std::size(source) - 1;
 
     auto pos = specimen.end();
 
@@ -440,7 +440,7 @@ GTEST_TEST(StringValue, TryParseUint32)
     EXPECT_EQ(result, 0x0020u);
 }
 
-} // TED
+} // Anonymous namespace
 
 } // namespace Ag
 ////////////////////////////////////////////////////////////////////////////////

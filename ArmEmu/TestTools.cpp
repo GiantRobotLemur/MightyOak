@@ -23,7 +23,7 @@
 // Macro Definitions
 ////////////////////////////////////////////////////////////////////////////////
 
-namespace Ag {
+namespace Mo {
 namespace Arm {
 
 namespace {
@@ -47,7 +47,7 @@ public:
     {
         _instruction.getBreakpointParameters().Comment = _index++;
 
-        String error;
+        Ag::String error;
         uint32_t instruction = 0;
         if (_instruction.assemble(instruction, 0x0000, error) == false)
         {
@@ -81,9 +81,9 @@ public:
     else
     {
         std::string message;
-        appendFormat(FormatInfo::getNeutral(),
-                     "0x{0:X2} vs 0x{1:X2}",
-                     message, { lhs, rhs });
+        Ag::appendFormat(Ag::FormatInfo::getNeutral(),
+                         "0x{0:X2} vs 0x{1:X2}",
+                         message, { lhs, rhs });
 
         return ::testing::AssertionFailure() << message;
     }
@@ -98,9 +98,9 @@ public:
     else
     {
         std::string message;
-        appendFormat(FormatInfo::getNeutral(),
-                     "0x{0:X4} vs 0x{1:X4}",
-                     message, { lhs, rhs });
+        Ag::appendFormat(Ag::FormatInfo::getNeutral(),
+                         "0x{0:X4} vs 0x{1:X4}",
+                         message, { lhs, rhs });
 
         return ::testing::AssertionFailure() << message;
     }
@@ -115,9 +115,9 @@ public:
     else
     {
         std::string message;
-        appendFormat(FormatInfo::getNeutral(),
-                     "0x{0:X8} vs 0x{1:X8}",
-                     message, { lhs, rhs });
+        Ag::appendFormat(Ag::FormatInfo::getNeutral(),
+                         "0x{0:X8} vs 0x{1:X8}",
+                         message, { lhs, rhs });
 
         return ::testing::AssertionFailure() << message;
     }
@@ -132,9 +132,9 @@ public:
     else
     {
         std::string message;
-        appendFormat(FormatInfo::getNeutral(),
-                     "0x{0:X8} vs 0x{1:X8}",
-                     message, { lhs, rhs });
+        Ag::appendFormat(Ag::FormatInfo::getNeutral(),
+                         "0x{0:X8} vs 0x{1:X8}",
+                         message, { lhs, rhs });
 
         return ::testing::AssertionFailure() << message;
     }
@@ -149,9 +149,9 @@ public:
     else
     {
         std::string message;
-        appendFormat(FormatInfo::getNeutral(),
-                     "{0}: 0x{1:X8} vs 0x{2:X8}",
-                     message, { coreRegisterToString(regId), lhs, rhs });
+        Ag::appendFormat(Ag::FormatInfo::getNeutral(),
+                         "{0}: 0x{1:X8} vs 0x{2:X8}",
+                         message, { coreRegisterToString(regId), lhs, rhs });
 
         return ::testing::AssertionFailure() << message;
     }
@@ -166,9 +166,9 @@ public:
     else
     {
         std::string message;
-        appendFormat(FormatInfo::getNeutral(),
-                     "MEM 0x{0:X6}: 0x{1:X8} vs 0x{2:X8}",
-                     message, { addr, lhs, rhs });
+        Ag::appendFormat(Ag::FormatInfo::getNeutral(),
+                         "MEM 0x{0:X6}: 0x{1:X8} vs 0x{2:X8}",
+                         message, { addr, lhs, rhs });
 
         return ::testing::AssertionFailure() << message;
     }
@@ -225,7 +225,7 @@ IArmSystemUPtr createUserModeTestSystem(const char *assembler)
                                      Asm::OperationClass::Branch);
     resetBranch.getBranchParameters().Address = TestBedHardware::RamBase;
 
-    String error;
+    Ag::String error;
     if (resetBranch.assemble(rom.front(), TestBedHardware::RomBase, error) == false)
     {
         throw Ag::OperationException("Could not assemble reset vector.");
@@ -263,6 +263,6 @@ IArmSystemUPtr createUserModeTestSystem(const char *assembler)
     return IArmSystemUPtr(testSystem);
 }
 
-}} // namespace Ag::Arm
+}} // namespace Mo::Arm
 ////////////////////////////////////////////////////////////////////////////////
 

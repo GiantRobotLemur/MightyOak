@@ -12,12 +12,12 @@
 #define __ARM_EMU_SYSTEM_INL__
 
 ////////////////////////////////////////////////////////////////////////////////
-// Dependant Header Files
+// Dependent Header Files
 ////////////////////////////////////////////////////////////////////////////////
 #include "ArmEmu.hpp"
 #include "SystemConfigurations.inl"
 
-namespace Ag {
+namespace Mo {
 namespace Arm {
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -85,7 +85,7 @@ public:
         default:
             if (id <= CoreRegister::R15)
             {
-                result = _registers.getRm(static_cast<GeneralRegister>(toScalar(id)));
+                result = _registers.getRm(static_cast<GeneralRegister>(Ag::toScalar(id)));
             }
             break;
         }
@@ -114,7 +114,7 @@ public:
             {
                 // Set and preserve status flags, unless writing to R15 on
                 // a 26-bit system.
-                _registers.setRdAndStatus(static_cast<GeneralRegister>(toScalar(id)), value,
+                _registers.setRdAndStatus(static_cast<GeneralRegister>(Ag::toScalar(id)), value,
                                           static_cast<uint8_t>(_registers.getPSR() >> PsrShift::Status));
             }
             break;
@@ -205,7 +205,7 @@ public:
     }
 };
 
-}} // namespace Ag::Arm
+}} // namespace Mo::Arm
 
 #endif // Header guard
 ////////////////////////////////////////////////////////////////////////////////

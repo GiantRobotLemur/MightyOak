@@ -247,7 +247,7 @@ char toHexDigit(uint32_t value)
     return digits[value & 0x0F];
 }
 
-} // TED
+} // Anonymous namespace
 
 ///////////////////////////////////////////////////////////////////////////////
 // Local Data
@@ -336,8 +336,7 @@ String transform(const String &text, wint_t (*transformFn)(wint_t))
     }
 }
 
-} // TED
-
+} // Anonymous namespace
 
 ///////////////////////////////////////////////////////////////////////////////
 // Member Functions

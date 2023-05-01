@@ -21,27 +21,8 @@
 #include "SyntaxNode.hpp"
 #include "Token.hpp"
 
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
-
-namespace Ag {
+namespace Mo {
 namespace Asm {
-
-namespace {
-////////////////////////////////////////////////////////////////////////////////
-// Local Data Types
-////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////
-// Local Data
-////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////
-// Local Functions
-////////////////////////////////////////////////////////////////////////////////
-
-} // TED
 
 ////////////////////////////////////////////////////////////////////////////////
 // ParseContext Member Function Definitions
@@ -104,14 +85,14 @@ bool ParseContext::hasIncompleteSyntaxNodes() const
 //! @retval true The input source was successfully opened.
 //! @retval false The input source could not be obtained, error should receive
 //! a message detailing why.
-bool ParseContext::tryBegin(ILexicalContext *baseLexer, String &error)
+bool ParseContext::tryBegin(ILexicalContext *baseLexer, Ag::string_ref_t error)
 {
     // Empty the state before starting.
     _lexicalStack.clear();
     _cachedToken.clear();
 
     IInputSourcePtr inputSource;
-    String errorOrId;
+    Ag::String errorOrId;
     bool isOK = false;
 
     if (_input->tryGetPrimaryInputSource(inputSource, errorOrId))
@@ -149,7 +130,7 @@ void ParseContext::popLexicalContext()
 {
     if (_lexicalStack.empty())
     {
-        throw OperationException("Cannot pop from an empty lexical stack.");
+        throw Ag::OperationException("Cannot pop from an empty lexical stack.");
     }
     else if (_cachedToken.getClass() == TokenClass::Empty)
     {
@@ -157,7 +138,8 @@ void ParseContext::popLexicalContext()
     }
     else
     {
-        throw OperationException("Cannot pop the lexical stack with an outstanding token.");
+        throw Ag::OperationException("Cannot pop the lexical stack "
+                                     "with an outstanding token.");
     }
 }
 
@@ -252,7 +234,7 @@ void ParseContext::restoreSyntaxStack(size_t state)
     {
         ISyntaxNode *node = _nodeStack.back();
         _nodeStack.pop_back();
-        safeDelete(node);
+        Ag::safeDelete(node);
     }
 }
 
@@ -318,7 +300,7 @@ void ParseContext::ungetToken(const Token &previous)
     }
     else
     {
-        throw OperationException("Cannot unget more than one token at once.");
+        throw Ag::OperationException("Cannot unget more than one token at once.");
     }
 }
 
@@ -423,10 +405,6 @@ bool ParseContext::tryGenerateToken(Token &next)
     return hasToken;
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// Global Function Definitions
-////////////////////////////////////////////////////////////////////////////////
-
-}} // namespace Ag::Asm
+}} // namespace Mo::Asm
 ////////////////////////////////////////////////////////////////////////////////
 

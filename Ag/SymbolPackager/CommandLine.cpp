@@ -202,7 +202,7 @@ bool tryParseFormat(const std::string &value, Format &fmt)
     return isOK;
 }
 
-} // TED
+} // Anonymous namespace
 
 ////////////////////////////////////////////////////////////////////////////////
 // Class Method Definitions

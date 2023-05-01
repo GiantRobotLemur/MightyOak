@@ -60,7 +60,7 @@ template<typename T> T raiseToPower(T value, int power)
     return result;
 }
 
-} // TED
+} // Anonymous namespace
 
 ////////////////////////////////////////////////////////////////////////////////
 // Class Method Definitions
@@ -226,7 +226,7 @@ bool ScalarParser::tryProcessCharacter(char character)
 
     bool isProcessed = false;
 
-    if (_currentState < arraySize(handlerFunctions))
+    if (_currentState < std::size(handlerFunctions))
     {
         isProcessed = ((this)->*handlerFunctions[_currentState])(character);
     }
@@ -819,7 +819,7 @@ bool ScalarParser::isTerminalState(ScalarParser::State state)
         State_InTrailingWhiteSpace,
     };
 
-    return std::binary_search(terminals, terminals + arraySize(terminals), state);
+    return std::binary_search(terminals, terminals + std::size(terminals), state);
 }
 
 //! @brief Raises a value to a power of 10.

@@ -18,7 +18,7 @@
 #include "ConstantSet.hpp"
 #include "SymbolTable.hpp"
 
-namespace Ag {
+namespace Mo {
 namespace Asm {
 
 namespace {
@@ -132,6 +132,6 @@ GTEST_TEST(SymbolTable, QueryDefinedSymbols)
 
 } // Anonymous namespace
 
-}} // namespace Ag::Asm
+}} // namespace Mo::Asm
 ////////////////////////////////////////////////////////////////////////////////
 

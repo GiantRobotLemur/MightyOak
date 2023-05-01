@@ -13,7 +13,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 #include "TestTools.hpp"
 
-namespace Ag {
+namespace Mo {
 namespace Asm {
 
 namespace {
@@ -24,7 +24,7 @@ namespace {
 class PositiveAssemblyTestPoint : public BaseTestPoint
 {
 private:
-    String _source;
+    Ag::String _source;
     std::vector<uint32_t> _results;
 public:
     // Construction
@@ -47,7 +47,7 @@ public:
     ~PositiveAssemblyTestPoint() = default;
 
     // Accessors
-    string_cref_t getSource() const { return _source; }
+    Ag::string_cref_t getSource() const { return _source; }
 
     // Operations
     ::testing::AssertionResult isSuccessful(const Messages &log) const
@@ -74,8 +74,8 @@ public:
 class NegativeAssemblyTestPoint : public BaseTestPoint
 {
 private:
-    String _source;
-    String _messageFragment;
+    Ag::String _source;
+    Ag::String _messageFragment;
     int _errorLine;
 public:
     // Construction
@@ -91,7 +91,7 @@ public:
     ~NegativeAssemblyTestPoint() = default;
 
     // Accessors
-    string_cref_t getSource() const { return _source; }
+    Ag::string_cref_t getSource() const { return _source; }
 
     // Operations
     ::testing::AssertionResult hasExpectedError(const Messages &log) const
@@ -229,7 +229,7 @@ public:
 // Unit Tests
 ////////////////////////////////////////////////////////////////////////////////
 
-} // TED
+} // Anonymous namespace
 
 void registerAssemblyTests()
 {
@@ -408,7 +408,7 @@ void registerAssemblyTests()
 
     registerTestPoints<PositiveAssemblyTest>("AssemblyTests",
                                              positivePoints,
-                                             arraySize(positivePoints));
+                                             std::size(positivePoints));
 
     NegativeAssemblyTestPoint negativePoints[] = {
         { LOC, "SWI_BadExpr", "SWIMI \"Hello!\"", "incompatible data type", 1 },
@@ -434,9 +434,9 @@ void registerAssemblyTests()
 
     registerTestPoints<NegativeAssemblyTest>("AssemblyTests",
                                              negativePoints,
-                                             arraySize(negativePoints));
+                                             std::size(negativePoints));
 }
 
-}} // namespace Ag::Asm
+}} // namespace Mo::Asm
 ////////////////////////////////////////////////////////////////////////////////
 

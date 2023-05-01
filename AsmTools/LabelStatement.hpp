@@ -12,7 +12,7 @@
 #define __ASM_TOOLS_LABEL_STATEMENT_HPP__
 
 ////////////////////////////////////////////////////////////////////////////////
-// Dependant Header Files
+// Dependent Header Files
 ////////////////////////////////////////////////////////////////////////////////
 #include "Ag/Core/String.hpp"
 #include "AsmTools/Messages.hpp"
@@ -20,7 +20,7 @@
 #include "ExpressionNode.hpp"
 #include "StatementListNode.hpp"
 
-namespace Ag {
+namespace Mo {
 namespace Asm {
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -53,7 +53,7 @@ private:
     };
 
     // Internal Fields
-    String _id;
+    Ag::String _id;
     ExpressionNodeUPtr _valueExpr;
     State _state;
 };
@@ -63,23 +63,23 @@ class LabelStatement : public Statement
 {
 public:
     // Construction/Destruction
-    LabelStatement(string_cref_t id, const Location &at, IExprUPtr &&value);
+    LabelStatement(Ag::string_cref_t id, const Location &at, IExprUPtr &&value);
     virtual ~LabelStatement() = default;
 
     // Accessors
-    string_cref_t getID() const;
+    Ag::string_cref_t getID() const;
     const Location &getSourcePosition() const;
     IExprCPtr getValueExpr() const;
 
 private:
     // Internal Fields
     Location _at;
-    String _id;
+    Ag::String _id;
     IExprUPtr _valueExpr;
     bool _isAddress;
 };
 
-}} // namespace Ag::Asm
+}} // namespace Mo::Asm
 
 #endif // Header guard
 ////////////////////////////////////////////////////////////////////////////////

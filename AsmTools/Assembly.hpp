@@ -12,11 +12,11 @@
 #define __ASM_TOOLS_ASSEMBLY_HPP__
 
 ////////////////////////////////////////////////////////////////////////////////
-// Dependant Header Files
+// Dependent Header Files
 ////////////////////////////////////////////////////////////////////////////////
 #include "AsmTools/InstructionInfo.hpp"
 
-namespace Ag {
+namespace Mo {
 namespace Asm {
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -28,7 +28,7 @@ struct AssemblyParams
     // Public Fields
     static const uint8_t MaxInstructions = 4;
     const InstructionParams *Params;
-    String ErrorMessage;
+    Ag::String ErrorMessage;
     uint32_t Instructions[MaxInstructions];
     uint32_t LoadAddress;
     uint8_t InstructionCount;
@@ -62,7 +62,7 @@ struct AssemblyParams
 ////////////////////////////////////////////////////////////////////////////////
 bool assembleInstruction(AssemblyParams &params);
 
-}} // namespace Ag::Asm
+}} // namespace Mo::Asm
 
 #endif // Header guard
 ////////////////////////////////////////////////////////////////////////////////

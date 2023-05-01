@@ -20,11 +20,7 @@
 #include "AsmTools/InstructionInfo.hpp"
 #include "AsmTools/Options.hpp"
 
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
-
-namespace Ag {
+namespace Mo {
 namespace Asm {
 
 namespace {
@@ -33,9 +29,9 @@ namespace {
 ////////////////////////////////////////////////////////////////////////////////
 InputContext createInput(const char *sourceCode)
 {
-    IInputSourcePtr source = createBufferInputSource(String(sourceCode));
+    IInputSourcePtr source = createBufferInputSource(Ag::String(sourceCode));
     Location position("MyProject/Libs/Here.asm");
-    String sourceId("MyProject/Libs/Lib.asm");
+    Ag::String sourceId("MyProject/Libs/Lib.asm");
 
     return InputContext(source, position, sourceId, 2);
 }
@@ -295,8 +291,8 @@ GTEST_TEST(PsrComponentLexer, MultipleSuffixes)
 
     Token token;
     constexpr uint8_t DefaultSuffix = 0;
-    constexpr uint8_t ExpectedSuffix = toScalar(PsrComponent::Extension) |
-                                       toScalar(PsrComponent::Control);
+    constexpr uint8_t ExpectedSuffix = Ag::toScalar(PsrComponent::Extension) |
+                                       Ag::toScalar(PsrComponent::Control);
 
     EXPECT_TRUE(specimen->tryGetNextToken(input, token));
     EXPECT_EQ(token.getClass(), TokenClass::RegisterStatus);
@@ -311,7 +307,7 @@ GTEST_TEST(PsrComponentLexer, AllSuffixes)
 
     Token token;
     constexpr uint8_t DefaultSuffix = 0;
-    constexpr uint8_t ExpectedSuffix = toScalar(PsrComponent::All);
+    constexpr uint8_t ExpectedSuffix = Ag::toScalar(PsrComponent::All);
 
     EXPECT_TRUE(specimen->tryGetNextToken(input, token));
     EXPECT_EQ(token.getClass(), TokenClass::RegisterStatus);
@@ -341,8 +337,8 @@ GTEST_TEST(PsrComponentLexer, InvalidSuffixesFail)
     EXPECT_EQ(token.getClass(), TokenClass::Error);
 }
 
-} // TED
+} // Anonymous namespace
 
-}} // namespace Ag::Asm
+}} // namespace Mo::Asm
 ////////////////////////////////////////////////////////////////////////////////
 

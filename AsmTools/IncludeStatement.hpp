@@ -12,23 +12,15 @@
 #define __ASM_TOOLS_INCLUDE_STATEMENT_HPP__
 
 ////////////////////////////////////////////////////////////////////////////////
-// Dependant Header Files
+// Dependent Header Files
 ////////////////////////////////////////////////////////////////////////////////
 #include "AsmTools/Messages.hpp"
 
 #include "Statement.hpp"
 #include "StatementListNode.hpp"
 
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
-
-namespace Ag {
+namespace Mo {
 namespace Asm {
-
-////////////////////////////////////////////////////////////////////////////////
-// Data Type Declarations
-////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////
 // Class Declarations
@@ -40,10 +32,6 @@ public:
     // Construction/Destruction
     IncludeNode(ParseContext &context, const Location &at);
     virtual ~IncludeNode() = default;
-
-    // Accessors
-
-    // Operations
 
     // Overrides
     virtual bool isComplete() const override;
@@ -61,10 +49,8 @@ private:
         Complete,
     };
 
-    // Internal Functions
-
     // Internal Fields
-    String _id;
+    Ag::String _id;
     State _currentState;
 };
 
@@ -73,39 +59,24 @@ class IncludeStatement : public Statement
 {
 public:
     // Construction/Destruction
-    IncludeStatement(string_cref_t id, const Location &at);
+    IncludeStatement(Ag::string_cref_t id, const Location &at);
     virtual ~IncludeStatement() = default;
 
     // Accessors
     const Location &getLocation() const;
-    string_cref_t &getFileReference() const;
-
-    // Operations
+    Ag::string_cref_t getFileReference() const;
 
     // Overrides
     virtual uint32_t calculateObjectCodeSize(IEvalContext *context) const override;
     virtual bool assemble(const AssemblyState &state, IEvalContext *context,
                           ObjectCodeBuilder &output) const override;
 private:
-    // Internal Types
-
-    // Internal Functions
-
     // Internal Fields
     Location _at;
-    String _id;
+    Ag::String _id;
 };
 
-
-////////////////////////////////////////////////////////////////////////////////
-// Function Declarations
-////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////
-// Templates
-////////////////////////////////////////////////////////////////////////////////
-
-}} // namespace Ag::Asm
+}} // namespace Mo::Asm
 
 #endif // Header guard
 ////////////////////////////////////////////////////////////////////////////////

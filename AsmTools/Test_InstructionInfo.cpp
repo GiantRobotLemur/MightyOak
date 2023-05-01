@@ -18,16 +18,10 @@
 
 #include "TestTools.hpp"
 
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
-
-namespace Ag {
+namespace Mo {
 namespace Asm {
 
 namespace {
-
-
 
 ////////////////////////////////////////////////////////////////////////////////
 // Local Functions
@@ -113,14 +107,14 @@ void accessParameters(InstructionInfo &instruction, OperationClass opClass)
     case OperationClass::FpaRegisterTransfer: break;
     case OperationClass::FpaComparison: break;
     default:
-        throw NotSupportedException("The required instruction class.");
+        throw Ag::NotSupportedException("The required instruction class.");
     }
 }
 
 //! @brief Modifies a line of assembly language to modify the condition code
 //! suffix to set HS to CS and LO to CC.
 //! @param[in,out] statement The ARM assembly language instruction to modify.
-void canonicaliseConditionCode(string_ref_t statement)
+void canonicaliseConditionCode(Ag::string_ref_t statement)
 {
         // We need to fix up synonymous condition codes:
         //  HS => CS
@@ -159,7 +153,7 @@ void canonicaliseConditionCode(string_ref_t statement)
 //! @return The original register value.
 CoreRegister getAndIncCoreReg(uint8_t &baseReg)
 {
-    CoreRegister reg = fromScalar<CoreRegister>(baseReg & 0xFF);
+    CoreRegister reg = Ag::fromScalar<CoreRegister>(baseReg & 0xFF);
     ++baseReg;
 
     baseReg &= 0x0F;
@@ -172,7 +166,7 @@ CoreRegister getAndIncCoreReg(uint8_t &baseReg)
 //! @return The original register value.
 CoProcRegister getAndIncCoProcReg(uint8_t &baseReg)
 {
-    CoProcRegister reg = fromScalar<CoProcRegister>(baseReg & 0xFF);
+    CoProcRegister reg = Ag::fromScalar<CoProcRegister>(baseReg & 0xFF);
     ++baseReg;
 
     baseReg &= 0x0F;
@@ -195,7 +189,7 @@ CoProcRegister getAndIncCoProcReg(uint8_t &baseReg)
 class InstructionTestPoint : public BaseTestPoint
 {
 private:
-    String _asmText;
+    Ag::String _asmText;
     uint32_t _encoding;
 public:
     InstructionTestPoint(const TestLocation &loc, const char *name,
@@ -206,7 +200,7 @@ public:
     {
     }
 
-    string_cref_t getAssemblerText() const { return _asmText; }
+    Ag::string_cref_t getAssemblerText() const { return _asmText; }
     uint32_t getEncoding() const { return _encoding; }
 
     // Operations
@@ -315,7 +309,7 @@ public:
                               OperationClass::CoreMultiply,
                               _condition);
             auto &params = instruction.getCoreMultiplyParameters();
-            uint8_t base = toScalar(_baseRegister);
+            uint8_t base = Ag::toScalar(_baseRegister);
 
             params.Rd = getAndIncCoreReg(base);
             params.Rm = getAndIncCoreReg(base);
@@ -335,7 +329,7 @@ public:
                               OperationClass::LongMultiply,
                               _condition);
             auto &params = instruction.getLongMultiplyParameters();
-            uint8_t base = toScalar(_baseRegister);
+            uint8_t base = Ag::toScalar(_baseRegister);
 
             params.RdLo = getAndIncCoreReg(base);
             params.RdHi = getAndIncCoreReg(base);
@@ -375,7 +369,7 @@ public:
 
     virtual void configure(InstructionInfo &instruction) const override
     {
-        uint8_t baseReg = toScalar(_baseRegister);
+        uint8_t baseReg = Ag::toScalar(_baseRegister);
         ShifterOperand *shifter = nullptr;
 
         if ((_mnemonic == InstructionMnemonic::Cmp) ||
@@ -635,7 +629,7 @@ public:
                             OperationClass::AtomicSwap,
                             _condition);
         auto &params = instruction.getCoreSwapParameters();
-        uint8_t base = toScalar(_baseReg);
+        uint8_t base = Ag::toScalar(_baseReg);
 
         params.Rd = getAndIncCoreReg(base);
         params.Rm = getAndIncCoreReg(base);
@@ -750,7 +744,7 @@ public:
             params.OpCode2 = (_opCodeBase + 1) & 7;
             params.CoProcessor = _cpId;
 
-            uint8_t base = toScalar(_baseReg);
+            uint8_t base = Ag::toScalar(_baseReg);
 
             params.Rd = getAndIncCoProcReg(base);
             params.Rn = getAndIncCoProcReg(base);
@@ -769,7 +763,7 @@ public:
             params.OpCode2 = (_opCodeBase + 1) & 7;
             params.CoProcessor = _cpId;
 
-            uint8_t base = toScalar(_baseReg);
+            uint8_t base = Ag::toScalar(_baseReg);
 
             params.Rd = getAndIncCoreReg(base);
             params.Rn = getAndIncCoProcReg(base);
@@ -796,11 +790,11 @@ public:
         _isLoad(isLoad),
         _condition(condition)
     {
-        zeroFill(_params);
+        Ag::zeroFill(_params);
 
         _params.IsLong = isLong;
         _params.CoProcessor = cpId;
-        uint8_t baseRegister = toScalar(baseReg);
+        uint8_t baseRegister = Ag::toScalar(baseReg);
 
         _params.Rd = getAndIncCoProcReg(baseRegister);
         _params.Addr.Rn = getAndIncCoreReg(baseRegister);
@@ -879,10 +873,10 @@ public:
 
         _point.configure(specimen);
 
-        String text = specimen.toString(baseAddr, FormatterOptions::ShowOffsets);
+        Ag::String text = specimen.toString(baseAddr, FormatterOptions::ShowOffsets);
         EXPECT_STRINGEQ(text, _point.getAssemblerText());
 
-        String error;
+        Ag::String error;
         uint32_t objectCode = 0;
 
         ASSERT_TRUE(specimen.assemble(objectCode, baseAddr, error)) << error.getUtf8Bytes();
@@ -894,7 +888,7 @@ public:
                              InstructionInfo::AllowFPA |
                              InstructionInfo::AllowThumb |
                              InstructionInfo::UseStackModesOnR13);
-        String disText = specimen.toString(baseAddr, FormatterOptions::ShowOffsets);
+        Ag::String disText = specimen.toString(baseAddr, FormatterOptions::ShowOffsets);
 
         // Ensure the condition code from source matches that which was
         // interpreted through disassembly.
@@ -925,10 +919,10 @@ public:
 
         _point.configure(specimen);
 
-        String text = specimen.toString(baseAddr, FormatterOptions::ShowOffsets);
+        Ag::String text = specimen.toString(baseAddr, FormatterOptions::ShowOffsets);
         EXPECT_STRINGEQ(text, _point.getAssemblerText());
 
-        String error;
+        Ag::String error;
         uint32_t objectCode = 0;
         EXPECT_FALSE(specimen.assemble(objectCode, baseAddr, error));
         EXPECT_FALSE(error.isEmpty());
@@ -949,18 +943,18 @@ GTEST_TEST(InstructionInfo, CannotAccessWrongParameters)
     using II = InstructionInfo;
     using IM = InstructionMnemonic;
 
-    constexpr uint8_t c = 10;  toScalar(OperationClass::Max);
+    constexpr uint8_t c = 10;  Ag::toScalar(OperationClass::Max);
 
     for (uint8_t i = 1; i < c; ++i)
     {
         std::string trace;
-        II s(IM::Abs, fromScalar<OperationClass>(i));
+        II s(IM::Abs, Ag::fromScalar<OperationClass>(i));
 
         for (uint8_t j = 1; j < c; ++j)
         {
-            OperationClass opClass = fromScalar<OperationClass>(j);
+            OperationClass opClass = Ag::fromScalar<OperationClass>(j);
             trace.clear();
-            appendFormat("OpClass #{0} vs #{1}", trace, { i, j });
+            Ag::appendFormat("OpClass #{0} vs #{1}", trace, { i, j });
             SCOPED_TRACE(trace.c_str());
 
             if (i == j)
@@ -969,13 +963,13 @@ GTEST_TEST(InstructionInfo, CannotAccessWrongParameters)
             }
             else
             {
-                EXPECT_THROW({ accessParameters(s, opClass); }, OperationException);
+                EXPECT_THROW({ accessParameters(s, opClass); }, Ag::OperationException);
             }
         }
     }
 }
 
-} // TED
+} // Anonymous namespace
 
 void registerInstructionTests()
 {
@@ -986,7 +980,7 @@ void registerInstructionTests()
 
     registerTestPoints<PositiveInstructionTest<SwiTestPoint>>("Instruction_SWI",
                                                               swiSuccesses,
-                                                              arraySize(swiSuccesses));
+                                                              std::size(swiSuccesses));
 
     SwiTestPoint swiFail[] = {
         { LOC, "Swi_Simple", "SWI &DEADBEEF", ConditionCode::Al, 0xDEADBEEF },
@@ -995,7 +989,7 @@ void registerInstructionTests()
 
     registerTestPoints<NegativeInstructionTest<SwiTestPoint>>("Instruction_SWI_Fail",
                                                               swiFail,
-                                                              arraySize(swiFail));
+                                                              std::size(swiFail));
 
     BkptTestPoint bkptSuccesses[] = {
         { LOC, "Bkpt_Simple", "BKPT &DEAD", 0xDEAD, 0xE12DEA7D },
@@ -1004,7 +998,7 @@ void registerInstructionTests()
 
     registerTestPoints<PositiveInstructionTest<BkptTestPoint>>("Instruction_BKPT",
                                                                bkptSuccesses,
-                                                               arraySize(bkptSuccesses));
+                                                               std::size(bkptSuccesses));
 
     BranchTestPoint branchSuccesses[] = {
         { LOC, "Branch_Simple", "B $ + &18", ConditionCode::Al, InstructionMnemonic::B, 0x10018, 0xEA000004 },
@@ -1012,7 +1006,7 @@ void registerInstructionTests()
     };
 
     registerTestPoints<PositiveInstructionTest<BranchTestPoint>>(
-        "Instruction_Branch", branchSuccesses, arraySize(branchSuccesses));
+        "Instruction_Branch", branchSuccesses, std::size(branchSuccesses));
 
     BranchTestPoint branchFail[] = {
         { LOC, "Branch_OffsetTooHigh", "BGE $ + &4000000", ConditionCode::Ge, InstructionMnemonic::B, 0x4010000u },
@@ -1020,7 +1014,7 @@ void registerInstructionTests()
     };
 
     registerTestPoints<NegativeInstructionTest<BranchTestPoint>>(
-        "Instruction_Branch_Fail", branchFail, arraySize(branchFail));
+        "Instruction_Branch_Fail", branchFail, std::size(branchFail));
 
     MultiplyTestPoint mulSuccesses[] = {
         { LOC, "Mul_Simple", "MUL R1, R2, R3", ConditionCode::Al, InstructionMnemonic::Mul, false, CoreRegister::R1, 0xE0010392 },
@@ -1049,7 +1043,7 @@ void registerInstructionTests()
     };
 
     registerTestPoints<PositiveInstructionTest<MultiplyTestPoint>>(
-        "Instruction_Multiply", mulSuccesses, arraySize(mulSuccesses));
+        "Instruction_Multiply", mulSuccesses, std::size(mulSuccesses));
 
     AluInstructionTestPoint aluSuccess[] = {
         { LOC, "Add_Immediate", "ADD R1, R2, #3", ConditionCode::Al, InstructionMnemonic::Add, false, CoreRegister::R1, ShifterMode::ImmediateConstant, 0xE2821003 },
@@ -1068,7 +1062,7 @@ void registerInstructionTests()
     };
 
     registerTestPoints<PositiveInstructionTest<AluInstructionTestPoint>>(
-        "Instruction_ALU", aluSuccess, arraySize(aluSuccess));
+        "Instruction_ALU", aluSuccess, std::size(aluSuccess));
 
     DataTranInstructionTestPoint dtrSuccess[] = {
         { LOC, "Ldr_PreImmed", "LDR R0, [R1, #8]", ConditionCode::Al, InstructionMnemonic::Ldr, 0, DTTF_OffsetTypeConstant | DTTF_PreIndexed, 0xE5910008, ShiftType::None },
@@ -1094,7 +1088,7 @@ void registerInstructionTests()
     };
 
     registerTestPoints<PositiveInstructionTest<DataTranInstructionTestPoint>>(
-        "Instruction_DataTransfer", dtrSuccess, arraySize(dtrSuccess));
+        "Instruction_DataTransfer", dtrSuccess, std::size(dtrSuccess));
 
     MultiTransferTestPoint mtrSuccess[] = {
         { LOC, "Ldm_IA", "LDMIA R0, {R1}", ConditionCode::Al, InstructionMnemonic::Ldm, MultiTransferMode::IncrementAfter, false, false, CoreRegister::R0, 0x0002u, 0xE8900002u },
@@ -1112,7 +1106,7 @@ void registerInstructionTests()
     };
 
     registerTestPoints<PositiveInstructionTest<MultiTransferTestPoint>>(
-        "Instruction_MultiTransfer", mtrSuccess, arraySize(mtrSuccess));
+        "Instruction_MultiTransfer", mtrSuccess, std::size(mtrSuccess));
 
     SwapTestPoint swapSuccess[] = {
         { LOC, "SwapWord", "SWP R0, R1, [R2]", ConditionCode::Al, false, CoreRegister::R0, 0xE1020091u },
@@ -1122,7 +1116,7 @@ void registerInstructionTests()
     };
 
     registerTestPoints<PositiveInstructionTest<SwapTestPoint>>(
-        "Instruction_Swap", swapSuccess, arraySize(swapSuccess));
+        "Instruction_Swap", swapSuccess, std::size(swapSuccess));
 
     WriteStatusRegTestPoint msrSuccess[] = {
         { LOC, "Msr_RegCPSR", "MSR CPSR, R11", 0xE12FF00Bu, ConditionCode::Al, CoreRegister::R11, true, 0x0F },
@@ -1186,6 +1180,6 @@ void registerInstructionTests()
         "Instruction_CpLdcStc", cpDataSuccess, std::size(cpDataSuccess));
 }
 
-}} // namespace Ag::Asm
+}} // namespace Mo::Asm
 ////////////////////////////////////////////////////////////////////////////////
 

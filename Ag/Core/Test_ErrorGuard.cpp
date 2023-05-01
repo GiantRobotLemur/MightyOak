@@ -414,7 +414,7 @@ GTEST_TEST(ErrorGuard, CatchIntDivisionByZeroException)
 //                 DivisionByZeroException::Domain);
 // }
 
-} // TED
+} // Anonymous namespace
 
 } // namespace Ag
 ////////////////////////////////////////////////////////////////////////////////

@@ -13,7 +13,7 @@
 #define __ARM_EMU_INSTRUCTION_PIPELINE_INL__
 
 ////////////////////////////////////////////////////////////////////////////////
-// Dependant Header Files
+// Dependent Header Files
 ////////////////////////////////////////////////////////////////////////////////
 #include "Ag/Core/Utils.hpp"
 
@@ -23,7 +23,7 @@
 #include "AluInstructions.inl"
 #include "DataTransferInstructions.inl"
 
-namespace Ag {
+namespace Mo {
 namespace Arm {
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -122,7 +122,7 @@ uint32_t InstructionPipeline<TPipelineTraits>::decodeAndExecute(uint32_t instruc
     uint8_t carryOut, opCode;
 
     // Switch on major op-code.
-    switch (extractBits<uint8_t, 25, 3>(instruction))
+    switch (Ag::Bin::extractBits<uint8_t, 25, 3>(instruction))
     {
     case 0x00:
         // Core ALU operations using register/shifted register operand 2.
@@ -231,9 +231,9 @@ uint32_t InstructionPipeline<TPipelineTraits>::decodeAndExecute(uint32_t instruc
             op2 = calculateConstantAluOperand(instruction);
 
             result = execDataProcOpStatus(_registers, instruction, op2,
-                                          extractBit<PsrShift::Carry>(_registers.getPSR()));
+                                          Ag::Bin::extractBit<PsrShift::Carry>(_registers.getPSR()));
         }
-        else if (extractBits<uint8_t, 23, 2>(instruction) == 0x02)
+        else if (Ag::Bin::extractBits<uint8_t, 23, 2>(instruction) == 0x02)
         {
             // Its a comparison op without the 'S' flag set. Naughtiness?
             result = _registers.raiseUndefinedInstruction();
@@ -248,7 +248,7 @@ uint32_t InstructionPipeline<TPipelineTraits>::decodeAndExecute(uint32_t instruc
 
     case 0x02:
         // Load/Store with immediate offset.
-        op1 = _registers.getRn(extractEnum<GeneralRegister, 16, 4>(instruction));
+        op1 = _registers.getRn(Ag::Bin::extractEnum<GeneralRegister, 16, 4>(instruction));
         op2 = instruction & 0xFFF;
 
         result =
@@ -258,7 +258,7 @@ uint32_t InstructionPipeline<TPipelineTraits>::decodeAndExecute(uint32_t instruc
 
     case 0x03:
         // Load/Store with register offset.
-        op1 = _registers.getRn(extractEnum<GeneralRegister, 16, 4>(instruction));
+        op1 = _registers.getRn(Ag::Bin::extractEnum<GeneralRegister, 16, 4>(instruction));
         op2 = calculateDataTransferOffset(_registers, instruction);
 
         result =
@@ -268,7 +268,7 @@ uint32_t InstructionPipeline<TPipelineTraits>::decodeAndExecute(uint32_t instruc
 
     case 0x04:
         // Load/Store multiple registers.
-        op1 = _registers.getRn(extractEnum<GeneralRegister, 16, 4>(instruction));
+        op1 = _registers.getRn(Ag::Bin::extractEnum<GeneralRegister, 16, 4>(instruction));
 
         result =
             (instruction & 0x100000) ? execLoadMultiple(_hardware, _registers, instruction, op1) :
@@ -290,7 +290,7 @@ uint32_t InstructionPipeline<TPipelineTraits>::decodeAndExecute(uint32_t instruc
         // Software interrupt.
         // Co-processor data processing.
         // Co-processor register transfer.
-        if (extractBit<24>(instruction))
+        if (Ag::Bin::extractBit<24>(instruction))
         {
             // It's a software interrupt.
             result = _registers.raiseSoftwareInterrupt();
@@ -310,7 +310,7 @@ uint32_t InstructionPipeline<TPipelineTraits>::decodeAndExecute(uint32_t instruc
     return result;
 }
 
-}} // namespace Ag::Arm
+}} // namespace Mo::Arm
 
 #endif // Header guard
 ////////////////////////////////////////////////////////////////////////////////

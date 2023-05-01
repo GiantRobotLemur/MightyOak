@@ -17,7 +17,7 @@
 #include "ExprContexts.hpp"
 #include "ObjectCodeBuilder.hpp"
 
-namespace Ag {
+namespace Mo {
 namespace Asm {
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -33,7 +33,7 @@ namespace Asm {
 ObjectCodeBuilder::ObjectCodeBuilder(Messages &messages, uint32_t baseAddr,
                                      uint32_t initialOffset) :
     _output(messages),
-    _encoder(Bin::ByteOrder::getLittleEndian()),
+    _encoder(Ag::Bin::ByteOrder::getLittleEndian()),
     _baseAddress(baseAddr),
     _initialOffset(initialOffset),
     _finalPass(false)
@@ -211,6 +211,6 @@ ObjectCode ObjectCodeBuilder::createObjectCode(const SymbolTable &topLevelSymbol
     return ObjectCode(std::move(_code), std::move(symbols), _baseAddress);
 }
 
-}} // namespace Ag::Asm
+}} // namespace Mo::Asm
 ////////////////////////////////////////////////////////////////////////////////
 

@@ -14,7 +14,7 @@
 #include <cstring>
 #include "AsmTools/ObjectCode.hpp"
 
-namespace Ag {
+namespace Mo {
 namespace Asm {
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -84,6 +84,6 @@ void ObjectCode::clear()
     _symbols.clear();
 }
 
-}} // namespace Ag::Asm
+}} // namespace Mo::Asm
 ////////////////////////////////////////////////////////////////////////////////
 

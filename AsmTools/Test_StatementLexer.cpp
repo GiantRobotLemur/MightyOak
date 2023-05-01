@@ -21,7 +21,7 @@
 #include "LexicalAnalysers.hpp"
 #include "LexicalContext.hpp"
 
-namespace Ag {
+namespace Mo {
 namespace Asm {
 
 namespace {
@@ -30,9 +30,9 @@ namespace {
 ////////////////////////////////////////////////////////////////////////////////
 InputContext createInput(const char *sourceCode)
 {
-    IInputSourcePtr source = createBufferInputSource(String(sourceCode));
+    IInputSourcePtr source = createBufferInputSource(Ag::String(sourceCode));
     Location position("MyProject/Libs/Here.asm");
-    String sourceId("MyProject/Libs/Lib.asm");
+    Ag::String sourceId("MyProject/Libs/Lib.asm");
 
     return InputContext(source, position, sourceId, 2);
 }
@@ -535,8 +535,9 @@ GTEST_TEST(StatementLexer, RecogniseAluInstructions)
 
     for (const auto &expectedInstruction : mnemonics)
     {
-        String instruction = String::format("InstructionMnemonic: {0}",
-                                            { static_cast<uint32_t>(expectedInstruction.second) });
+        Ag::String instruction =
+            Ag::String::format("InstructionMnemonic: {0}",
+                               { static_cast<uint32_t>(expectedInstruction.second) });
         SCOPED_TRACE(instruction.getUtf8Bytes());
 
         // Get the processor mode directive.
@@ -581,9 +582,10 @@ GTEST_TEST(StatementLexer, RecogniseBranchInstructions)
 
     for (const auto &expected : mnemonics)
     {
-        String instruction = String::format("InstructionMnemonic: {0}, Cond: {1}",
-                                            { static_cast<uint32_t>(std::get<1>(expected)),
-                                              static_cast<uint32_t>(std::get<2>(expected)) });
+        Ag::String instruction =
+            Ag::String::format("InstructionMnemonic: {0}, Cond: {1}",
+                               { static_cast<uint32_t>(std::get<1>(expected)),
+                                 static_cast<uint32_t>(std::get<2>(expected)) });
         SCOPED_TRACE(instruction.getUtf8Bytes());
 
         // Get the processor mode directive.
@@ -654,9 +656,10 @@ GTEST_TEST(StatementLexer, RecogniseConditionCodes)
 
     for (const auto &expected : mnemonics)
     {
-        String instruction = String::format("InstructionMnemonic: {0}, Cond: {1}",
-                                            { static_cast<uint32_t>(std::get<1>(expected)),
-                                            static_cast<uint32_t>(std::get<2>(expected)) });
+        Ag::String instruction =
+            Ag::String::format("InstructionMnemonic: {0}, Cond: {1}",
+                               { static_cast<uint32_t>(std::get<1>(expected)),
+                                 static_cast<uint32_t>(std::get<2>(expected)) });
         SCOPED_TRACE(instruction.getUtf8Bytes());
 
         // Get the processor mode directive.
@@ -775,6 +778,6 @@ GTEST_TEST(StatementLexer, RecogniseAdrDirective)
 
 } // Anonymous namespace
 
-}} // namespace Ag::Asm
+}} // namespace Mo::Asm
 ////////////////////////////////////////////////////////////////////////////////
 

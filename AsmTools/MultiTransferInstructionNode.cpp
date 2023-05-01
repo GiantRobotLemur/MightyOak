@@ -21,11 +21,7 @@
 #include "RegisterListNode.hpp"
 #include "Token.hpp"
 
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
-
-namespace Ag {
+namespace Mo {
 namespace Asm {
 
 namespace {
@@ -59,19 +55,19 @@ private:
         if (getCoreRegSymbols().tryLookupValue(range.First, value) &&
             value.tryConvert(DataType::Uint32, regValue))
         {
-            first = fromScalar<CoreRegister>(static_cast<uint8_t>(regValue.asUint32()));
+            first = Ag::fromScalar<CoreRegister>(static_cast<uint8_t>(regValue.asUint32()));
         }
         else
         {
             // Evaluate the symbol as an expression.
-            String error;
+            Ag::String error;
             SymbolExpr registerSymbol(range.At, range.First);
             if (tryEvaluateCoreRegister(context, &registerSymbol, first, error) == false)
             {
                 if (logErrors)
                 {
                     std::string builder("Failed to evaluate transfer register expression: ");
-                    appendAgString(builder, error);
+                    Ag::appendAgString(builder, error);
 
                     log.appendError(range.At, builder);
                 }
@@ -88,19 +84,19 @@ private:
         else if (getCoreRegSymbols().tryLookupValue(range.Last, value) &&
                  value.tryConvert(DataType::Uint32, regValue))
         {
-            last = fromScalar<CoreRegister>(static_cast<uint8_t>(regValue.asUint32()));
+            last = Ag::fromScalar<CoreRegister>(static_cast<uint8_t>(regValue.asUint32()));
         }
         else
         {
             // Evaluate the symbol as an expression.
-            String error;
+            Ag::String error;
             SymbolExpr registerSymbol(range.At, range.Last);
             if (tryEvaluateCoreRegister(context, &registerSymbol, last, error) == false)
             {
                 if (logErrors)
                 {
                     std::string builder("Failed to evaluate transfer register expression: ");
-                    appendAgString(builder, error);
+                    Ag::appendAgString(builder, error);
 
                     log.appendError(range.At, builder);
                 }
@@ -117,9 +113,9 @@ private:
                 if (logErrors)
                 {
                     log.appendWarning(range.At,
-                                      String::format("Register range {0}-{1} was "
-                                                     "expressed in the wrong order.",
-                                                     { range.First, range.Last }));
+                                      Ag::String::format("Register range {0}-{1} was "
+                                                         "expressed in the wrong order.",
+                                                         { range.First, range.Last }));
                 }
 
                 // Return the reversed register range.
@@ -168,7 +164,7 @@ protected:
         info.UserModeRegs = (_flags & MultiTransferInstructionNode::UserModeRegs) != 0;
 
         // Resolve the destination register.
-        String error;
+        Ag::String error;
         if (tryEvaluateCoreRegister(context, _rd.get(), info.Rd, error))
         {
             if (_regRanges.empty())
@@ -190,8 +186,8 @@ protected:
                     if (tryEvalRange(context, log, isFinalPass,
                                      regRange, resolvedRange))
                     {
-                        for (uint8_t i = toScalar(resolvedRange.first),
-                             j = toScalar(resolvedRange.second); i <= j; ++i)
+                        for (uint8_t i = Ag::toScalar(resolvedRange.first),
+                             j = Ag::toScalar(resolvedRange.second); i <= j; ++i)
                         {
                             info.Registers |= static_cast<uint16_t>(1u << i);
                         }
@@ -207,7 +203,7 @@ protected:
         else if (isFinalPass)
         {
             std::string builder("Failed to evaluate destination register expression: ");
-            appendAgString(builder, error);
+            Ag::appendAgString(builder, error);
 
             log.appendError(getStart(), builder);
         }
@@ -224,7 +220,7 @@ protected:
 // Local Functions
 ////////////////////////////////////////////////////////////////////////////////
 
-} // TED
+} // Anonymous namespace
 
 ////////////////////////////////////////////////////////////////////////////////
 // MultiTransferInstructionNode Member Function Definitions
@@ -343,7 +339,7 @@ ISyntaxNode *MultiTransferInstructionNode::applyNode(ParseContext &context,
     {
     case State::AfterMnemonic:
         // Expect register expression.
-        if (tryCast(childNode, expr))
+        if (Ag::tryCast(childNode, expr))
         {
             _destReg.reset(expr);
             result = this;
@@ -362,7 +358,7 @@ ISyntaxNode *MultiTransferInstructionNode::applyNode(ParseContext &context,
 
     case State::BeforeRegisterList:
         // Expect RegisterListNode.
-        if (tryCast(childNode, regs))
+        if (Ag::tryCast(childNode, regs))
         {
             _regList.reset(regs);
             result = this;
@@ -412,10 +408,6 @@ Statement *MultiTransferInstructionNode::compile(Messages &/*output*/) const
     return statement;
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// Global Function Definitions
-////////////////////////////////////////////////////////////////////////////////
-
-}} // namespace Ag::Asm
+}} // namespace Mo::Asm
 ////////////////////////////////////////////////////////////////////////////////
 

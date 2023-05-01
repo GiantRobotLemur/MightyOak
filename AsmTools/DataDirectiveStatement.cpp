@@ -17,7 +17,7 @@
 #include "LexicalAnalysers.hpp"
 #include "SymbolTable.hpp"
 
-namespace Ag {
+namespace Mo {
 namespace Asm {
 
 namespace {
@@ -684,7 +684,7 @@ public:
 // Local Functions
 ////////////////////////////////////////////////////////////////////////////////
 
-} // TED
+} // Anonymous namespace
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -797,7 +797,7 @@ ISyntaxNode *DataDirectiveNode::applyNode(ParseContext &context,
     {
         ExpressionNodePtr expression = nullptr;
 
-        if (tryCast(childNode, expression))
+        if (Ag::tryCast(childNode, expression))
         {
             // Ensure the lexical state is properly restored.
             context.restoreLexicalState(_lexicalStackBase);
@@ -821,7 +821,7 @@ void DataDirectiveNode::recover(ParseContext &context, ISyntaxNode *node)
 {
     ExpressionNode *expression = nullptr;
 
-    if ((_state == State::BeforeSeparator) && tryCast(node, expression))
+    if ((_state == State::BeforeSeparator) && Ag::tryCast(node, expression))
     {
         _values.emplace_back(expression);
 
@@ -844,7 +844,7 @@ void DataDirectiveNode::recover(ParseContext &context, ISyntaxNode *node)
             }
         }
 
-        safeDelete(node);
+        Ag::safeDelete(node);
 
         _state = State::Complete;
     }
@@ -961,7 +961,7 @@ bool DataDirectiveStatement::assemble(const AssemblyState &/*state*/,
 
     for (const auto &expr : _values)
     {
-        String error;
+        Ag::String error;
         Value value;
 
         // HACK: Sneakily update the current context as we generate data.
@@ -1007,6 +1007,6 @@ const IExprUPtrCollection &DataDirectiveStatement::getValueExpressions() const
     return _values;
 }
 
-}} // namespace Ag::Asm
+}} // namespace Mo::Asm
 ////////////////////////////////////////////////////////////////////////////////
 

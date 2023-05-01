@@ -13,7 +13,7 @@
 #include "TestTools.hpp"
 #include "AsmTools.hpp"
 
-namespace Ag {
+namespace Mo {
 namespace Asm {
 
 namespace {
@@ -331,6 +331,6 @@ GTEST_TEST(AddressDirective, SubtractExtendedPadded)
 
 } // Anonymous namespace
 
-}} // namespace Ag::Asm
+}} // namespace Mo::Asm
 ////////////////////////////////////////////////////////////////////////////////
 

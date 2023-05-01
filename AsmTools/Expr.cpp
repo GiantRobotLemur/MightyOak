@@ -17,21 +17,10 @@
 #include "Ag/Core/Utils.hpp"
 #include "Ag/Core/Variant.hpp"
 
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
-
-namespace Ag {
+namespace Mo {
 namespace Asm {
 
 namespace {
-////////////////////////////////////////////////////////////////////////////////
-// Local Data Types
-////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////
-// Local Data
-////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////
 // Local Functions
@@ -40,7 +29,7 @@ namespace {
 //! @param[in] input The value to apply the operator to.
 //! @param[out] error Receives an error message if the application fails.
 //! @return The result of applying the operator, or an empty value.
-Value unaryNegate(const Value &input, string_ref_t error)
+Value unaryNegate(const Value &input, Ag::string_ref_t error)
 {
     Value result;
 
@@ -91,7 +80,7 @@ Value unaryNegate(const Value &input, string_ref_t error)
 //! @param[in] input The value to apply the operator to.
 //! @param[out] error Receives an error message if the application fails.
 //! @return The result of applying the operator, or an empty value.
-Value unaryAbsolute(const Value &input, string_ref_t error)
+Value unaryAbsolute(const Value &input, Ag::string_ref_t error)
 {
     Value result;
 
@@ -120,7 +109,7 @@ Value unaryAbsolute(const Value &input, string_ref_t error)
 //! @param[in] input The value to apply the operator to.
 //! @param[out] error Receives an error message if the application fails.
 //! @return The result of applying the operator, or an empty value.
-Value unaryNot(const Value &input, string_ref_t error)
+Value unaryNot(const Value &input, Ag::string_ref_t error)
 {
     Value result;
 
@@ -198,7 +187,7 @@ DataType promoteToCompatibleTypes(Value &lhs, Value &rhs)
 //! @param[in] rhs The right evaluated operand value.
 //! @param[out] error Receives an error if the operator cannot be applied.
 //! @return The result of applying the operator, empty if the operation failed.
-Value addition(Value &lhs, Value &rhs, string_ref_t error)
+Value addition(Value &lhs, Value &rhs, Ag::string_ref_t error)
 {
     DataType commonType = promoteToCompatibleTypes(lhs, rhs);
     Value result;
@@ -217,7 +206,7 @@ Value addition(Value &lhs, Value &rhs, string_ref_t error)
         buffer[0] = lhs.asCharacter();
         buffer[1] = rhs.asCharacter();
 
-        result = Value(String(buffer, 2));
+        result = Value(Ag::String(buffer, 2));
     } break;
 
     case DataType::String: {
@@ -238,7 +227,7 @@ Value addition(Value &lhs, Value &rhs, string_ref_t error)
 //! @param[in] rhs The right evaluated operand value.
 //! @param[out] error Receives an error if the operator cannot be applied.
 //! @return The result of applying the operator, empty if the operation failed.
-Value subtraction(Value &lhs, Value &rhs, string_ref_t error)
+Value subtraction(Value &lhs, Value &rhs, Ag::string_ref_t error)
 {
     DataType commonType = promoteToCompatibleTypes(lhs, rhs);
     Value result;
@@ -275,7 +264,7 @@ Value subtraction(Value &lhs, Value &rhs, string_ref_t error)
 //! @param[in] rhs The right evaluated operand value.
 //! @param[out] error Receives an error if the operator cannot be applied.
 //! @return The result of applying the operator, empty if the operation failed.
-Value multiplication(Value &lhs, Value &rhs, string_ref_t error)
+Value multiplication(Value &lhs, Value &rhs, Ag::string_ref_t error)
 {
     DataType commonType = promoteToCompatibleTypes(lhs, rhs);
     Value result;
@@ -312,7 +301,7 @@ Value multiplication(Value &lhs, Value &rhs, string_ref_t error)
 //! @param[in] rhs The right evaluated operand value.
 //! @param[out] error Receives an error if the operator cannot be applied.
 //! @return The result of applying the operator, empty if the operation failed.
-Value division(Value &lhs, Value &rhs, string_ref_t error)
+Value division(Value &lhs, Value &rhs, Ag::string_ref_t error)
 {
     DataType commonType = promoteToCompatibleTypes(lhs, rhs);
     Value result;
@@ -400,7 +389,7 @@ Value division(Value &lhs, Value &rhs, string_ref_t error)
 //! @param[in] rhs The right evaluated operand value.
 //! @param[out] error Receives an error if the operator cannot be applied.
 //! @return The result of applying the operator, empty if the operation failed.
-Value modulus(Value &lhs, Value &rhs, string_ref_t error)
+Value modulus(Value &lhs, Value &rhs, Ag::string_ref_t error)
 {
     DataType commonType = promoteToCompatibleTypes(lhs, rhs);
     Value result;
@@ -440,7 +429,7 @@ Value modulus(Value &lhs, Value &rhs, string_ref_t error)
 //! @param[in] rhs The right evaluated operand value.
 //! @param[out] error Receives an error if the operator cannot be applied.
 //! @return The result of applying the operator, empty if the operation failed.
-Value logicShiftLeft(Value &lhs, Value &rhs, string_ref_t error)
+Value logicShiftLeft(Value &lhs, Value &rhs, Ag::string_ref_t error)
 {
     Value shiftValue;
     Value result;
@@ -504,7 +493,7 @@ Value logicShiftLeft(Value &lhs, Value &rhs, string_ref_t error)
 //! @param[in] rhs The right evaluated operand value.
 //! @param[out] error Receives an error if the operator cannot be applied.
 //! @return The result of applying the operator, empty if the operation failed.
-Value logicShiftRight(Value &lhs, Value &rhs, string_ref_t error)
+Value logicShiftRight(Value &lhs, Value &rhs, Ag::string_ref_t error)
 {
     Value shiftValue;
     Value result;
@@ -568,7 +557,7 @@ Value logicShiftRight(Value &lhs, Value &rhs, string_ref_t error)
 //! @param[in] rhs The right evaluated operand value.
 //! @param[out] error Receives an error if the operator cannot be applied.
 //! @return The result of applying the operator, empty if the operation failed.
-Value arithmeticShiftRight(Value &lhs, Value &rhs, string_ref_t error)
+Value arithmeticShiftRight(Value &lhs, Value &rhs, Ag::string_ref_t error)
 {
     Value shiftValue;
     Value result;
@@ -632,7 +621,7 @@ Value arithmeticShiftRight(Value &lhs, Value &rhs, string_ref_t error)
 //! @param[in] rhs The right evaluated operand value.
 //! @param[out] error Receives an error if the operator cannot be applied.
 //! @return The result of applying the operator, empty if the operation failed.
-Value bitwiseAnd(Value &lhs, Value &rhs, string_ref_t error)
+Value bitwiseAnd(Value &lhs, Value &rhs, Ag::string_ref_t error)
 {
     DataType commonType = promoteToCompatibleTypes(lhs, rhs);
     Value result;
@@ -672,7 +661,7 @@ Value bitwiseAnd(Value &lhs, Value &rhs, string_ref_t error)
 //! @param[in] rhs The right evaluated operand value.
 //! @param[out] error Receives an error if the operator cannot be applied.
 //! @return The result of applying the operator, empty if the operation failed.
-Value bitwiseOr(Value &lhs, Value &rhs, string_ref_t error)
+Value bitwiseOr(Value &lhs, Value &rhs, Ag::string_ref_t error)
 {
     DataType commonType = promoteToCompatibleTypes(lhs, rhs);
     Value result;
@@ -712,7 +701,7 @@ Value bitwiseOr(Value &lhs, Value &rhs, string_ref_t error)
 //! @param[in] rhs The right evaluated operand value.
 //! @param[out] error Receives an error if the operator cannot be applied.
 //! @return The result of applying the operator, empty if the operation failed.
-Value bitwiseXor(Value &lhs, Value &rhs, string_ref_t error)
+Value bitwiseXor(Value &lhs, Value &rhs, Ag::string_ref_t error)
 {
     DataType commonType = promoteToCompatibleTypes(lhs, rhs);
     Value result;
@@ -747,7 +736,7 @@ Value bitwiseXor(Value &lhs, Value &rhs, string_ref_t error)
     return result;
 }
 
-} // TED
+} // Anonymous namespace
 
 ////////////////////////////////////////////////////////////////////////////////
 // BaseExpr Member Function Definitions
@@ -778,7 +767,7 @@ ConstantExpr::ConstantExpr(const Location &at, const Value &value) :
 bool ConstantExpr::isConstant() const { return true; }
 
 // Inherited from IExpr.
-bool ConstantExpr::tryConstantEvaluate(Value &result, string_ref_t error) const
+bool ConstantExpr::tryConstantEvaluate(Value &result, Ag::string_ref_t error) const
 {
     result = _value;
 
@@ -792,7 +781,7 @@ bool ConstantExpr::tryConstantEvaluate(Value &result, string_ref_t error) const
 
 // Inherited from IExpr.
 bool ConstantExpr::tryEvaluate(const IEvalContext * /* context */,
-                               Value &result, string_ref_t error) const
+                               Value &result, Ag::string_ref_t error) const
 {
     return tryConstantEvaluate(result, error);
 }
@@ -803,7 +792,7 @@ bool ConstantExpr::tryEvaluate(const IEvalContext * /* context */,
 //! @brief Constructs a sub-expression which looks up a symbol.
 //! @param[in] at The location of the symbol in source code.
 //! @param[in] id The identifier of the symbol to look up.
-SymbolExpr::SymbolExpr(const Location &at, string_cref_t id) :
+SymbolExpr::SymbolExpr(const Location &at, Ag::string_cref_t id) :
     BaseExpr(at),
     _id(id)
 {
@@ -813,7 +802,7 @@ SymbolExpr::SymbolExpr(const Location &at, string_cref_t id) :
 bool SymbolExpr::isConstant() const { return false; }
 
 // Inherited from IExpr.
-bool SymbolExpr::tryConstantEvaluate(Value &result, string_ref_t error) const
+bool SymbolExpr::tryConstantEvaluate(Value &result, Ag::string_ref_t error) const
 {
     result = Value();
     error = "The a symbol can never be constant.";
@@ -823,7 +812,7 @@ bool SymbolExpr::tryConstantEvaluate(Value &result, string_ref_t error) const
 
 // Inherited from IExpr.
 bool SymbolExpr::tryEvaluate(const IEvalContext *context,
-                               Value &result, string_ref_t error) const
+                               Value &result, Ag::string_ref_t error) const
 {
     if (context->tryLookupSymbol(_id, result))
     {
@@ -831,8 +820,8 @@ bool SymbolExpr::tryEvaluate(const IEvalContext *context,
     }
     else
     {
-        error = String::format("Identifier was '{0}' not defined in the current context.",
-                               { _id });
+        error = Ag::String::format("Identifier was '{0}' not defined in the current context.",
+                                   { _id });
         return false;
     }
 }
@@ -854,7 +843,7 @@ bool CurrentAddressExpr::isConstant() const { return false; }
 
 // Inherited from IExpr.
 bool CurrentAddressExpr::tryConstantEvaluate(Value &result,
-                                            string_ref_t error) const
+                                             Ag::string_ref_t error) const
 {
     result = Value();
     error = "The a symbol can never be constant.";
@@ -864,7 +853,7 @@ bool CurrentAddressExpr::tryConstantEvaluate(Value &result,
 
 // Inherited from IExpr.
 bool CurrentAddressExpr::tryEvaluate(const IEvalContext *context, Value &result,
-                                     string_ref_t /* error */) const
+                                     Ag::string_ref_t /* error */) const
 {
     result = Value(context->getAssemblyAddress());
 
@@ -925,7 +914,7 @@ bool UnaryOpExpr::isConstant() const
 
 // Inherited from IExpr.
 bool UnaryOpExpr::tryConstantEvaluate(Value &result,
-                                      string_ref_t error) const
+                                      Ag::string_ref_t error) const
 {
     result.setNull();
 
@@ -944,7 +933,7 @@ bool UnaryOpExpr::tryConstantEvaluate(Value &result,
 
 // Inherited from IExpr.
 bool UnaryOpExpr::tryEvaluate(const IEvalContext *context, Value &result,
-                              string_ref_t error) const
+                              Ag::string_ref_t error) const
 {
     result.setNull();
 
@@ -1110,7 +1099,7 @@ bool BinaryOpExpr::isConstant() const
 
 // Inherited from IExpr.
 bool BinaryOpExpr::tryConstantEvaluate(Value &result,
-                                      string_ref_t error) const
+                                       Ag::string_ref_t error) const
 {
     result.setNull();
 
@@ -1130,7 +1119,7 @@ bool BinaryOpExpr::tryConstantEvaluate(Value &result,
 
 // Inherited from IExpr.
 bool BinaryOpExpr::tryEvaluate(const IEvalContext *context, Value &result,
-                              string_ref_t error) const
+                               Ag::string_ref_t error) const
 {
     result.setNull();
 
@@ -1148,7 +1137,6 @@ bool BinaryOpExpr::tryEvaluate(const IEvalContext *context, Value &result,
     return (result.isNull() == false);
 }
 
-
 ////////////////////////////////////////////////////////////////////////////////
 // ExprToEvaluate Member Function Definitions
 ////////////////////////////////////////////////////////////////////////////////
@@ -1162,14 +1150,14 @@ ExprToEvaluate::ExprToEvaluate(const IExprUPtr &expr, const char *name, uint32_t
 bool ExprToEvaluate::tryEvaluate(IEvalContext *context, Messages &log,
                                  bool isFinalPass, uint32_t &result) const
 {
-    Ag::Asm::Value value;
-    String error;
+    Mo::Asm::Value value;
+    Ag::String error;
     bool isOK = false;
     result = 0;
 
     if (Expr->tryEvaluate(context, value, error))
     {
-        Ag::Asm::Value ordinalValue;
+        Mo::Asm::Value ordinalValue;
 
         if (value.tryConvert(DataType::Uint32, ordinalValue))
         {
@@ -1212,11 +1200,11 @@ IExprPtr constantOptimise(IExprPtr expr)
     {
         ConstantExpr *constant = nullptr;
 
-        if (tryCast(expr, constant) == false)
+        if (Ag::tryCast(expr, constant) == false)
         {
             // We have an expression which is constant, but could be optimised.
             Value constantResult;
-            String error;
+            Ag::String error;
 
             if (expr->tryConstantEvaluate(constantResult, error))
             {
@@ -1239,7 +1227,7 @@ IExprPtr constantOptimise(IExprPtr expr)
 //! @retval true A value was successfully returned in ordinal.
 //! @retval false Evaluation failed, error has been updated.
 bool tryEvaluateOrdinal(IEvalContext *context, IExprPtr expr,
-                        uint32_t &ordinal, string_ref_t error)
+                        uint32_t &ordinal, Ag::string_ref_t error)
 {
     bool hasValue = false;
     ordinal = 0;
@@ -1278,7 +1266,7 @@ bool tryEvaluateOrdinal(IEvalContext *context, IExprPtr expr,
 //! @retval true A value was successfully returned in reg.
 //! @retval false Evaluation failed, error has been updated.
 bool tryEvaluateCoreRegister(IEvalContext *context, IExprPtr expr,
-                             CoreRegister &reg, string_ref_t error)
+                             CoreRegister &reg, Ag::string_ref_t error)
 {
     uint32_t ordinal = 0;
     bool hasReg = false;
@@ -1287,7 +1275,7 @@ bool tryEvaluateCoreRegister(IEvalContext *context, IExprPtr expr,
     {
         if (ordinal < 16)
         {
-            reg = fromScalar<CoreRegister>(static_cast<uint8_t>(ordinal));
+            reg = Ag::forceFromScalar<CoreRegister>(ordinal);
             hasReg = true;
         }
         else
@@ -1308,7 +1296,7 @@ bool tryEvaluateCoreRegister(IEvalContext *context, IExprPtr expr,
 //! @retval true A value was successfully returned in ordinal.
 //! @retval false Evaluation failed, error has been updated.
 bool tryEvaluateInteger(IEvalContext *context, IExprPtr expr,
-                        int32_t &value, string_ref_t error)
+                        int32_t &value, Ag::string_ref_t error)
 {
     bool hasValue = false;
     value = 0;
@@ -1370,7 +1358,6 @@ bool tryEvaluateExpressions(const ExprToEvaluate *exprsToEval,
     return isOK;
 }
 
-
-}} // namespace Ag::Asm
+}} // namespace Mo::Asm
 ////////////////////////////////////////////////////////////////////////////////
 

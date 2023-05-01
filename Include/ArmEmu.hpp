@@ -11,7 +11,7 @@
 #define __ARM_EMU_HPP__
 
 ////////////////////////////////////////////////////////////////////////////////
-// Dependant Header Files
+// Dependent Header Files
 ////////////////////////////////////////////////////////////////////////////////
 #include <cstdint>
 
@@ -20,7 +20,9 @@
 #include "Ag/Core/EnumInfo.hpp"
 #include "Ag/Core/Timer.hpp"
 
-namespace Ag {
+//! @brief The namespace encapsulating all components of the Mighty Oak
+//! Archimedes and RiscPC emulator and its domain-specific tools.
+namespace Mo {
 namespace Arm {
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -102,7 +104,7 @@ struct ExecutionMetrics
 
     //! @brief The amount of physical time calculated using the
     //! High Resolution Monotonic timer.
-    MonotonicTicks ElapsedTime;
+    Ag::MonotonicTicks ElapsedTime;
 
     // Construction
     ExecutionMetrics();
@@ -173,7 +175,7 @@ const char *coreRegisterToString(CoreRegister regId);
 
 const ProcessorModeEnumInfo &getProcessorModeType();
 
-}} // namespace Ag::Arm
+}} // namespace Mo::Arm
 
 #endif // Header guard
 ////////////////////////////////////////////////////////////////////////////////

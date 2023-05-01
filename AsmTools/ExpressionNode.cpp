@@ -23,21 +23,10 @@
 #include "SymbolTable.hpp"
 #include "Token.hpp"
 
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
-
-namespace Ag {
+namespace Mo {
 namespace Asm {
 
 namespace {
-////////////////////////////////////////////////////////////////////////////////
-// Local Data Types
-////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////
-// Local Data
-////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////
 // Local Functions
@@ -54,7 +43,7 @@ int getOperatorPrecidence(UnaryOperatorType op)
         99, // LogicalNot
     };
 
-    static const size_t count = arraySize(precidences);
+    static const size_t count = std::size(precidences);
 
     static_assert(count == static_cast<size_t>(UnaryOperatorType::Max),
                   "The unary operator precedences need to be updated.");
@@ -82,7 +71,7 @@ int getOperatorPrecidence(BinaryOperatorType op)
         40, // Xor
     };
 
-    static const size_t count = arraySize(precidences);
+    static const size_t count = std::size(precidences);
 
     static_assert(count == static_cast<size_t>(BinaryOperatorType::Max),
                   "The binary operator precedences need to be updated.");
@@ -107,7 +96,7 @@ bool isEndOfExpr(const Token &token)
 
     static bool isSorted = false;
 
-    TokenClass *exprEnd = exprEndTypes + arraySize(exprEndTypes);
+    TokenClass *exprEnd = exprEndTypes + std::size(exprEndTypes);
 
     if (isSorted == false)
     {
@@ -156,7 +145,7 @@ ISyntaxNode *expandExpression(ExpressionNodePtr node, const Token &token)
     }
 }
 
-} // TED
+} // Anonymous namespace
 
 ////////////////////////////////////////////////////////////////////////////////
 // ExperssionNode Member Function Definitions
@@ -219,7 +208,7 @@ ISyntaxNode *TerminalExpressionNode::applyNode(ParseContext & /* context */,
 void TerminalExpressionNode::recover(ParseContext & /* context */,
                                      ISyntaxNode *node)
 {
-    safeDelete(node);
+    Ag::safeDelete(node);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -230,7 +219,7 @@ void TerminalExpressionNode::recover(ParseContext & /* context */,
 //! @param[in] value The digits of the integer.
 //! @param[in] radix The radix used to decode the digits.
 IntegerLiteralNode::IntegerLiteralNode(const Location &at,
-                                       string_cref_t value, int radix) :
+                                       Ag::string_cref_t value, int radix) :
     TerminalExpressionNode(at, ExpressionType::IntegerLiteral),
     _value(value),
     _radix(radix)
@@ -241,7 +230,7 @@ IntegerLiteralNode::IntegerLiteralNode(const Location &at,
 int IntegerLiteralNode::getRadix() const { return _radix; }
 
 //! @brief Gets the value digits without any radix prefix.
-string_cref_t IntegerLiteralNode::getValue() const { return _value; }
+Ag::string_cref_t IntegerLiteralNode::getValue() const { return _value; }
 
 // Inherited from ExpressionNode.
 IExpr *IntegerLiteralNode::compile(const ConstantSet & /* constants */) const
@@ -271,14 +260,14 @@ IExpr *IntegerLiteralNode::compile(const ConstantSet & /* constants */) const
 //! @param[in] at The position of the text the node represents in source code.
 //! @param[in] value The digits of the real value including decimal point and
 //! exponent notation.
-RealLiteralNode::RealLiteralNode(const Location &at, string_cref_t value) :
+RealLiteralNode::RealLiteralNode(const Location &at, Ag::string_cref_t value) :
     TerminalExpressionNode(at, ExpressionType::RealLiteral),
     _value(value)
 {
 }
 
 //! @brief Gets the text value of the numeric literal.
-string_cref_t RealLiteralNode::getValue() const { return _value; }
+Ag::string_cref_t RealLiteralNode::getValue() const { return _value; }
 
 // Inherited from ExpressionNode.
 IExpr *RealLiteralNode::compile(const ConstantSet & /* constants */) const
@@ -314,7 +303,7 @@ IExpr *RealLiteralNode::compile(const ConstantSet & /* constants */) const
 //! @param[in] value The un-escaped characters of the string.
 //! @param[in] isUnterminted True if the string literal had no closing quote,
 //! false if the literal was valid.
-StringLiteralNode::StringLiteralNode(const Location &at, string_cref_t value,
+StringLiteralNode::StringLiteralNode(const Location &at, Ag::string_cref_t value,
                                      bool isUnterminted) :
     TerminalExpressionNode(at, ExpressionType::StringLiteral),
     _value(value),
@@ -323,7 +312,7 @@ StringLiteralNode::StringLiteralNode(const Location &at, string_cref_t value,
 }
 
 //! @brief Gets the value of the string with escape sequences resolved.
-string_cref_t StringLiteralNode::getValue() const
+Ag::string_cref_t StringLiteralNode::getValue() const
 {
     return _value;
 }
@@ -347,14 +336,14 @@ IExpr *StringLiteralNode::compile(const ConstantSet & /* constants */) const
 //! @brief Constructs a node representing an reference to a variable.
 //! @param[in] at The position of the text the node represents in source code.
 //! @param[in] id The identifier of the referenced variable.
-SymbolNode::SymbolNode(const Location &at, string_cref_t id) :
+SymbolNode::SymbolNode(const Location &at, Ag::string_cref_t id) :
     TerminalExpressionNode(at, ExpressionType::Symbol),
     _id(id)
 {
 }
 
 //! @brief Gets the symbol identifier to be looked up in order to get a value.
-string_cref_t SymbolNode::getId() const { return _id; }
+Ag::string_cref_t SymbolNode::getId() const { return _id; }
 
 // Inherited from ExpressionNode.
 IExpr *SymbolNode::compile(const ConstantSet &constants) const
@@ -484,7 +473,7 @@ ISyntaxNode *ParenthesisNode::applyNode(ParseContext & /* context */,
     {
         ExpressionNode *childExpr;
 
-        if (tryCast(childNode, childExpr))
+        if (Ag::tryCast(childNode, childExpr))
         {
             _child.reset(childExpr);
             _state = State::AfterExpr;
@@ -502,7 +491,7 @@ void ParenthesisNode::recover(ParseContext & /* context */,
 {
     ExpressionNode *childExpr;
 
-    if (tryCast(node, childExpr))
+    if (Ag::tryCast(node, childExpr))
     {
         if (_state == State::BeforeExpr)
         {
@@ -513,12 +502,12 @@ void ParenthesisNode::recover(ParseContext & /* context */,
         }
         else
         {
-            safeDelete(childExpr);
+            Ag::safeDelete(childExpr);
         }
     }
     else
     {
-        safeDelete(node);
+        Ag::safeDelete(node);
     }
 }
 
@@ -617,7 +606,7 @@ ISyntaxNode *UnaryOperatorNode::applyNode(ParseContext & /* context */,
     ExpressionNode *childExpr = nullptr;
     ExpressionNode *current = this;
 
-    if ((_state == State::BeforeExpr) && tryCast(childNode, childExpr))
+    if ((_state == State::BeforeExpr) && Ag::tryCast(childNode, childExpr))
     {
         if (childExpr->getExprType() == ExpressionType::BinaryOperator)
         {
@@ -654,7 +643,7 @@ void UnaryOperatorNode::recover(ParseContext &context,
 
     if ((_state == State::BeforeExpr))
     {
-        if (tryCast(node, childExpr))
+        if (Ag::tryCast(node, childExpr))
         {
             _child.reset(childExpr);
             _isValid = false;
@@ -665,7 +654,7 @@ void UnaryOperatorNode::recover(ParseContext &context,
             // We can't consume the new node, but we can certainly
             // force ourselves into a complete state with an appropriate
             // error.
-            safeDelete(node);
+            Ag::safeDelete(node);
             context.getMessages().appendError(getPosition(),
                                               "Orphan unary operator.");
             _state = State::Complete;
@@ -674,7 +663,7 @@ void UnaryOperatorNode::recover(ParseContext &context,
     else
     {
         // We could not apply the node, so dispose of it.
-        safeDelete(node);
+        Ag::safeDelete(node);
     }
 }
 
@@ -806,7 +795,7 @@ ISyntaxNode *BinaryOperatorNode::applyNode(ParseContext & /* context */,
     ExpressionNode *childExpr = nullptr;
     ExpressionNode *current = this;
 
-    if ((_state == State::BeforeRhsExpr) && tryCast(childNode, childExpr))
+    if ((_state == State::BeforeRhsExpr) && Ag::tryCast(childNode, childExpr))
     {
         if (childExpr->getExprType() == ExpressionType::BinaryOperator)
         {
@@ -844,7 +833,7 @@ void BinaryOperatorNode::recover(ParseContext &context,
 
     if ((_state == State::BeforeRhsExpr))
     {
-        if (tryCast(node, childExpr))
+        if (Ag::tryCast(node, childExpr))
         {
             _rhsChild.reset(childExpr);
             _isValid = false;
@@ -856,13 +845,13 @@ void BinaryOperatorNode::recover(ParseContext &context,
             _state = State::Complete;
             context.getMessages().appendError(getPosition(),
                                               "Incomplete operator expression.");
-            safeDelete(node);
+            Ag::safeDelete(node);
         }
     }
     else
     {
         // We could not apply the node, so dispose of it.
-        safeDelete(node);
+        Ag::safeDelete(node);
     }
 }
 
@@ -1012,7 +1001,6 @@ bool compileExpressionNodes(ExprToCompile *exprNodes, IExprUPtr *exprs,
     return isOK;
 }
 
-
-}} // namespace Ag::Asm
+}} // namespace Mo::Asm
 ////////////////////////////////////////////////////////////////////////////////
 

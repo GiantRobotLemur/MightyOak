@@ -26,7 +26,7 @@
 // Local Data Types
 ////////////////////////////////////////////////////////////////////////////////
 
-namespace Ag {
+namespace Mo {
 namespace Arm {
 
 namespace {
@@ -1183,7 +1183,7 @@ INSTANTIATE_TEST_SUITE_P(CPU, ALU, testing::ValuesIn(testPoints));
 
 } // Anonymous namespace.
 
-}} // namespace Ag::Arm
+}} // namespace Mo::Arm
 
 ////////////////////////////////////////////////////////////////////////////////
 

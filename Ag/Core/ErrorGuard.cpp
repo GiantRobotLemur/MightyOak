@@ -323,7 +323,7 @@ public:
         };
 
         // Calculate the end iterator for the static array.
-        const size_t count = arraySize(allowedTypes);
+        constexpr size_t count = std::size(allowedTypes);
         uint32_t *allowedTypesEnd = allowedTypes + count;
 
         if (isInitialised == false)
@@ -633,7 +633,7 @@ public:
         _capturedSignalId(0),
         _signalHandled(false)
     {
-        static_assert(arraySize(SignalIds) <= MaxSignalCount,
+        static_assert(std::size(SignalIds) <= MaxSignalCount,
                       "ErrorGuardContext::MaxSignalCount needs to be increased.");
 
         zeroFill(_savedSignals);
@@ -649,7 +649,7 @@ public:
         sigemptyset(&signalConfig.sa_mask);
         signalConfig.sa_flags = SA_NODEFER | SA_SIGINFO;
 
-        for (size_t index = 0, count = arraySize(SignalIds); index < count; ++index)
+        for (size_t index = 0, count = std::size(SignalIds); index < count; ++index)
         {
             _savedSignalsOverride[index] = sigaction(SignalIds[index],
                                                      &signalConfig,
@@ -660,7 +660,7 @@ public:
     virtual ~ErrorGuardContext()
     {
         // Restore the states if claimed signals.
-        for (size_t index = 0, count = arraySize(SignalIds); index < count; ++index)
+        for (size_t index = 0, count = std::size(SignalIds); index < count; ++index)
         {
             if (_savedSignalsOverride[index] == 0)
             {
@@ -720,7 +720,7 @@ public:
 
 #endif
 
-} // TED
+} // Anonymous namespace
 
 ////////////////////////////////////////////////////////////////////////////////
 // Global Data

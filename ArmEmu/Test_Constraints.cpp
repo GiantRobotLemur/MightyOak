@@ -18,7 +18,7 @@
 
 #include "TestConstraints.hpp"
 
-namespace Ag {
+namespace Mo {
 namespace Arm {
 
 namespace {
@@ -113,38 +113,38 @@ GTEST_TEST(Constraints, ParseSystemRegisters)
                                  items));
     ASSERT_EQ(items.size(), 6u);
     EXPECT_EQ(items[0].Location, SystemElement::SystemRegister);
-    EXPECT_EQ(items[0].Index, toScalar(SystemRegister::PC));
+    EXPECT_EQ(items[0].Index, Ag::toScalar(SystemRegister::PC));
     EXPECT_EQ(items[0].SubIndex, 0);
     EXPECT_EQ(items[0].Value, 0x8000u);
 
     EXPECT_EQ(items[1].Location, SystemElement::SystemRegister);
-    EXPECT_EQ(items[1].Index, toScalar(SystemRegister::CPSR));
+    EXPECT_EQ(items[1].Index, Ag::toScalar(SystemRegister::CPSR));
     EXPECT_EQ(items[1].SubIndex, 0);
     EXPECT_EQ(items[1].Value, 0x0C000003u);
 
     EXPECT_EQ(items[2].Location, SystemElement::SystemRegister);
-    EXPECT_EQ(items[2].Index, toScalar(SystemRegister::SPSR));
+    EXPECT_EQ(items[2].Index, Ag::toScalar(SystemRegister::SPSR));
     EXPECT_EQ(items[2].SubIndex, 0);
     EXPECT_EQ(items[2].Value, 1u);
 
     EXPECT_EQ(items[3].Location, SystemElement::SystemRegister);
-    EXPECT_EQ(items[3].Index, toScalar(SystemRegister::ProcessorMode));
+    EXPECT_EQ(items[3].Index, Ag::toScalar(SystemRegister::ProcessorMode));
     EXPECT_EQ(items[3].SubIndex, 0);
-    EXPECT_EQ(items[3].Value, toScalar(ProcessorMode::User32));
+    EXPECT_EQ(items[3].Value, Ag::toScalar(ProcessorMode::User32));
 
     EXPECT_EQ(items[4].Location, SystemElement::SystemRegister);
-    EXPECT_EQ(items[4].Index, toScalar(SystemRegister::IrqStatus));
+    EXPECT_EQ(items[4].Index, Ag::toScalar(SystemRegister::IrqStatus));
     EXPECT_EQ(items[4].SubIndex, 0);
     EXPECT_EQ(items[4].Value, 3u);
 
     EXPECT_EQ(items[5].Location, SystemElement::SystemRegister);
-    EXPECT_EQ(items[5].Index, toScalar(SystemRegister::IrqMask));
+    EXPECT_EQ(items[5].Index, Ag::toScalar(SystemRegister::IrqMask));
     EXPECT_EQ(items[5].SubIndex, 0);
     EXPECT_EQ(items[5].Value, 15u);
 }
 
 } // Anonymous namespace
 
-}} // namespace Ag::Arm
+}} // namespace Mo::Arm
 ////////////////////////////////////////////////////////////////////////////////
 
