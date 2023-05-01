@@ -206,7 +206,7 @@ const Exception &getEmptyException()
     return empty;
 }
 
-} // TED
+} // Anonymous namespace
 
 ////////////////////////////////////////////////////////////////////////////////
 // Class Method Definitions

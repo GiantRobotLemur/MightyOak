@@ -22,25 +22,10 @@
 ////////////////////////////////////////////////////////////////////////////////
 // Macro Definitions
 ////////////////////////////////////////////////////////////////////////////////
-#define VERIFY_TYPE(x) if (_nativeType != (DataType::x)) throw BadCastException(# x);
+#define VERIFY_TYPE(x) if (_nativeType != (DataType::x)) throw Ag::BadCastException(# x);
 
-namespace Ag {
+namespace Mo {
 namespace Asm {
-
-namespace {
-////////////////////////////////////////////////////////////////////////////////
-// Local Data Types
-////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////
-// Local Data
-////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////
-// Local Functions
-////////////////////////////////////////////////////////////////////////////////
-
-} // TED
 
 ////////////////////////////////////////////////////////////////////////////////
 // Value Member Function Definitions
@@ -48,7 +33,7 @@ namespace {
 //! @brief Initialises the object to a value of zero in all types.
 Value::Primitive::Primitive()
 {
-    std::fill_n(Extended, arraySize(Extended), 0);
+    std::fill_n(Extended, std::size(Extended), 0);
 }
 
 //! @brief Creates an empty value object.
@@ -115,7 +100,7 @@ Value::Value(double value) :
 
 //! @brief Creates an initialised value object.
 //! @param[in] value The concrete value to initialise the object with.
-Value::Value(string_cref_t value) :
+Value::Value(Ag::string_cref_t value) :
     _nativeType(DataType::String),
     _text(value)
 {
@@ -201,7 +186,7 @@ char32_t Value::asCharacter() const
 //! @brief Gets the string value the object wraps with no conversion.
 //! @throws BadCastException If the object doesn't contain a value of the
 //! expected data type.
-string_cref_t Value::asString() const
+Ag::string_cref_t Value::asString() const
 {
     VERIFY_TYPE(String);
     return _text;
@@ -212,7 +197,7 @@ void Value::setNull()
 {
     _nativeType = DataType::Unknown;
     _data = Primitive();
-    _text = String::Empty;
+    _text = Ag::String::Empty;
 }
 
 //! @brief Attempts to convert the current value to a value of a specified
@@ -278,7 +263,7 @@ bool Value::tryConvert(DataType targetType, Value &result) const
 
             case DataType::String: {
                 std::string buffer;
-                appendValue(LocaleInfo::getNeutral(), buffer, _data.Int32);
+                Ag::appendValue(Ag::LocaleInfo::getNeutral(), buffer, _data.Int32);
                 result = Value(buffer);
             } break;
 
@@ -316,7 +301,7 @@ bool Value::tryConvert(DataType targetType, Value &result) const
             case DataType::String:
             {
                 std::string buffer;
-                appendValue(LocaleInfo::getNeutral(), buffer, _data.Uint32);
+                Ag::appendValue(Ag::LocaleInfo::getNeutral(), buffer, _data.Uint32);
                 result = Value(buffer);
             } break;
 
@@ -373,7 +358,7 @@ bool Value::tryConvert(DataType targetType, Value &result) const
 
             case DataType::String:{
                 std::string buffer;
-                appendValue(LocaleInfo::getNeutral(), buffer, _data.Int64);
+                Ag::appendValue(Ag::LocaleInfo::getNeutral(), buffer, _data.Int64);
                 result = Value(buffer);
             } break;
 
@@ -431,7 +416,7 @@ bool Value::tryConvert(DataType targetType, Value &result) const
             case DataType::String:
             {
                 std::string buffer;
-                appendValue(LocaleInfo::getNeutral(), buffer, _data.Uint64);
+                Ag::appendValue(Ag::LocaleInfo::getNeutral(), buffer, _data.Uint64);
                 result = Value(buffer);
             } break;
 
@@ -454,7 +439,7 @@ bool Value::tryConvert(DataType targetType, Value &result) const
             case DataType::String:
             {
                 std::string buffer;
-                appendValue(LocaleInfo::getNeutral(), buffer, _data.Float);
+                Ag::appendValue(Ag::LocaleInfo::getNeutral(), buffer, _data.Float);
                 result = Value(buffer);
             } break;
 
@@ -479,7 +464,7 @@ bool Value::tryConvert(DataType targetType, Value &result) const
             case DataType::String:
             {
                 std::string buffer;
-                appendValue(LocaleInfo::getNeutral(), buffer, _data.Float);
+                Ag::appendValue(Ag::LocaleInfo::getNeutral(), buffer, _data.Float);
                 result = Value(buffer);
             } break;
 
@@ -506,7 +491,7 @@ bool Value::tryConvert(DataType targetType, Value &result) const
             case DataType::Uint64: result = Value(static_cast<uint64_t>(_data.Character)); break;
             case DataType::Float: result = Value(static_cast<float>(_data.Character)); break;
             case DataType::Double: result = Value(static_cast<double>(_data.Character)); break;
-            case DataType::String: result = Value(String(&_data.Character, 1)); break;
+            case DataType::String: result = Value(Ag::String(&_data.Character, 1)); break;
 
             case DataType::ExtendedReal:
             default: canConvert = false; break;
@@ -592,11 +577,6 @@ bool Value::tryConvert(DataType targetType, Value &result) const
     return canConvert;
 }
 
-
-////////////////////////////////////////////////////////////////////////////////
-// Global Function Definitions
-////////////////////////////////////////////////////////////////////////////////
-
-}} // namespace Ag::Asm
+}} // namespace Mo::Asm
 ////////////////////////////////////////////////////////////////////////////////
 

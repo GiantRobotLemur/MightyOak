@@ -13,7 +13,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 #include "InputSource.hpp"
 
-namespace Ag {
+namespace Mo {
 namespace Asm {
 
 namespace {
@@ -24,7 +24,7 @@ namespace {
 class FileInputSource : public IInputSource
 {
 private:
-    StdFilePtr _input;
+    Ag::StdFilePtr _input;
 public:
     FileInputSource(FILE *input) :
         _input(input)
@@ -34,14 +34,14 @@ public:
     virtual ~FileInputSource() = default;
 
     // Inherited from IInputSource.
-    virtual size_t readCharacters(utf32_ptr_t buffer, size_t bufferSize) override
+    virtual size_t readCharacters(Ag::utf32_ptr_t buffer, size_t bufferSize) override
     {
         size_t bufferUsed = 0;
 
         // Read characters until the buffer is full or the stream ended.
         while (_input && (bufferUsed < bufferSize))
         {
-            Utf::FromWideConverter converter;
+            Ag::Utf::FromWideConverter converter;
             char32_t result;
             bool hasError = false;
 
@@ -76,10 +76,10 @@ public:
 class StringInputSource : public IInputSource
 {
 private:
-    String _source;
+    Ag::String _source;
     size_t _offset;
 public:
-    StringInputSource(const String &source) :
+    StringInputSource(Ag::string_cref_t source) :
         _source(source),
         _offset(0)
     {
@@ -88,14 +88,15 @@ public:
     virtual ~StringInputSource() = default;
 
     // Overrides
-    virtual size_t readCharacters(utf32_ptr_t buffer, size_t bufferSize) override
+    virtual size_t readCharacters(Ag::utf32_ptr_t buffer,
+                                  size_t bufferSize) override
     {
         size_t bufferUsed = 0;
         size_t sourceMax = _source.getUtf8Length();
 
         if (_offset < sourceMax)
         {
-            Utf::FromUtf8Converter converter;
+            Ag::Utf::FromUtf8Converter converter;
             char32_t next = 0;
             bool hasError = false;
 
@@ -103,7 +104,7 @@ public:
             {
                 size_t index = 0;
                 size_t indexMax = sourceMax - _offset;
-                uint8_cptr_t encoded = reinterpret_cast<uint8_cptr_t>(_source.getUtf8Bytes()) + _offset;
+                Ag::uint8_cptr_t encoded = reinterpret_cast<Ag::uint8_cptr_t>(_source.getUtf8Bytes()) + _offset;
                 converter.reset();
 
                 while (index < indexMax)
@@ -144,13 +145,13 @@ public:
 //! @param[out] error Receives an error message if the file could not be opened.
 //! @retval true The file was successfully opened and returned in ptr.
 //! @retval false The file could not be opened, error describes why.
-bool tryCreateFileInputSource(const Fs::Path &fileName, IInputSourcePtr &ptr,
-                              String &error)
+bool tryCreateFileInputSource(const Ag::Fs::Path &fileName, IInputSourcePtr &ptr,
+                              Ag::string_ref_t error)
 {
     FILE *stream = nullptr;
     bool isOK = false;
 
-    String path = fileName.toString(Fs::PathUsage::Kernel);
+    Ag::String path = fileName.toString(Ag::Fs::PathUsage::Kernel);
 
     if (tryOpenFile(path, "r", stream, error))
     {
@@ -164,11 +165,11 @@ bool tryCreateFileInputSource(const Fs::Path &fileName, IInputSourcePtr &ptr,
 //! @brief Creates an input source which dispenses the contents of a text string.
 //! @param[in] sourceText The text to be produced by the input source object.
 //! @return A newly created IInputSource object.
-IInputSourcePtr createBufferInputSource(const String &sourceText)
+IInputSourcePtr createBufferInputSource(Ag::string_cref_t sourceText)
 {
     return std::make_unique<StringInputSource>(sourceText);
 }
 
-}} // namespace Ag::Asm
+}} // namespace Mo::Asm
 ////////////////////////////////////////////////////////////////////////////////
 

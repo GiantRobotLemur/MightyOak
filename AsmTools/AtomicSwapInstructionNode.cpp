@@ -18,12 +18,7 @@
 #include "LexicalAnalysers.hpp"
 #include "ParseContext.hpp"
 
-
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
-
-namespace Ag {
+namespace Mo {
 namespace Asm {
 
 namespace {
@@ -75,13 +70,13 @@ protected:
         info.IsByte = _isByte;
 
         // Resolve the destination register.
-        String error;
+        Ag::String error;
 
         if ((tryEvaluateCoreRegister(context, _rd.get(), info.Rd, error) == false) &&
             isFinalPass)
         {
             std::string builder("Failed to evaluate destination register expression: ");
-            appendAgString(builder, error);
+            Ag::appendAgString(builder, error);
 
             log.appendError(getStart(), builder);
             isOK = false;
@@ -90,7 +85,7 @@ protected:
                  isFinalPass)
         {
             std::string builder("Failed to evaluate source register expression: ");
-            appendAgString(builder, error);
+            Ag::appendAgString(builder, error);
 
             log.appendError(getStart(), builder);
             isOK = false;
@@ -99,7 +94,7 @@ protected:
                  isFinalPass)
         {
             std::string builder("Failed to evaluate base register expression: ");
-            appendAgString(builder, error);
+            Ag::appendAgString(builder, error);
 
             log.appendError(getStart(), builder);
             isOK = false;
@@ -109,15 +104,7 @@ protected:
     }
 };
 
-////////////////////////////////////////////////////////////////////////////////
-// Local Data
-////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////
-// Local Functions
-////////////////////////////////////////////////////////////////////////////////
-
-} // TED
+} // Anonymous namespace
 
 ////////////////////////////////////////////////////////////////////////////////
 // AtomicSwapInstructionNode Member Function Definitions
@@ -213,7 +200,7 @@ ISyntaxNode *AtomicSwapInstructionNode::applyNode(ParseContext &/*context*/,
     switch (_state)
     {
     case State::AfterMnemonic: // Expect Rd expression.
-        if (tryCast(childNode, exprNode))
+        if (Ag::tryCast(childNode, exprNode))
         {
             _destReg.reset(exprNode);
             result = this;
@@ -225,7 +212,7 @@ ISyntaxNode *AtomicSwapInstructionNode::applyNode(ParseContext &/*context*/,
         break;
 
     case State::BeforeSourceReg: // expect Rm expression.
-        if (tryCast(childNode, exprNode))
+        if (Ag::tryCast(childNode, exprNode))
         {
             _sourceReg.reset(exprNode);
             result = this;
@@ -240,7 +227,7 @@ ISyntaxNode *AtomicSwapInstructionNode::applyNode(ParseContext &/*context*/,
         break;
 
     case State::BeforeBaseReg: // Expect Rn expression.
-        if (tryCast(childNode, exprNode))
+        if (Ag::tryCast(childNode, exprNode))
         {
             _baseReg.reset(exprNode);
             result = this;
@@ -279,10 +266,6 @@ Statement *AtomicSwapInstructionNode::compile(Messages &/*output*/) const
                                         _isByte);
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// Global Function Definitions
-////////////////////////////////////////////////////////////////////////////////
-
-}} // namespace Ag::Asm
+}} // namespace Mo::Asm
 ////////////////////////////////////////////////////////////////////////////////
 

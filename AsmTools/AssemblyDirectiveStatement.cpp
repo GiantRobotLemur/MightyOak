@@ -17,11 +17,7 @@
 #include "ParseContext.hpp"
 #include "Token.hpp"
 
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
-
-namespace Ag {
+namespace Mo {
 namespace Asm {
 
 namespace {
@@ -204,12 +200,12 @@ public:
 
         int32_t pow2;
 
-        if (Bin::bitScanReverse(_value, pow2) == false)
+        if (Ag::Bin::bitScanReverse(_value, pow2) == false)
         {
             pow2 = 4;
         }
 
-        uint32_t alignedAddr = Bin::roundUpPow2(currentAddr, pow2);
+        uint32_t alignedAddr = Ag::Bin::roundUpPow2(currentAddr, pow2);
 
         return alignedAddr - currentAddr;
     }
@@ -235,7 +231,7 @@ public:
 // Local Functions
 ////////////////////////////////////////////////////////////////////////////////
 
-} // TED
+} // Anonymous namespace
 
 ////////////////////////////////////////////////////////////////////////////////
 // AssemblyDirectiveNode Member Function Definitions
@@ -379,13 +375,13 @@ ISyntaxNode *AlignDirectiveNode::applyNode(ParseContext &context, ISyntaxNode *c
     IntegerLiteralNode *valueNode;
 
     if ((_state == State::AfterKeyword) &&
-        tryCast(childNode, valueNode))
+        Ag::tryCast(childNode, valueNode))
     {
         IExprUPtr expr(valueNode->compile(ConstantSet::Empty));
 
         if (expr)
         {
-            String error;
+            Ag::String error;
             Value alignObject;
             auto &log = context.getMessages();
 
@@ -397,7 +393,7 @@ ISyntaxNode *AlignDirectiveNode::applyNode(ParseContext &context, ISyntaxNode *c
                 {
                     int32_t msb;
 
-                    if ((Bin::bitScanReverse(alignValue.asUint32(), msb) == false) ||
+                    if ((Ag::Bin::bitScanReverse(alignValue.asUint32(), msb) == false) ||
                         (alignValue.asUint32() != (1u << msb)) ||
                         (alignValue.asUint32() < 2) ||
                         (alignValue.asUint32() > 0x10000))
@@ -447,6 +443,6 @@ Statement *AlignDirectiveNode::compile(Messages &/*output*/) const
     return new AlignStatement(_value);
 }
 
-}} // namespace Ag::Asm
+}} // namespace Mo::Asm
 ////////////////////////////////////////////////////////////////////////////////
 

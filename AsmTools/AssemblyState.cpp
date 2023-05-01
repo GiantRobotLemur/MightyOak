@@ -16,28 +16,8 @@
 #include "Ag/Core/Exception.hpp"
 #include "AssemblyState.hpp"
 
-
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
-
-namespace Ag {
+namespace Mo {
 namespace Asm {
-
-namespace {
-////////////////////////////////////////////////////////////////////////////////
-// Local Data Types
-////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////
-// Local Data
-////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////
-// Local Functions
-////////////////////////////////////////////////////////////////////////////////
-
-} // TED
 
 ////////////////////////////////////////////////////////////////////////////////
 // AssemblyState Member Function Definitions
@@ -88,7 +68,7 @@ void AssemblyState::setInstructionSet(InstructionSet instructionSet)
 //! @retval false The extension is not legal in the current context.
 bool AssemblyState::isValidExtension(ArchExtensionEnum extension) const
 {
-    return (_archExtensionFlags & toScalar(extension)) != 0;
+    return (_archExtensionFlags & Ag::toScalar(extension)) != 0;
 }
 
 //! @brief Adds an extension to those which can be assembled in the
@@ -96,7 +76,7 @@ bool AssemblyState::isValidExtension(ArchExtensionEnum extension) const
 //! @param[in] extension The extension to add.
 void AssemblyState::addExtension(ArchExtensionEnum extension)
 {
-    _archExtensionFlags |= toScalar(extension);
+    _archExtensionFlags |= Ag::toScalar(extension);
 }
 
 //! @brief Gets the addressing mode instructions are assumed to be assembled in.
@@ -151,11 +131,11 @@ const char *instructionSetToString(InstructionSet instructionSet)
         "ARM v7",
     };
 
-    static_assert(arraySize(names) == toScalar(InstructionSet::Max),
+    static_assert(std::size(names) == Ag::toScalar(InstructionSet::Max),
                   "The instruction set names are out of synch with the enumeration definition.");
 
-    return (instructionSet < InstructionSet::Max) ? names[toScalar(instructionSet)] :
-                                                    names[toScalar(InstructionSet::ArmV7)];
+    return (instructionSet < InstructionSet::Max) ? names[Ag::toScalar(instructionSet)] :
+                                                    names[Ag::toScalar(InstructionSet::ArmV7)];
 }
 
 //! Gets a display text string to represent a processor operating mode.
@@ -169,11 +149,11 @@ const char *processorModeToString(ProcessorMode mode)
         "Jazelle byte code",
     };
 
-    static_assert(arraySize(modes) == toScalar(ProcessorMode::Max),
+    static_assert(std::size(modes) == Ag::toScalar(ProcessorMode::Max),
                   "The processor mode names are out of synch with the enumeration definition.");
 
-    return (mode < ProcessorMode::Max) ? modes[toScalar(mode)] :
-                                         modes[toScalar(ProcessorMode::Arm)];
+    return (mode < ProcessorMode::Max) ? modes[Ag::toScalar(mode)] :
+                                         modes[Ag::toScalar(ProcessorMode::Arm)];
 }
 
 //! Gets a display text string to represent a processor extension.
@@ -193,12 +173,12 @@ const char *processorExtensionToString(ArchExtensionEnum extension)
         "Break Point",
     };
 
-    static_assert(arraySize(extensions) == toScalar(ArchExtensionEnum::Max),
+    static_assert(std::size(extensions) == Ag::toScalar(ArchExtensionEnum::Max),
                   "The architecture extension names are out of synch with the enumeration definition.");
 
     int32_t msb;
-    if (Bin::bitScanReverse(static_cast<uint32_t>(toScalar(extension)), msb) &&
-        (static_cast<uint32_t>(msb) < toScalar(ArchExtensionEnum::Max)))
+    if (Ag::Bin::bitScanReverse(static_cast<uint32_t>(Ag::toScalar(extension)), msb) &&
+        (static_cast<uint32_t>(msb) < Ag::toScalar(ArchExtensionEnum::Max)))
     {
         return extensions[msb];
     }
@@ -208,6 +188,6 @@ const char *processorExtensionToString(ArchExtensionEnum extension)
     }
 }
 
-}} // namespace Ag::Asm
+}} // namespace Mo::Asm
 ////////////////////////////////////////////////////////////////////////////////
 

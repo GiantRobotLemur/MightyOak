@@ -12,13 +12,13 @@
 #define __ASM_TOOLS_MESSAGES_HPP__
 
 ////////////////////////////////////////////////////////////////////////////////
-// Dependant Header Files
+// Dependent Header Files
 ////////////////////////////////////////////////////////////////////////////////
 #include <deque>
 
 #include "Ag/Core.hpp"
 
-namespace Ag {
+namespace Mo {
 namespace Asm {
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -28,7 +28,7 @@ namespace Asm {
 struct Location
 {
     //! @brief The name of the file being assembled.
-    String FileName;
+    Ag::String FileName;
 
     //! @brief The 1-based index of the line containing the located character.
     int LineNo;
@@ -38,7 +38,7 @@ struct Location
 
     // Construction
     Location();
-    Location(const String &fileName);
+    Location(const Ag::String &fileName);
 
     // Accessors
     bool isValid() const;
@@ -69,19 +69,19 @@ class Message
 public:
     // Construction/Destruction
     Message(MessageSeverity severity, const Location &location,
-            const String &message, size_t ordinal);
+            const Ag::String &message, size_t ordinal);
 
     // Accessors
     size_t getOrdinal() const;
     MessageSeverity getSeverity() const;
     const Location &getLocation() const;
-    const String &getMessage() const;
+    const Ag::String &getMessage() const;
 
     // Operations
-    String toString() const;
+    Ag::String toString() const;
 private:
     // Internal Fields
-    String _message;
+    Ag::String _message;
     Location _location;
     size_t _ordinal;
     MessageSeverity _severity;
@@ -103,31 +103,31 @@ public:
     const MessageCollection &getMessages() const;
 
     // Operations
-    void appendInfo(const Location &location, const String &message);
-    void appendInfo(const Location &location, utf8_cptr_t formatSpec,
-                    const VariantList &values);
-    void appendWarning(const Location &location, const String &message);
-    void appendWarning(const Location &location, utf8_cptr_t formatSpec,
-                       const VariantList &values);
-    void appendError(const Location &location, const String &message);
-    void appendError(const Location &location, utf8_cptr_t formatSpec,
-                     const VariantList &values);
-    void appendFatal(const Location &location, const String &message);
-    void appendFatal(const Location &location, utf8_cptr_t formatSpec,
-                     const VariantList &values);
+    void appendInfo(const Location &location, const Ag::String &message);
+    void appendInfo(const Location &location, Ag::utf8_cptr_t formatSpec,
+                    const Ag::VariantList &values);
+    void appendWarning(const Location &location, const Ag::String &message);
+    void appendWarning(const Location &location, Ag::utf8_cptr_t formatSpec,
+                       const Ag::VariantList &values);
+    void appendError(const Location &location, const Ag::String &message);
+    void appendError(const Location &location, Ag::utf8_cptr_t formatSpec,
+                     const Ag::VariantList &values);
+    void appendFatal(const Location &location, const Ag::String &message);
+    void appendFatal(const Location &location, Ag::utf8_cptr_t formatSpec,
+                     const Ag::VariantList &values);
 
     void sort();
 private:
     // Internal Functions
     void appendFormatted(MessageSeverity severity, const Location &location,
-                         utf8_cptr_t formatSpec, const VariantList &values);
+                         Ag::utf8_cptr_t formatSpec, const Ag::VariantList &values);
 
     // Internal Fields
     MessageCollection _messages;
     bool _hasErrors;
 };
 
-}} // namespace Ag::Asm
+}} // namespace Mo::Asm
 
 #endif // Header guard
 ////////////////////////////////////////////////////////////////////////////////

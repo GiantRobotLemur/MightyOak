@@ -11,14 +11,14 @@
 #define __ASM_TOOLS_OBJECT_CODE_BUILDER_HPP__
 
 ////////////////////////////////////////////////////////////////////////////////
-// Dependant Header Files
+// Dependent Header Files
 ////////////////////////////////////////////////////////////////////////////////
 #include <vector>
 
 #include "Ag/Core/ByteOrder.hpp"
 #include "AsmTools/ObjectCode.hpp"
 
-namespace Ag {
+namespace Mo {
 namespace Asm {
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -68,14 +68,14 @@ public:
 private:
     // Internal Fields
     Messages &_output;
-    const Bin::ByteOrder *_encoder;
+    const Ag::Bin::ByteOrder *_encoder;
     std::vector<uint8_t> _code;
     uint32_t _baseAddress;
     uint32_t _initialOffset;
     bool _finalPass;
 };
 
-}} // namespace Ag::Asm
+}} // namespace Mo::Asm
 
 #endif // Header guard
 ////////////////////////////////////////////////////////////////////////////////

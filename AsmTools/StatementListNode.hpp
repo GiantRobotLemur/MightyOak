@@ -12,7 +12,7 @@
 #define __ASM_TOOLS_STATEMENT_LIST_NODE_HPP__
 
 ////////////////////////////////////////////////////////////////////////////////
-// Dependant Header Files
+// Dependent Header Files
 ////////////////////////////////////////////////////////////////////////////////
 #include <vector>
 #include <unordered_set>
@@ -26,7 +26,7 @@
 #include "Statement.hpp"
 #include "SyntaxNode.hpp"
 
-namespace Ag {
+namespace Mo {
 namespace Asm {
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -122,7 +122,7 @@ private:
     void processStatementNode(ParseContext &context,
                               StatementNode *parsedStatment);
     void processIncludedFile(ParseContext &parentContext,
-                             string_cref_t inputSourceId,
+                             Ag::string_cref_t inputSourceId,
                              const Location &includedFrom);
     void appendObjectCode(const ObjectCodeBuilder &objectCode);
     void deferAssembly(StatementUPtr &&statement, uint32_t predictedSize);
@@ -137,7 +137,7 @@ private:
 };
 
 
-}} // namespace Ag::Asm
+}} // namespace Mo::Asm
 
 #endif // Header guard
 ////////////////////////////////////////////////////////////////////////////////

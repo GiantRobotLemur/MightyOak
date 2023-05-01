@@ -12,21 +12,12 @@
 #define __ASM_TOOLS_INPUT_SET_HPP__
 
 ////////////////////////////////////////////////////////////////////////////////
-// Dependant Header Files
+// Dependent Header Files
 ////////////////////////////////////////////////////////////////////////////////
-
 #include "InputSource.hpp"
 
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
-
-namespace Ag {
+namespace Mo {
 namespace Asm {
-
-////////////////////////////////////////////////////////////////////////////////
-// Data Type Declarations
-////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////
 // Class Declarations
@@ -50,7 +41,7 @@ public:
     //! @retval false source was not overwritten and errorOrId receives text
     //! detailing why.
     virtual bool tryGetPrimaryInputSource(IInputSourcePtr &source,
-                                          String &errorOrId) = 0;
+                                          Ag::String &errorOrId) = 0;
 
     //! @brief Attempts to get a secondary input set using an identifier which
     //! it to be interpreted relative to that of the current input set.
@@ -64,9 +55,9 @@ public:
     //! errorOrId with its identifier.
     //! @retval false source was not overwritten and errorOrId receives text
     //! detailing why.
-    virtual bool tryGetInputSource(const String &identifier,
+    virtual bool tryGetInputSource(const Ag::String &identifier,
                                    std::unique_ptr<IInputSet> &input,
-                                   String &errorOrId) = 0;
+                                   Ag::String &errorOrId) = 0;
 };
 
 using IInputSetUPtr = std::unique_ptr<IInputSet>;
@@ -74,15 +65,12 @@ using IInputSetUPtr = std::unique_ptr<IInputSet>;
 ////////////////////////////////////////////////////////////////////////////////
 // Function Declarations
 ////////////////////////////////////////////////////////////////////////////////
-IInputSetUPtr createFileInputSet(const Fs::Path &rootFile,
-                                 const std::vector<Fs::Path> &searchPaths);
-IInputSetUPtr createStringInputSet(const String &identifier, const String &source);
+IInputSetUPtr createFileInputSet(const Ag::Fs::Path &rootFile,
+                                 const std::vector<Ag::Fs::Path> &searchPaths);
+IInputSetUPtr createStringInputSet(const Ag::String &identifier,
+                                   const Ag::String &source);
 
-////////////////////////////////////////////////////////////////////////////////
-// Templates
-////////////////////////////////////////////////////////////////////////////////
-
-}} // namespace Ag::Asm
+}} // namespace Mo::Asm
 
 #endif // Header guard
 ////////////////////////////////////////////////////////////////////////////////

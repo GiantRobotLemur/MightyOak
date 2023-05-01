@@ -454,7 +454,7 @@ GTEST_TEST(LinearSortedMap, DeferReindex)
     EXPECT_FALSE(specimen.needsReindex());
 }
 
-} // TED
+} // Anonymous namespace
 
 } // namespace Ag
 ////////////////////////////////////////////////////////////////////////////////

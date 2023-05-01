@@ -16,7 +16,7 @@
 
 #include "ArmCore.hpp"
 
-namespace Ag {
+namespace Mo {
 namespace Arm {
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -47,6 +47,6 @@ GTEST_TEST(ConditionCodes, CanExecute)
     EXPECT_FALSE(canExecuteInstruction(0xF0000000 /* NV */, 0x0));
 }
 
-}} // namespace Ag::Arm
+}} // namespace Mo::Arm
 ////////////////////////////////////////////////////////////////////////////////
 

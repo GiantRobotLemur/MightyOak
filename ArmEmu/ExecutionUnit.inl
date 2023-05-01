@@ -12,11 +12,11 @@
 #define __ARM_EMU_EXECUTION_UNIT_INL__
 
 ////////////////////////////////////////////////////////////////////////////////
-// Dependant Header Files
+// Dependent Header Files
 ////////////////////////////////////////////////////////////////////////////////
 #include "ArmCore.hpp"
 
-namespace Ag {
+namespace Mo {
 namespace Arm {
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -82,7 +82,7 @@ public:
         _hardware.setHostIrq(false);
 
         // Capture the start time.
-        MonotonicTicks startTime = HighResMonotonicTimer::getTime();
+        Ag::MonotonicTicks startTime = Ag::HighResMonotonicTimer::getTime();
         uint32_t result = 0;
 
         do
@@ -124,13 +124,13 @@ public:
         } while (runPipeline);
 
         // Capture the end time and therefore the duration of the run.
-        metrics.ElapsedTime = HighResMonotonicTimer::getDuration(startTime);
+        metrics.ElapsedTime = Ag::HighResMonotonicTimer::getDuration(startTime);
 
         return metrics;
     }
 };
 
-}} // namespace Ag::Arm
+}} // namespace Mo::Arm
 
 #endif // Header guard
 ////////////////////////////////////////////////////////////////////////////////

@@ -20,11 +20,7 @@
 #include "SimpleInstructionStatements.hpp"
 #include "Token.hpp"
 
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
-
-namespace Ag {
+namespace Mo {
 namespace Asm {
 
 namespace {
@@ -53,7 +49,7 @@ public:
                                       bool isFinalPass) const override
     {
         bool canEvaluate = false;
-        String error;
+        Ag::String error;
         uint32_t comment = 0;
 
         if (tryEvaluateOrdinal(context, _comment.get(), comment, error))
@@ -69,9 +65,9 @@ public:
         else if (isFinalPass)
         {
             std::string builder("Failed to evaluate the numeric SWI field: ");
-            appendAgString(builder, error);
+            Ag::appendAgString(builder, error);
 
-            log.appendError(getStart(), String(builder));
+            log.appendError(getStart(), builder);
         }
 
         // Feed in the parameter needed, whether valid or not.
@@ -103,7 +99,7 @@ public:
                                       bool isFinalPass) const override
     {
         bool canEvaluate = false;
-        String error;
+        Ag::String error;
         uint32_t comment = 0;
 
         if (tryEvaluateOrdinal(context, _comment.get(), comment, error))
@@ -119,9 +115,9 @@ public:
         else if (isFinalPass)
         {
             std::string builder("Failed to evaluate the numeric breakpoint field: ");
-            appendAgString(builder, error);
+            Ag::appendAgString(builder, error);
 
-            log.appendError(getStart(), String(builder));
+            log.appendError(getStart(), builder);
         }
 
         // Feed in the parameter needed, whether valid or not.
@@ -154,7 +150,7 @@ public:
                                       bool isFinalPass) const override
     {
         bool canEvaluate = false;
-        String error;
+        Ag::String error;
         uint32_t targetAddr = 0;
 
         if (tryEvaluateOrdinal(context, _target.get(), targetAddr, error))
@@ -179,9 +175,9 @@ public:
         else if (isFinalPass)
         {
             std::string builder("Failed to evaluate branch target field: ");
-            appendAgString(builder, error);
+            Ag::appendAgString(builder, error);
 
-            log.appendError(getStart(), String(builder));
+            log.appendError(getStart(), builder);
         }
 
         return canEvaluate;
@@ -226,7 +222,7 @@ public:
                                       IEvalContext *context, Messages &log,
                                       bool isFinalPass) const override
     {
-        String error;
+        Ag::String error;
         bool isOK = true;
         bool isLong = isLongMul(getMnemonic());
 
@@ -252,7 +248,7 @@ public:
                     message.push_back(':');
                     message.push_back(' ');
                     appendAgString(message, error);
-                    log.appendError(getStart(), String(message));
+                    log.appendError(getStart(), message);
                 }
             }
         }
@@ -334,7 +330,7 @@ public:
                                       bool isFinalPass) const override
     {
         auto &info = instruction.getMoveFromPsrParameters();
-        String error;
+        Ag::String error;
         bool isOK = false;
 
         if (tryEvaluateCoreRegister(context, _rd.get(), info.Rd, error))
@@ -346,9 +342,9 @@ public:
         {
             std::string message;
             message.append("Failed to evaluate destination register expression: ");
-            appendAgString(message, error);
+            Ag::appendAgString(message, error);
 
-            log.appendError(getStart(), String(message));
+            log.appendError(getStart(), message);
         }
 
         return isOK || isFinalPass;
@@ -401,7 +397,7 @@ public:
         info.IsCPSR = _isCPSR;
         info.PsrComponents = _psrComponents;
 
-        String error;
+        Ag::String error;
         bool isOK = true;
 
         if (_sourceIsReg)
@@ -415,9 +411,9 @@ public:
             {
                 std::string message;
                 message.append("Failed to evaluate source register expression: ");
-                appendAgString(message, error);
+                Ag::appendAgString(message, error);
 
-                log.appendError(getStart(), String(message));
+                log.appendError(getStart(), message);
             }
         }
         else
@@ -431,9 +427,9 @@ public:
             {
                 std::string message;
                 message.append("Failed to evaluate source immediate constant expression: ");
-                appendAgString(message, error);
+                Ag::appendAgString(message, error);
 
-                log.appendError(getStart(), String(message));
+                log.appendError(getStart(), message);
             }
         }
 
@@ -458,7 +454,7 @@ protected:
 // Local Functions
 ////////////////////////////////////////////////////////////////////////////////
 
-} // TED
+} // Anonymous namespace
 
 ////////////////////////////////////////////////////////////////////////////////
 // SwiInstructionNode Member Function Definitions
@@ -506,7 +502,7 @@ ISyntaxNode *SwiInstructionNode::applyNode(ParseContext &context,
     ExpressionNode *expr = nullptr;
 
     if ((_state == State::AfterMnemonic) &&
-        tryCast(childNode, expr))
+        Ag::tryCast(childNode, expr))
     {
         // Stop looking for expression tokens.
         restoreLexicalState(context);
@@ -599,7 +595,7 @@ ISyntaxNode *BranchInstructionNode::applyNode(ParseContext &context,
     ExpressionNode *expr = nullptr;
 
     if ((_state == State::AfterMnemonic) &&
-        tryCast(childNode, expr))
+        Ag::tryCast(childNode, expr))
     {
         // Stop looking for expression tokens.
         restoreLexicalState(context);
@@ -718,7 +714,7 @@ ISyntaxNode *MultiplyInstructionNode::applyNode(ParseContext &context,
     ExpressionNode *expr = nullptr;
 
     if ((_state == State::AfterSeparator) &&
-        tryCast(childNode, expr))
+        Ag::tryCast(childNode, expr))
     {
         // Stop looking for expression tokens.
         restoreLexicalState(context);
@@ -851,7 +847,7 @@ ISyntaxNode *MoveFromStatusRegNode::applyNode(ParseContext &context,
     switch (_state)
     {
     case State::AfterMnemonic:
-        if (tryCast(childNode, exprNode))
+        if (Ag::tryCast(childNode, exprNode))
         {
             restoreLexicalState(context);
             _rdExpr.reset(exprNode);
@@ -938,7 +934,7 @@ ISyntaxNode *MoveToStatusRegNode::applyToken(ParseContext &context,
             if (token.tryGetScalarProperty(TokenProperty::PsrComponent,
                                            _psrComponents) == false)
             {
-                _psrComponents = toScalar(PsrComponent::All);
+                _psrComponents = Ag::toScalar(PsrComponent::All);
             }
 
             _state = State::AfterPsrReg;
@@ -985,7 +981,7 @@ ISyntaxNode *MoveToStatusRegNode::applyNode(ParseContext &context,
     case State::AfterPsrReg: break;
     case State::BeforeSourceExpr:
     case State::BeforeSourceImmediateExpr:
-        if (tryCast(childNode, exprNode))
+        if (Ag::tryCast(childNode, exprNode))
         {
             restoreLexicalState(context);
 
@@ -1129,7 +1125,7 @@ ISyntaxNode *BkptInstructionNode::applyNode(ParseContext &context,
     ExpressionNode *expr = nullptr;
 
     if ((_state == State::AfterMnemonic) &&
-        tryCast(childNode, expr))
+        Ag::tryCast(childNode, expr))
     {
         // Stop looking for expression tokens.
         restoreLexicalState(context);
@@ -1181,10 +1177,6 @@ Statement *BkptInstructionNode::compile(Messages &output) const
     return result;
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// Global Function Definitions
-////////////////////////////////////////////////////////////////////////////////
-
-}} // namespace Ag::Asm
+}} // namespace Mo::Asm
 ////////////////////////////////////////////////////////////////////////////////
 

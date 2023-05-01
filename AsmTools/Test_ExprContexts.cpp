@@ -18,7 +18,7 @@
 #include "ExprContexts.hpp"
 
 
-namespace Ag {
+namespace Mo {
 namespace Asm {
 
 namespace {
@@ -29,7 +29,7 @@ namespace {
 GTEST_TEST(RootEvalContext, Empty)
 {
     RootEvalContext specimen(0x10000);
-    String scope;
+    Ag::String scope;
     Location at;
     Value value;
 
@@ -56,7 +56,7 @@ GTEST_TEST(RootEvalContext, AssemblyOffset)
 GTEST_TEST(RootEvalContext, WithSymbols)
 {
     RootEvalContext specimen(0x10000);
-    String scope;
+    Ag::String scope;
     Location at;
     Value value;
 
@@ -85,7 +85,7 @@ GTEST_TEST(InnerEvalContext, Empty)
 {
     RootEvalContext globalScope(0x10000);
     InnerEvalContext specimen(&globalScope, "Local");
-    String scope;
+    Ag::String scope;
     Location at;
     Value value;
 
@@ -118,7 +118,7 @@ GTEST_TEST(InnerEvalContext, WithSymbols)
 {
     RootEvalContext globalScope(0x10000);
     InnerEvalContext specimen(&globalScope, "Local");
-    String scope;
+    Ag::String scope;
     Location at;
     Value value;
 
@@ -149,6 +149,6 @@ GTEST_TEST(InnerEvalContext, WithSymbols)
 
 } // Anonymous namespace
 
-}} // namespace Ag::Asm
+}} // namespace Mo::Asm
 ////////////////////////////////////////////////////////////////////////////////
 

@@ -17,7 +17,7 @@
 #include "Hardware.inl"
 #include "ARMv2CoreRegisterFile.inl"
 
-using namespace Ag::Arm;
+using namespace Mo::Arm;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Local Data
@@ -54,7 +54,7 @@ public:
 };
 
 // Explicitly instantiate the whole class to ensure it at least compiles.
-template class Ag::Arm::ARMv2CoreRegisterFile<::BasicHardware>;
+template class Mo::Arm::ARMv2CoreRegisterFile<::BasicHardware>;
 
 struct ARMv2RegisterTraits
 {

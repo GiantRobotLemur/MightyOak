@@ -20,7 +20,7 @@
 // Macro Definitions
 ////////////////////////////////////////////////////////////////////////////////
 
-namespace Ag {
+namespace Mo {
 namespace Asm {
 
 namespace {
@@ -33,17 +33,17 @@ class FileInputSet : public IInputSet
 {
 private:
     // Internal Fields
-    Fs::Path _primaryFile;
-    std::vector<Fs::Path> _searchPaths;
+    Ag::Fs::Path _primaryFile;
+    std::vector<Ag::Fs::Path> _searchPaths;
 
     // Internal Functions
     //! @brief Determines if a file path points to a valid include file.
     //! @param[in] includeFilePath The path to the file to query.
     //! @retval true The file exists and appears valid.
     //! @retval false The file doesn't exist or is a directory.
-    static bool isValidFile(const Fs::Path &includeFilePath)
+    static bool isValidFile(const Ag::Fs::Path &includeFilePath)
     {
-        Fs::Entry fileEntry(includeFilePath);
+        Ag::Fs::Entry fileEntry(includeFilePath);
 
         return fileEntry.exists() && (fileEntry.isDirectory() == false);
     }
@@ -53,7 +53,7 @@ private:
     //! @param[out] match The full path to the matching file, if one was found.
     //! @retval true A file matching the specification was found.
     //! @retval false No file on any search path matched the specification.
-    bool tryFindFile(const Fs::Path &id, Fs::Path &match) const
+    bool tryFindFile(const Ag::Fs::Path &id, Ag::Fs::Path &match) const
     {
         bool hasMatch = false;
 
@@ -69,8 +69,8 @@ private:
         else
         {
             // Search the folder containing the current file first.
-            Fs::Path currentDir = _primaryFile.getDirectoryPath();
-            Fs::Path absIdPath = id.convertToAbsolute(currentDir);
+            Ag::Fs::Path currentDir = _primaryFile.getDirectoryPath();
+            Ag::Fs::Path absIdPath = id.convertToAbsolute(currentDir);
 
             if (isValidFile(absIdPath))
             {
@@ -80,7 +80,7 @@ private:
             else
             {
                 // Use the search paths.
-                for (const Fs::Path &searchDir : _searchPaths)
+                for (const Ag::Fs::Path &searchDir : _searchPaths)
                 {
                     absIdPath = id.convertToAbsolute(searchDir);
 
@@ -102,7 +102,8 @@ public:
     //! @param[in] primaryFile The path to the primary source code file.
     //! @param[in] searchPaths The ordered set of paths to folders to search for
     //! included source files.
-    FileInputSet(const Fs::Path &primaryFile, const std::vector<Fs::Path> &searchPaths) :
+    FileInputSet(const Ag::Fs::Path &primaryFile,
+                 const std::vector<Ag::Fs::Path> &searchPaths) :
         _primaryFile(primaryFile.convertToAbsolute()),
         _searchPaths(searchPaths)
     {
@@ -111,13 +112,13 @@ public:
     // Overrides
     // Inherited from IInputSet.
     virtual bool tryGetPrimaryInputSource(IInputSourcePtr &source,
-                                          String &errorOrId) override
+                                          Ag::string_ref_t errorOrId) override
     {
         bool hasSource = false;
 
         if (tryCreateFileInputSource(_primaryFile, source, errorOrId))
         {
-            errorOrId = _primaryFile.toString(Fs::PathUsage::Display);
+            errorOrId = _primaryFile.toString(Ag::Fs::PathUsage::Display);
             hasSource = true;
         }
 
@@ -125,17 +126,17 @@ public:
     }
 
     // Inherited from IInputSet.
-    virtual bool tryGetInputSource(const String &identifier,
+    virtual bool tryGetInputSource(Ag::string_cref_t identifier,
                                    IInputSetUPtr &source,
-                                   String &errorOrId) override
+                                   Ag::string_ref_t errorOrId) override
     {
-        Fs::Path idPath;
+        Ag::Fs::Path idPath;
 
         bool isOK = false;
 
-        if (Fs::Path::tryParse(identifier, idPath, errorOrId))
+        if (Ag::Fs::Path::tryParse(identifier, idPath, errorOrId))
         {
-            Fs::Path target;
+            Ag::Fs::Path target;
 
             if (tryFindFile(idPath, target))
             {
@@ -145,14 +146,15 @@ public:
             }
             else
             {
-                errorOrId = String::format("Cannot find included file '{0}' on any search path.",
-                                           { identifier });
+                errorOrId = Ag::String::format("Cannot find included file '{0}'"
+                                               " on any search path.",
+                                               { identifier });
             }
         }
         else
         {
-            errorOrId = String::format("Include file path '{0}' is invalid.",
-                                       { identifier });
+            errorOrId = Ag::String::format("Include file path '{0}' is invalid.",
+                                           { identifier });
         }
 
         return isOK;
@@ -165,15 +167,15 @@ class BufferInputSet : public IInputSet
 {
 private:
     // Internal Fields
-    String _id;
-    String _primaryData;
+    Ag::String _id;
+    Ag::String _primaryData;
 
 public:
     // Construction/Destruction
     //! @brief Constructs a new input set.
     //! @param[in] id The identifier of the primary input source.
     //! @param[in] primaryData The text in the primary input source.
-    BufferInputSet(const String &id, const String &primaryData) :
+    BufferInputSet(Ag::string_cref_t id, Ag::string_cref_t primaryData) :
         _id(id),
         _primaryData(primaryData)
     {
@@ -182,7 +184,7 @@ public:
     // Overrides
     // Inherited from IInputSet.
     virtual bool tryGetPrimaryInputSource(IInputSourcePtr &source,
-                                          String &errorOrId) override
+                                          Ag::string_ref_t errorOrId) override
     {
         // Always return source providing the primary data.
         source = createBufferInputSource(_primaryData);
@@ -191,9 +193,9 @@ public:
     }
 
     // Inherited from IInputSet.
-    virtual bool tryGetInputSource(const String & /* identifier */,
+    virtual bool tryGetInputSource(Ag::string_cref_t /* identifier */,
                                    IInputSetUPtr & /* source */,
-                                   String &errorOrId) override
+                                   Ag::string_ref_t errorOrId) override
     {
         // No secondary sources currently supported.
         errorOrId = "Data not found.";
@@ -201,19 +203,7 @@ public:
     }
 };
 
-////////////////////////////////////////////////////////////////////////////////
-// Local Data
-////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////
-// Local Functions
-////////////////////////////////////////////////////////////////////////////////
-
-} // TED
-
-////////////////////////////////////////////////////////////////////////////////
-// Class Method Definitions
-////////////////////////////////////////////////////////////////////////////////
+} // Anonymous namespace
 
 ////////////////////////////////////////////////////////////////////////////////
 // Global Function Definitions
@@ -223,33 +213,33 @@ public:
 //! @param[in] searchPaths The paths to folders to search for any included
 //! source files.
 //! @return An input set which will be automatically disposed of.
-IInputSetUPtr createFileInputSet(const Fs::Path &rootFile,
-                                 const std::vector<Fs::Path> &searchPaths)
+IInputSetUPtr createFileInputSet(const Ag::Fs::Path &rootFile,
+                                 const std::vector<Ag::Fs::Path> &searchPaths)
 {
-    std::vector<Fs::Path> resolvedPaths;
+    std::vector<Ag::Fs::Path> resolvedPaths;
 
     if (searchPaths.empty() == false)
     {
         // Resolve the set of search paths to remove invalid entries and repeats.
         resolvedPaths.reserve(searchPaths.size() + 1);
 
-        Fs::PathBuilder builder;
-        std::unordered_set<Fs::Path> visitedPaths;
+        Ag::Fs::PathBuilder builder;
+        std::unordered_set<Ag::Fs::Path> visitedPaths;
 
         // Add the search paths in order ensuring there are no duplicates and
         // any search paths actually exist and point to a folder.
-        for (const Fs::Path &searchPath : searchPaths)
+        for (const Ag::Fs::Path &searchPath : searchPaths)
         {
             builder = searchPath;
             builder.convertToAbsolute();
             builder.makeCanonical();
 
-            Fs::Path resolvedPath(builder);
+            Ag::Fs::Path resolvedPath(builder);
 
             if (visitedPaths.find(resolvedPath) == visitedPaths.end())
             {
                 // The path is not a repeat of another.
-                Fs::Entry targetDir(resolvedPath);
+                Ag::Fs::Entry targetDir(resolvedPath);
 
                 if (targetDir.exists() && targetDir.isDirectory())
                 {
@@ -270,13 +260,12 @@ IInputSetUPtr createFileInputSet(const Fs::Path &rootFile,
 //! messages.
 //! @param[in] source The text of the primary input source.
 //! @return An input set which will be automatically disposed of.
-IInputSetUPtr createStringInputSet(const String &identifier, const String &source)
+IInputSetUPtr createStringInputSet(Ag::string_cref_t identifier,
+                                   Ag::string_cref_t source)
 {
     return std::make_unique<BufferInputSet>(identifier, source);
 }
 
-
-
-}} // namespace Ag::Asm
+}} // namespace Mo::Asm
 ////////////////////////////////////////////////////////////////////////////////
 

@@ -20,11 +20,7 @@
 #include "InputSource.hpp"
 #include "InputSet.hpp"
 
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
-
-namespace Ag {
+namespace Mo {
 namespace Asm {
 
 namespace {
@@ -37,10 +33,6 @@ struct IsZero
 };
 
 ////////////////////////////////////////////////////////////////////////////////
-// Local Data
-////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////
 // Unit Tests
 ////////////////////////////////////////////////////////////////////////////////
 GTEST_TEST(InputSource, CreateEmptySource)
@@ -49,7 +41,7 @@ GTEST_TEST(InputSource, CreateEmptySource)
     char32_t buffer[BufferSize];
     std::fill_n(buffer, BufferSize, U'\0');
 
-    IInputSourcePtr specimen = createBufferInputSource(String::Empty);
+    IInputSourcePtr specimen = createBufferInputSource(Ag::String::Empty);
     ASSERT_TRUE(specimen);
 
     size_t charsRead = specimen->readCharacters(buffer, BufferSize);
@@ -66,7 +58,7 @@ GTEST_TEST(InputSource, CreateFilledSource)
     char32_t buffer[BufferSize];
     std::fill_n(buffer, BufferSize, U'\0');
 
-    String sample("Hello World!");
+    Ag::String sample("Hello World!");
     IInputSourcePtr specimen = createBufferInputSource(sample);
     ASSERT_TRUE(specimen);
 
@@ -96,7 +88,7 @@ GTEST_TEST(InputSource, PartialRead)
     std::fill_n(buffer, BufferSize, U'\0');
 
     // 2.5 x 0-9
-    String sample("0123456789012345678901234");
+    Ag::String sample("0123456789012345678901234");
     char32_t expected[] = U"0123456789";
     const size_t expectedSize = 10;
     IInputSourcePtr specimen = createBufferInputSource(sample);
@@ -142,8 +134,8 @@ GTEST_TEST(InputSource, PartialRead)
 
 GTEST_TEST(InputSource, FromSet)
 {
-    String id = "Test.asm";
-    String sample("ADD R0,R2,R5,LSL #16");
+    Ag::String id = "Test.asm";
+    Ag::String sample("ADD R0,R2,R5,LSL #16");
 
     // Create the input set with a single buffer source.
     IInputSetUPtr specimen = createStringInputSet(id, sample);
@@ -151,7 +143,7 @@ GTEST_TEST(InputSource, FromSet)
     ASSERT_TRUE(specimen);
 
     IInputSourcePtr source;
-    String errorOrId;
+    Ag::String errorOrId;
 
     // Get the single source.
     ASSERT_TRUE(specimen->tryGetPrimaryInputSource(source, errorOrId));
@@ -168,7 +160,7 @@ GTEST_TEST(InputSource, FromSet)
 
     EXPECT_EQ(charsRead, sample.getUtf32Length());
 
-    String result(buffer, charsRead);
+    Ag::String result(buffer, charsRead);
 
     EXPECT_STREQ(result.getUtf8Bytes(), sample.getUtf8Bytes());
 
@@ -178,8 +170,8 @@ GTEST_TEST(InputSource, FromSet)
 
 GTEST_TEST(InputSource, BufferSetHasNoSecondarySources)
 {
-    String id = "Test.asm";
-    String sample("ADD R0,R2,R5,LSL #16");
+    Ag::String id = "Test.asm";
+    Ag::String sample("ADD R0,R2,R5,LSL #16");
 
     // Create the input set with a single buffer source.
     IInputSetUPtr specimen = createStringInputSet(id, sample);
@@ -187,8 +179,8 @@ GTEST_TEST(InputSource, BufferSetHasNoSecondarySources)
     ASSERT_TRUE(specimen);
 
     IInputSetUPtr source;
-    String errorOrId;
-    String sourceId = "Libs/Utils.asm";
+    Ag::String errorOrId;
+    Ag::String sourceId = "Libs/Utils.asm";
 
     // Try to get a secondary source.
     EXPECT_FALSE(specimen->tryGetInputSource(sourceId, source, errorOrId));
@@ -198,8 +190,8 @@ GTEST_TEST(InputSource, BufferSetHasNoSecondarySources)
     EXPECT_STRNE(sourceId.getUtf8Bytes(), errorOrId.getUtf8Bytes());
 }
 
-} // TED
+} // Anonymous namespace
 
-}} // namespace Ag::Asm
+}} // namespace Mo::Asm
 ////////////////////////////////////////////////////////////////////////////////
 

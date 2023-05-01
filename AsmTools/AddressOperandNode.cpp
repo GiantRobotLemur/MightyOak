@@ -15,27 +15,8 @@
 #include "LexicalAnalysers.hpp"
 #include "ParseContext.hpp"
 
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
-
-namespace Ag {
+namespace Mo {
 namespace Asm {
-
-namespace {
-////////////////////////////////////////////////////////////////////////////////
-// Local Data Types
-////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////
-// Local Data
-////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////
-// Local Functions
-////////////////////////////////////////////////////////////////////////////////
-
-} // TED
 
 ////////////////////////////////////////////////////////////////////////////////
 // AddressOperandNode Member Definitions
@@ -252,7 +233,7 @@ ISyntaxNode *AddressOperandNode::applyNode(ParseContext &context,
     {
     case State::BeforeOperand:
         // Expects An address expression or an opening square '['.
-        if (tryCast(childNode, expr))
+        if (Ag::tryCast(childNode, expr))
         {
             // It was just an address expression, that was easy!
             _base.reset(expr);
@@ -265,7 +246,7 @@ ISyntaxNode *AddressOperandNode::applyNode(ParseContext &context,
 
     case State::BeforeBaseReg:
         // Expects a register expression.
-        if (tryCast(childNode, expr))
+        if (Ag::tryCast(childNode, expr))
         {
             _base.reset(expr);
             _state = State::AfterBaseReg;
@@ -280,7 +261,7 @@ ISyntaxNode *AddressOperandNode::applyNode(ParseContext &context,
 
     case State::BeforePreIndexOffset:
         // Expects a ShifterOperandNode.
-        if (tryCast(childNode, shifter))
+        if (Ag::tryCast(childNode, shifter))
         {
             // We have the composite offset field, including the
             // closing square ']'.
@@ -310,7 +291,7 @@ ISyntaxNode *AddressOperandNode::applyNode(ParseContext &context,
 
     case State::BeforePostIndexOffset:
         // Expects a ShifterOperandNode.
-        if (tryCast(childNode, shifter))
+        if (Ag::tryCast(childNode, shifter))
         {
             // Receive the offset shifter which includes the statement
             // terminator.
@@ -461,7 +442,7 @@ bool StatementAddressOperand::configure(InstructionInfo &instruction,
     if (addrOperand == nullptr)
     {
         // We shouldn't get here, hence an exception rather than a logged error.
-        throw NotSupportedException("Encoding an address operand in the required instruction type.");
+        throw Ag::NotSupportedException("Encoding an address operand in the required instruction type.");
     }
     else if (tryResolve(context, log, isFinalPass, *addrOperand, maxOffset))
     {
@@ -522,10 +503,10 @@ bool StatementAddressOperand::tryResolve(IEvalContext *context, Messages &log,
                                          bool isFinalPass, AddrOperand &operand,
                                          uint32_t maxOffset) const
 {
-    String error;
+    Ag::String error;
     bool isOK = false;
     bool restrictAddrMode;
-    
+
     if (maxOffset == 0)
     {
         maxOffset = 0xFFF;
@@ -576,9 +557,9 @@ bool StatementAddressOperand::tryResolve(IEvalContext *context, Messages &log,
         else if (isFinalPass)
         {
             std::string builder("Failed to resolve address expression: ");
-            appendAgString(builder, error);
+            Ag::appendAgString(builder, error);
 
-            log.appendError(_start, String(builder));
+            log.appendError(_start, Ag::String(builder));
         }
     }
     else if (tryEvaluateCoreRegister(context, _baseExpr.get(), operand.Rn, error))
@@ -659,7 +640,7 @@ bool StatementAddressOperand::tryResolve(IEvalContext *context, Messages &log,
         std::string builder("Failed to resolve base address register expression: ");
         appendAgString(builder, error);
 
-        log.appendError(_start, String(builder));
+        log.appendError(_start, Ag::String(builder));
     }
 
     return isOK;
@@ -669,6 +650,6 @@ bool StatementAddressOperand::tryResolve(IEvalContext *context, Messages &log,
 // Global Function Definitions
 ////////////////////////////////////////////////////////////////////////////////
 
-}} // namespace Ag::Asm
+}} // namespace Mo::Asm
 ////////////////////////////////////////////////////////////////////////////////
 

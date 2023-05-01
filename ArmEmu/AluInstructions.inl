@@ -12,14 +12,14 @@
 #define __ARM_EMU_ALU_INSTRUCTIONS_INL__
 
 ////////////////////////////////////////////////////////////////////////////////
-// Dependant Header Files
+// Dependent Header Files
 ////////////////////////////////////////////////////////////////////////////////
 #include "Ag/Core/Binary.hpp"
 
 #include "ArmCore.hpp"
 #include "AluOperations.h"
 
-namespace Ag {
+namespace Mo {
 namespace Arm {
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -42,7 +42,7 @@ template<typename TRegisterFile>
 uint32_t calculateShiftedAluOperand(TRegisterFile &regs, uint32_t instruction,
                                     uint8_t &carryOut) noexcept
 {
-    uint32_t rmValue = regs.getRm(extractEnum<GeneralRegister, 0, 4>(instruction));
+    uint32_t rmValue = regs.getRm(Ag::Bin::extractEnum<GeneralRegister, 0, 4>(instruction));
     uint32_t result = 0;
     carryOut = 0;
 
@@ -51,17 +51,17 @@ uint32_t calculateShiftedAluOperand(TRegisterFile &regs, uint32_t instruction,
         // It's a shift by register, use the lower 8-bits, values greater than 31
         // need to be dealt with.
         uint8_t rsValue =
-            static_cast<uint8_t>(regs.getRs(extractEnum<GeneralRegister, 8, 4>(instruction)));
+            static_cast<uint8_t>(regs.getRs(Ag::Bin::extractEnum<GeneralRegister, 8, 4>(instruction)));
 
         if (rsValue == 0)
         {
             // Preserve the operand and carry flag, no matter what the shift mode.
-            carryOut = extractBit<PsrShift::Carry>(regs.getPSR());
+            carryOut = Ag::Bin::extractBit<PsrShift::Carry>(regs.getPSR());
             result = rmValue;
         }
         else
         {
-            switch (extractBits<uint8_t, 5, 2>(instruction))
+            switch (Ag::Bin::extractBits<uint8_t, 5, 2>(instruction))
             {
             case 0: // LSL
                 if (rsValue < 32)
@@ -113,7 +113,7 @@ uint32_t calculateShiftedAluOperand(TRegisterFile &regs, uint32_t instruction,
                     // Calculate a shift value modulus 32.
                     rsValue &= 0x1F;
 
-                    result = Bin::rotateRight(rmValue, static_cast<int32_t>(rsValue));
+                    result = Ag::Bin::rotateRight(rmValue, static_cast<int32_t>(rsValue));
                     carryOut = static_cast<uint8_t>(rmValue >> (rsValue - 1));
                 }
                 else
@@ -129,15 +129,15 @@ uint32_t calculateShiftedAluOperand(TRegisterFile &regs, uint32_t instruction,
     {
         // The shift value is a constant, values can only range from 0-31 where
         // a value of 0 has a very specific interpretation for each shift mode.
-        uint8_t rsValue = extractBits<uint8_t, 7, 5>(instruction);
+        uint8_t rsValue = Ag::Bin::extractBits<uint8_t, 7, 5>(instruction);
 
-        switch (extractBits<uint8_t, 5, 2>(instruction))
+        switch (Ag::Bin::extractBits<uint8_t, 5, 2>(instruction))
         {
         case 0: // LSL
             if (rsValue == 0)
             {
                 // Preserve the carry flag and the operand.
-                carryOut = extractBit<PsrShift::Carry>(regs.getPSR());
+                carryOut = Ag::Bin::extractBit<PsrShift::Carry>(regs.getPSR());
                 result = rmValue;
             }
             else
@@ -181,7 +181,7 @@ uint32_t calculateShiftedAluOperand(TRegisterFile &regs, uint32_t instruction,
             if (rsValue == 0)
             {
                 // Equates to Rm, RRX
-                uint8_t oldCarry = extractBit<PsrShift::Carry>(regs.getPSR());
+                uint8_t oldCarry = Ag::Bin::extractBit<PsrShift::Carry>(regs.getPSR());
                 result = (rmValue >> 1) | (static_cast<uint32_t>(oldCarry) << 31);
                 carryOut = static_cast<uint8_t>(rmValue);
             }
@@ -190,7 +190,7 @@ uint32_t calculateShiftedAluOperand(TRegisterFile &regs, uint32_t instruction,
                 // Calculate a shift value modulus 32.
                 rsValue &= 0x1F;
 
-                result = Bin::rotateRight(rmValue, static_cast<int32_t>(rsValue));
+                result = Ag::Bin::rotateRight(rmValue, static_cast<int32_t>(rsValue));
                 carryOut = static_cast<uint8_t>(rmValue >> (rsValue - 1));
             }
             break;
@@ -228,11 +228,11 @@ inline uint32_t calculateConstantAluOperand(uint32_t instruction) noexcept
 template<typename TRegisterFile>
 uint32_t calculateDataTransferOffset(TRegisterFile & regs, uint32_t instruction) noexcept
 {
-    uint32_t rmValue = regs.getRm(extractEnum<GeneralRegister, 0, 4>(instruction));
+    uint32_t rmValue = regs.getRm(Ag::Bin::extractEnum<GeneralRegister, 0, 4>(instruction));
     uint32_t result = 0;
-    uint8_t rsValue = extractBits<uint8_t, 7, 5>(instruction);
+    uint8_t rsValue = Ag::Bin::extractBits<uint8_t, 7, 5>(instruction);
 
-    switch (extractBits<uint8_t, 5, 2>(instruction))
+    switch (Ag::Bin::extractBits<uint8_t, 5, 2>(instruction))
     {
     case 0: // LSL
         if (rsValue == 0)
@@ -276,7 +276,7 @@ uint32_t calculateDataTransferOffset(TRegisterFile & regs, uint32_t instruction)
         if (rsValue == 0)
         {
             // Equates to Rm, RRX
-            uint32_t oldCarry = extractBit<PsrShift::Carry>(regs.getPSR());
+            uint32_t oldCarry = Ag::Bin::extractBit<PsrShift::Carry>(regs.getPSR());
             result = (rmValue >> 1) | (oldCarry << 31);
         }
         else
@@ -284,7 +284,7 @@ uint32_t calculateDataTransferOffset(TRegisterFile & regs, uint32_t instruction)
             // Calculate a shift value modulus 32.
             rsValue &= 0x1F;
 
-            result = Bin::rotateRight(rmValue, static_cast<int32_t>(rsValue));
+            result = Ag::Bin::rotateRight(rmValue, static_cast<int32_t>(rsValue));
         }
         break;
     }
@@ -310,24 +310,24 @@ uint32_t execDataProcOpStatus(TRegisterFile &regs, uint32_t instruction,
                               uint32_t op2, uint8_t carryOut) noexcept
 {
     uint32_t cycleCount = 1;
-    uint32_t op1 = regs.getRn(extractEnum<GeneralRegister, 16, 4>(instruction));
+    uint32_t op1 = regs.getRn(Ag::Bin::extractEnum<GeneralRegister, 16, 4>(instruction));
     uint32_t result;
     uint8_t status = 0;
-    uint8_t opCode = extractBits<uint8_t, 21, 4>(instruction);
+    uint8_t opCode = Ag::Bin::extractBits<uint8_t, 21, 4>(instruction);
 
     switch (opCode)
     {
     case 0: // AND
         // Combine ALU carry out with inherited overflow.
         status = (carryOut << PsrShift::LowCarry) |
-                 extractBit<PsrShift::Overflow>(regs.getPSR());
+                 Ag::Bin::extractBit<PsrShift::Overflow>(regs.getPSR());
         result = ALU_And(op1, op2, status);
         break;
 
     case 1: // EOR
         // Combine ALU carry out with inherited overflow.
         status = (carryOut << PsrShift::LowCarry) |
-                 extractBit<PsrShift::Overflow>(regs.getPSR());
+                 Ag::Bin::extractBit<PsrShift::Overflow>(regs.getPSR());
         result = ALU_Xor(op1, op2, status);
         break;
 
@@ -364,14 +364,14 @@ uint32_t execDataProcOpStatus(TRegisterFile &regs, uint32_t instruction,
     case 8: // TST
         // Combine ALU carry out with inherited overflow.
         status = (carryOut << PsrShift::LowCarry) |
-                 extractBit<PsrShift::Overflow>(regs.getPSR());
+                 Ag::Bin::extractBit<PsrShift::Overflow>(regs.getPSR());
         result = ALU_And(op1, op2, status);
         break;
 
     case 9: // TEQ
         // Combine ALU carry out with inherited overflow.
         status = (carryOut << PsrShift::LowCarry) |
-                 extractBit<PsrShift::Overflow>(regs.getPSR());
+                 Ag::Bin::extractBit<PsrShift::Overflow>(regs.getPSR());
         result = ALU_Xor(op1, op2, status);
         break;
 
@@ -385,7 +385,7 @@ uint32_t execDataProcOpStatus(TRegisterFile &regs, uint32_t instruction,
 
     case 12: // ORR
         status = (carryOut << PsrShift::LowCarry) |
-                 extractBit<PsrShift::Overflow>(regs.getPSR());
+                 Ag::Bin::extractBit<PsrShift::Overflow>(regs.getPSR());
         result = ALU_Or(op1, op2, status);
         break;
 
@@ -393,7 +393,7 @@ uint32_t execDataProcOpStatus(TRegisterFile &regs, uint32_t instruction,
     default:
         // Combine ALU carry out with inherited overflow.
         status = (carryOut << PsrShift::LowCarry) |
-                 extractBit<PsrShift::Overflow>(regs.getPSR());
+                 Ag::Bin::extractBit<PsrShift::Overflow>(regs.getPSR());
         status = ALU_Logic_Flags(op2, status);
         result = op2;
         break;
@@ -401,7 +401,7 @@ uint32_t execDataProcOpStatus(TRegisterFile &regs, uint32_t instruction,
     case 14: // BIC
         // Combine ALU carry out with inherited overflow.
         status = (carryOut << PsrShift::LowCarry) |
-                 extractBit<PsrShift::Overflow>(regs.getPSR());
+                 Ag::Bin::extractBit<PsrShift::Overflow>(regs.getPSR());
         result = ALU_Bic(op1, op2, status);
         break;
 
@@ -409,12 +409,12 @@ uint32_t execDataProcOpStatus(TRegisterFile &regs, uint32_t instruction,
         result = ~op2;
         // Combine ALU carry out with inherited overflow.
         status = (carryOut << PsrShift::LowCarry) |
-                 extractBit<PsrShift::Overflow>(regs.getPSR());
+                 Ag::Bin::extractBit<PsrShift::Overflow>(regs.getPSR());
         status = ALU_Logic_Flags(result, status);
         break;
     }
 
-    GeneralRegister rd = extractEnum<GeneralRegister, 12, 4>(instruction);
+    GeneralRegister rd = Ag::Bin::extractEnum<GeneralRegister, 12, 4>(instruction);
 
     if constexpr (TRegisterFile::HasCombinedPcPsr)
     {
@@ -492,9 +492,9 @@ uint32_t execDataProcOp(TRegisterFile &regs, uint32_t instruction,
                         uint32_t op2) noexcept
 {
     uint32_t cycleCount = 1;
-    uint32_t op1 = regs.getRn(extractEnum<GeneralRegister, 16, 4>(instruction));
+    uint32_t op1 = regs.getRn(Ag::Bin::extractEnum<GeneralRegister, 16, 4>(instruction));
     uint32_t result;
-    uint8_t opCode = extractBits<uint8_t, 21, 4>(instruction);
+    uint8_t opCode = Ag::Bin::extractBits<uint8_t, 21, 4>(instruction);
     bool hasResult = true;
 
     switch (opCode)
@@ -520,15 +520,15 @@ uint32_t execDataProcOp(TRegisterFile &regs, uint32_t instruction,
         break;
 
     case 5: // ADC
-        result = op1 + op2 + extractBit<PsrShift::Carry>(regs.getPSR());
+        result = op1 + op2 + Ag::Bin::extractBit<PsrShift::Carry>(regs.getPSR());
         break;
 
     case 6: // SBC
-        result = op1 - (op2 + extractBit<PsrShift::Carry>(regs.getPSR()));
+        result = op1 - (op2 + Ag::Bin::extractBit<PsrShift::Carry>(regs.getPSR()));
         break;
 
     case 7: // RSC
-        result = op2 - (op1 + extractBit<PsrShift::Carry>(regs.getPSR()));
+        result = op2 - (op1 + Ag::Bin::extractBit<PsrShift::Carry>(regs.getPSR()));
         break;
 
     case 8: // TST
@@ -562,7 +562,7 @@ uint32_t execDataProcOp(TRegisterFile &regs, uint32_t instruction,
 
     if (hasResult)
     {
-        GeneralRegister rd = extractEnum<GeneralRegister, 12, 4>(instruction);
+        GeneralRegister rd = Ag::Bin::extractEnum<GeneralRegister, 12, 4>(instruction);
 
         cycleCount |= regs.setRn(rd, result);
     }
@@ -590,18 +590,18 @@ uint32_t execMultiply(TRegisterFile &regs, uint32_t instruction) noexcept
     // Note: The use of getR[snm]() doesn't match the instruction, but is
     // correct for the handling of R15.
     uint32_t cycleCount = 1;
-    uint32_t rmValue = regs.getRs(extractEnum<GeneralRegister, 0, 4>(instruction));
-    uint32_t rsValue = regs.getRn(extractEnum<GeneralRegister, 8, 4>(instruction));
+    uint32_t rmValue = regs.getRs(Ag::Bin::extractEnum<GeneralRegister, 0, 4>(instruction));
+    uint32_t rsValue = regs.getRn(Ag::Bin::extractEnum<GeneralRegister, 8, 4>(instruction));
     uint32_t result;
 
     // Inherit the C and V status flags.
-    uint8_t status = extractBits<uint8_t, PsrShift::Status, 2>(regs.getPSR());
+    uint8_t status = Ag::Bin::extractBits<uint8_t, PsrShift::Status, 2>(regs.getPSR());
 
     if (instruction & 0x200000)
     {
         // Its multiply with accumulate.
         result = ALU_Mla(rmValue, rsValue,
-                         regs.getRm(extractEnum<GeneralRegister, 12, 4>(instruction)),
+                         regs.getRm(Ag::Bin::extractEnum<GeneralRegister, 12, 4>(instruction)),
                          status);
     }
     else
@@ -609,7 +609,7 @@ uint32_t execMultiply(TRegisterFile &regs, uint32_t instruction) noexcept
         result = ALU_Mul(rmValue, rsValue, status);
     }
 
-    GeneralRegister rd = extractEnum<GeneralRegister, 16, 4>(instruction);
+    GeneralRegister rd = Ag::Bin::extractEnum<GeneralRegister, 16, 4>(instruction);
 
     // R15 is protected from update.
     if (rd != GeneralRegister::R15)
@@ -625,7 +625,7 @@ uint32_t execMultiply(TRegisterFile &regs, uint32_t instruction) noexcept
 
     // Simulate the timing of the Booth's multiplier.
     int32_t msb;
-    if (Bin::bitScanReverse(rmValue, msb))
+    if (Ag::Bin::bitScanReverse(rmValue, msb))
     {
         cycleCount += (msb / 2);
     }
@@ -646,16 +646,16 @@ uint32_t execLongMultiply(TRegisterFile &regs, uint32_t instruction) noexcept
 {
     // Given use or R15 is UNPREDICTABLE, we'll assume it gets the PC portion
     // in the unlikely event a long multiply is performed in 26-bit mode.
-    uint32_t rmValue = regs.getRn(extractEnum<GeneralRegister, 0, 4>(instruction));
-    uint32_t rsValue = regs.getRn(extractEnum<GeneralRegister, 8, 4>(instruction));
-    GeneralRegister rdLo = extractEnum<GeneralRegister, 12, 4>(instruction);
-    GeneralRegister rdHi = extractEnum<GeneralRegister, 16, 4>(instruction);
+    uint32_t rmValue = regs.getRn(Ag::Bin::extractEnum<GeneralRegister, 0, 4>(instruction));
+    uint32_t rsValue = regs.getRn(Ag::Bin::extractEnum<GeneralRegister, 8, 4>(instruction));
+    GeneralRegister rdLo = Ag::Bin::extractEnum<GeneralRegister, 12, 4>(instruction);
+    GeneralRegister rdHi = Ag::Bin::extractEnum<GeneralRegister, 16, 4>(instruction);
     LongWord result;
 
     // Inherit the C and V status flags.
-    uint8_t status = extractBits<uint8_t, PsrShift::Status, 2>(regs.getPSR());
+    uint8_t status = Ag::Bin::extractBits<uint8_t, PsrShift::Status, 2>(regs.getPSR());
 
-    switch (extractBits<uint8_t, 21, 2>(instruction))
+    switch (Ag::Bin::extractBits<uint8_t, 21, 2>(instruction))
     {
     case 0x00: // UMULL
         status = ALU_Umull(result, rsValue, rmValue, status);
@@ -741,7 +741,7 @@ uint32_t execBranch(TRegisterFile &regs, uint32_t instruction) noexcept
     return 3 | ExecResult::FlushPipeline;
 }
 
-}} // namespace Ag::Arm
+}} // namespace Mo::Arm
 
 #endif // Header guard
 ////////////////////////////////////////////////////////////////////////////////

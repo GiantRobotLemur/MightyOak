@@ -18,24 +18,13 @@
 #include "Parser.hpp"
 #include "StatementListNode.hpp"
 
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
-
-namespace Ag {
+namespace Mo {
 
 //! @brief A namespace containing the tools required to assemble and disassemble
 //! ARM machine code.
 namespace Asm {
 
 namespace {
-////////////////////////////////////////////////////////////////////////////////
-// Local Data Types
-////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////
-// Local Data
-////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////
 // Local Functions
@@ -55,7 +44,7 @@ ObjectCode assemble(const Options &options, ParseContext &context)
     return statementList.assemble(context.getMessages());
 }
 
-} // TED
+} // Anonymous namespace
 
 ////////////////////////////////////////////////////////////////////////////////
 // Class Method Definitions
@@ -68,10 +57,10 @@ ObjectCode assemble(const Options &options, ParseContext &context)
 //! assembly process.
 //! @returns An object containing the assembled machine code. The object will be
 //! in an empty state if assembly failed.
-ObjectCode assembleFile(const String &filePath, const Options &assemblyOptions,
+ObjectCode assembleFile(const Ag::String &filePath, const Options &assemblyOptions,
                         Messages &messages)
 {
-    Fs::Path primaryPath(filePath);
+    Ag::Fs::Path primaryPath(filePath);
     VisitedSourceSet visitedFiles;
 
     ParseContext context(visitedFiles,
@@ -80,7 +69,7 @@ ObjectCode assembleFile(const String &filePath, const Options &assemblyOptions,
                          messages);
 
     ObjectCode result;
-    String error;
+    Ag::String error;
 
     // Attempt to open the initial input file.
     if (context.tryBegin(getStatementLexer(), error))
@@ -105,7 +94,7 @@ ObjectCode assembleFile(const String &filePath, const Options &assemblyOptions,
 //! assembly process.
 //! @returns An object containing the assembled machine code. The object will be
 //! in an empty state if assembly failed.
-ObjectCode assembleText(const String &sourceCode, const Options &assemblyOptions,
+ObjectCode assembleText(const Ag::String &sourceCode, const Options &assemblyOptions,
                         Messages &messages)
 {
     VisitedSourceSet visitedSources;
@@ -114,7 +103,7 @@ ObjectCode assembleText(const String &sourceCode, const Options &assemblyOptions
                          messages);
 
     ObjectCode result;
-    String error;
+    Ag::String error;
 
     // Attempt to get the initial input text buffer.
     if (context.tryBegin(getStatementLexer(), error))
@@ -131,10 +120,7 @@ ObjectCode assembleText(const String &sourceCode, const Options &assemblyOptions
 
     return result;
 }
-////////////////////////////////////////////////////////////////////////////////
-// Global Function Definitions
-////////////////////////////////////////////////////////////////////////////////
 
-}} // namespace Ag::Asm
+}} // namespace Mo::Asm
 ////////////////////////////////////////////////////////////////////////////////
 

@@ -12,7 +12,7 @@
 #define __ASM_TOOLS_REGISTER_LIST_NODE_HPP__
 
 ////////////////////////////////////////////////////////////////////////////////
-// Dependant Header Files
+// Dependent Header Files
 ////////////////////////////////////////////////////////////////////////////////
 #include <memory>
 #include <utility>
@@ -21,16 +21,8 @@
 #include "BaseSyntaxNode.hpp"
 #include "ExpressionNode.hpp"
 
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
-
-namespace Ag {
+namespace Mo {
 namespace Asm {
-
-////////////////////////////////////////////////////////////////////////////////
-// Data Type Declarations
-////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////
 // Class Declarations
@@ -45,10 +37,10 @@ public:
     struct RegisterRange
     {
         Location At;
-        String First;
-        String Last;
+        Ag::String First;
+        Ag::String Last;
 
-        RegisterRange(const Location &at, string_cref_t symbol);
+        RegisterRange(const Location &at, Ag::string_cref_t symbol);
     };
 
     using SymbolRangeCollection = std::vector<RegisterRange>;
@@ -60,13 +52,11 @@ public:
     // Accessors
     const SymbolRangeCollection &getRanges() const;
 
-    // Operations
-
     // Overrides
-     virtual bool isComplete() const override;
-     virtual bool isValid() const override;
-     virtual ISyntaxNode *applyToken(ParseContext &context, const Token &token) override;
-     virtual ISyntaxNode *applyNode(ParseContext &context, ISyntaxNode *childNode) override;
+    virtual bool isComplete() const override;
+    virtual bool isValid() const override;
+    virtual ISyntaxNode *applyToken(ParseContext &context, const Token &token) override;
+    virtual ISyntaxNode *applyNode(ParseContext &context, ISyntaxNode *childNode) override;
     virtual void recover(ParseContext &context, ISyntaxNode *node) override;
 private:
     // Internal Types
@@ -82,22 +72,12 @@ private:
         Complete,
     };
 
-    // Internal Functions
-
     // Internal Fields
     SymbolRangeCollection _ranges;
     State _state;
 };
 
-////////////////////////////////////////////////////////////////////////////////
-// Function Declarations
-////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////
-// Templates
-////////////////////////////////////////////////////////////////////////////////
-
-}} // namespace Ag::Asm
+}} // namespace Mo::Asm
 
 #endif // Header guard
 ////////////////////////////////////////////////////////////////////////////////

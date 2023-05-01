@@ -906,7 +906,7 @@ StackTracePrivate *resolveStackTrace(const ActivationRecord *records, size_t cou
     return packStackTrace(elements, modules, stringTable);
 }
 
-} // TED
+} // Anonymous namespace
 
 ////////////////////////////////////////////////////////////////////////////////
 // Class Method Definitions

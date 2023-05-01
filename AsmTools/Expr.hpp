@@ -12,7 +12,7 @@
 #define __ASM_TOOLS_EXPR_HPP__
 
 ////////////////////////////////////////////////////////////////////////////////
-// Dependant Header Files
+// Dependent Header Files
 ////////////////////////////////////////////////////////////////////////////////
 #include <memory>
 #include <vector>
@@ -23,17 +23,8 @@
 
 #include "Value.hpp"
 
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
-
-namespace Ag {
+namespace Mo {
 namespace Asm {
-
-////////////////////////////////////////////////////////////////////////////////
-// Data Type Declarations
-////////////////////////////////////////////////////////////////////////////////
-
 
 ////////////////////////////////////////////////////////////////////////////////
 // Class Declarations
@@ -52,7 +43,7 @@ public:
     //! @param[out] value Receives the value of the symbol if one was found.
     //! @retval true A value was defined for the named symbol.
     //! @retval false No value was defined for the named symbol.
-    virtual bool tryLookupSymbol(string_cref_t &id, Value &value) const = 0;
+    virtual bool tryLookupSymbol(Ag::string_cref_t &id, Value &value) const = 0;
 
     //! @brief Gets the offset of the instruction currently being assembled
     //! from the beginning of the object code.
@@ -90,7 +81,7 @@ public:
     //! @retval true The constant value was successfully evaluated.
     //! @retval false An error occurred during evaluation, a message was returned.
     virtual bool tryConstantEvaluate(Value &result,
-                                     string_ref_t error) const = 0;
+                                     Ag::string_ref_t error) const = 0;
 
     //! @brief Attempts to evaluate the expression fragment in a given context.
     //! @param[in] context The context in which the expression should be evaluated.
@@ -99,7 +90,7 @@ public:
     //! @retval true The expression was successfully evaluated.
     //! @retval false An error occurred during evaluation, a message was returned.
     virtual bool tryEvaluate(const IEvalContext *context, Value &result,
-                             string_ref_t error) const = 0;
+                             Ag::string_ref_t error) const = 0;
 };
 
 using IExprPtr = IExpr *;
@@ -134,9 +125,9 @@ public:
     // Overrides
     virtual bool isConstant() const override;
     virtual bool tryConstantEvaluate(Value &result,
-                                     string_ref_t error) const override;
+                                     Ag::string_ref_t error) const override;
     virtual bool tryEvaluate(const IEvalContext *context, Value &result,
-                             string_ref_t error) const override;
+                             Ag::string_ref_t error) const override;
 private:
     // Internal Fields
     Value _value;
@@ -146,18 +137,18 @@ private:
 class SymbolExpr : public BaseExpr
 {
 public:
-    SymbolExpr(const Location &at, string_cref_t id);
+    SymbolExpr(const Location &at, Ag::string_cref_t id);
     virtual ~SymbolExpr() = default;
 
     // Overrides
     virtual bool isConstant() const override;
     virtual bool tryConstantEvaluate(Value &result,
-                                     string_ref_t error) const override;
+                                     Ag::string_ref_t error) const override;
     virtual bool tryEvaluate(const IEvalContext *context, Value &result,
-                             string_ref_t error) const override;
+                             Ag::string_ref_t error) const override;
 private:
     // Internal Fields
-    String _id;
+    Ag::String _id;
 };
 
 //! @brief Represents the current assembly address in an expression.
@@ -170,9 +161,9 @@ public:
     // Overrides
     virtual bool isConstant() const override;
     virtual bool tryConstantEvaluate(Value &result,
-                                     string_ref_t error) const override;
+                                     Ag::string_ref_t error) const override;
     virtual bool tryEvaluate(const IEvalContext *context, Value &result,
-                             string_ref_t error) const override;
+                             Ag::string_ref_t error) const override;
 };
 
 //! @brief Represents the application of a unary operator to a sub-expression.
@@ -180,7 +171,7 @@ class UnaryOpExpr : public BaseExpr
 {
 public:
     // Public Types
-    typedef Value (*Fn)(const Value &operand, string_ref_t error);
+    typedef Value (*Fn)(const Value &operand, Ag::string_ref_t error);
 
 private:
     // Construction/Destruction
@@ -195,9 +186,9 @@ public:
     // Overrides
     virtual bool isConstant() const override;
     virtual bool tryConstantEvaluate(Value &result,
-                                     string_ref_t error) const override;
+                                     Ag::string_ref_t error) const override;
     virtual bool tryEvaluate(const IEvalContext *context, Value &result,
-                             string_ref_t error) const override;
+                             Ag::string_ref_t error) const override;
 private:
     // Internal Fields
     IExprUPtr _childExpr;
@@ -211,7 +202,7 @@ class BinaryOpExpr : public BaseExpr
 public:
     // Public Types
     typedef Value (*Fn)(Value &lhsOperand, Value &rhsOperand,
-                        string_ref_t error);
+                        Ag::string_ref_t error);
 private:
     // Construction/Destruction
     BinaryOpExpr(const Location &at, Fn opFn, IExprPtr lhsChildExpr, IExprPtr rhsChildExpr);
@@ -232,9 +223,9 @@ public:
     // Overrides
     virtual bool isConstant() const override;
     virtual bool tryConstantEvaluate(Value &result,
-                                     string_ref_t error) const override;
+                                     Ag::string_ref_t error) const override;
     virtual bool tryEvaluate(const IEvalContext *context, Value &result,
-                             string_ref_t error) const override;
+                             Ag::string_ref_t error) const override;
 private:
     // Internal Fields
     IExprUPtr _lhsExpr;
@@ -264,11 +255,11 @@ struct ExprToEvaluate
 ////////////////////////////////////////////////////////////////////////////////
 IExprPtr constantOptimise(IExprPtr expr);
 bool tryEvaluateOrdinal(IEvalContext *context, IExprPtr expr,
-                        uint32_t &ordinal, string_ref_t error);
+                        uint32_t &ordinal, Ag::string_ref_t error);
 bool tryEvaluateCoreRegister(IEvalContext *context, IExprPtr expr,
-                             CoreRegister &reg, string_ref_t error);
+                             CoreRegister &reg, Ag::string_ref_t error);
 bool tryEvaluateInteger(IEvalContext *context, IExprPtr expr,
-                        int32_t &value, string_ref_t error);
+                        int32_t &value, Ag::string_ref_t error);
 bool tryEvaluateExpressions(const ExprToEvaluate *exprsToEval,
                             uint32_t *values, size_t count, IEvalContext *context,
                             Messages &log, bool isFinalPass);
@@ -293,8 +284,7 @@ bool tryEvaluateExpressionArray(const ExprToEvaluate(&exprsToEval)[ExprCount],
     return isOK;
 }
 
-
-}} // namespace Ag::Asm
+}} // namespace Mo::Asm
 
 #endif // Header guard
 ////////////////////////////////////////////////////////////////////////////////

@@ -20,7 +20,7 @@
 #include "SimpleInstructionStatements.hpp"
 #include "StatementListNode.hpp"
 
-namespace Ag {
+namespace Mo {
 namespace Asm {
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -57,7 +57,7 @@ public:
         {
             // The new object code cannot be appended to the end of the
             // current block.
-            throw ArgumentException("objectCode");
+            throw Ag::ArgumentException("objectCode");
         }
 
         size_t sizeHint = _objectCode.size() + objectCode.getSize();
@@ -87,7 +87,7 @@ public:
         {
             // The objectCode object will not place the code we have at the
             // correct location.
-            throw ArgumentException("objectCode");
+            throw Ag::ArgumentException("objectCode");
         }
 
         // Simply copy the already assembled object code.
@@ -170,7 +170,7 @@ public:
         {
             // The objectCode object will not place the code we have at the
             // correct location.
-            throw ArgumentException("objectCode");
+            throw Ag::ArgumentException("objectCode");
         }
 
         // Process the deferred statements to produce object code.
@@ -202,9 +202,9 @@ public:
             }
             else
             {
-                throw OperationException("One or more deferred assembly "
-                                         "statements did not produce the amount "
-                                         "of object code expected.");
+                throw Ag::OperationException("One or more deferred assembly "
+                                             "statements did not produce the "
+                                             "amount of object code expected.");
             }
         }
     }
@@ -250,7 +250,7 @@ ISyntaxNode *EmptyStatement::applyNode(ParseContext & /* context */,
 void EmptyStatement::recover(ParseContext & /* context */,
                              ISyntaxNode *node)
 {
-    safeDelete(node);
+    Ag::safeDelete(node);
 }
 
 // Inherited from StatementNode.
@@ -400,7 +400,7 @@ ISyntaxNode *StatementListNode::applyNode(ParseContext &context,
     StatementNode *statementNode = nullptr;
     ISyntaxNode *result = this;
 
-    if (tryCast(childNode, statementNode))
+    if (Ag::tryCast(childNode, statementNode))
     {
         if (statementNode->isComplete() && statementNode->isValid())
         {
@@ -414,7 +414,7 @@ ISyntaxNode *StatementListNode::applyNode(ParseContext &context,
 // Inherited from ISyntaxNode.
 void StatementListNode::recover(ParseContext & /* context */, ISyntaxNode *node)
 {
-    safeDelete(node);
+    Ag::safeDelete(node);
 }
 
 //! @brief Calculates the offset of the next byte of object code after the last
@@ -520,7 +520,7 @@ void StatementListNode::processStatementNode(ParseContext &context,
             // Add the label definition to the current context.
             LabelStatement *label = static_cast<LabelStatement *>(statement.get());
             IScopedContext *currentContext = getScope();
-            String existingScope;
+            Ag::String existingScope;
             Location existingLocation;
 
             // Determine if the label is already defined.
@@ -528,10 +528,12 @@ void StatementListNode::processStatementNode(ParseContext &context,
                                                 existingScope,
                                                 existingLocation))
             {
-                String message;
-                message = String::format("Symbol '{0}' was already defined at {1}({2})",
-                                         { label->getID(), existingLocation.FileName,
-                                           existingLocation.LineNo });
+                Ag::String message =
+                    Ag::String::format("Symbol '{0}' was already "
+                                       "defined at {1}({2})",
+                                       { label->getID(),
+                                         existingLocation.FileName,
+                                         existingLocation.LineNo });
 
                 context.getMessages().appendError(label->getSourcePosition(),
                                                   message);
@@ -548,7 +550,7 @@ void StatementListNode::processStatementNode(ParseContext &context,
                 }
                 else
                 {
-                    String error;
+                    Ag::String error;
                     Value result;
 
                     if (label->getValueExpr()->tryEvaluate(currentContext,
@@ -576,7 +578,7 @@ void StatementListNode::processStatementNode(ParseContext &context,
             IncludeStatement *include = nullptr;
 
             if ((context.getInputSource() != nullptr) &&
-                tryCast(statement.get(), include))
+                Ag::tryCast(statement.get(), include))
             {
                 // Parse the specified file.
                 processIncludedFile(context,
@@ -621,7 +623,7 @@ void StatementListNode::processStatementNode(ParseContext &context,
 //! @param[in] includedFrom The location of the include directive in the
 //! source code being parsed.
 void StatementListNode::processIncludedFile(ParseContext &parentContext,
-                                            string_cref_t inputSourceId,
+                                            Ag::string_cref_t inputSourceId,
                                             const Location &includedFrom)
 {
     // Parse the specified file.
@@ -629,7 +631,7 @@ void StatementListNode::processIncludedFile(ParseContext &parentContext,
     Messages &message = parentContext.getMessages();
 
     IInputSetUPtr includedInput;
-    String errorOrId;
+    Ag::String errorOrId;
 
     if ((currentInput != nullptr) &&
         currentInput->tryGetInputSource(inputSourceId,
@@ -643,7 +645,7 @@ void StatementListNode::processIncludedFile(ParseContext &parentContext,
         if (visitedSources.find(errorOrId) == visitedSources.end())
         {
             // Create a context to parse the included file.
-            String error;
+            Ag::String error;
             ParseContext nestedContext(visitedSources,
                                        std::move(includedInput),
                                        message);
@@ -737,13 +739,13 @@ IScopedContext *StatementListNode::getScope()
 {
     if (_scopeStack.empty() || !_scopeStack.back())
     {
-        throw OperationException("Attempted to get the current assembly scope "
-                                 "when the stack was empty.");
+        throw Ag::OperationException("Attempted to get the current assembly "
+                                     "scope when the stack was empty.");
     }
 
     return _scopeStack.back().get();
 }
 
-}} // namespace Ag::Asm
+}} // namespace Mo::Asm
 ////////////////////////////////////////////////////////////////////////////////
 

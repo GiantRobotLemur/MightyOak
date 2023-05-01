@@ -315,7 +315,7 @@ GTEST_TEST(UnicodeTests, FromUtf16)
     EXPECT_TRUE(hasError);
 }
 
-} // TED
+} // Anonymous namespace
 
 }} // namespace Ag::Utf
 ////////////////////////////////////////////////////////////////////////////////

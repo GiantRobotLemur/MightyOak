@@ -22,7 +22,7 @@
 
 #include "TestConstraints.hpp"
 
-namespace Ag {
+namespace Mo {
 namespace Arm {
 
 namespace {
@@ -78,9 +78,9 @@ struct ElementInfo
 
     ElementInfo(SystemElement element, SystemRegister reg) :
         Element(element),
-        OrdinalMin(toScalar(reg)),
-        OrdinalMax(toScalar(reg)),
-        OrdinalOffset(toScalar(reg))
+        OrdinalMin(Ag::toScalar(reg)),
+        OrdinalMax(Ag::toScalar(reg)),
+        OrdinalOffset(Ag::toScalar(reg))
     {
     }
 };
@@ -90,11 +90,11 @@ using ElementInfoIndex = std::unordered_map<std::string_view, ElementInfo>;
 ////////////////////////////////////////////////////////////////////////////////
 // Local Functions
 ////////////////////////////////////////////////////////////////////////////////
-const EnumInfo<SystemRegister> &getSystemRegisterType()
+const Ag::EnumInfo<SystemRegister> &getSystemRegisterType()
 {
-    using Item = EnumSymbol<SystemRegister>;
+    using Item = Ag::EnumSymbol<SystemRegister>;
 
-    static EnumInfo<SystemRegister> instance({
+    static Ag::EnumInfo<SystemRegister> instance({
         Item(SystemRegister::PC, "PC", "Program Counter"),
         Item(SystemRegister::CPSR, "CPSR", "Current Program Status Register"),
         Item(SystemRegister::SPSR, "SPSR", "Saved Program Status Register"),
@@ -144,7 +144,7 @@ bool tryProcessConstraint(ConstraintCollection &collection,
             if (sysRegType.tryParse(key, reg))
             {
                 element = SystemElement::SystemRegister;
-                elementOrdinal = toScalar(reg);
+                elementOrdinal = Ag::toScalar(reg);
             }
         }
     }
@@ -177,7 +177,7 @@ bool tryProcessConstraint(ConstraintCollection &collection,
     uint32_t elementValue = 0;
 
     if ((element == SystemElement::SystemRegister) &&
-        (elementOrdinal == toScalar(SystemRegister::ProcessorMode)))
+        (elementOrdinal == Ag::toScalar(SystemRegister::ProcessorMode)))
     {
         if (parsed.IsScalar)
         {
@@ -191,7 +191,7 @@ bool tryProcessConstraint(ConstraintCollection &collection,
 
             if (modeInfo.tryFindSymbolIndex(parsed.SymbolValue, index))
             {
-                elementValue = toScalar(modeInfo.getSymbols().at(index).getId());
+                elementValue = Ag::toScalar(modeInfo.getSymbols().at(index).getId());
             }
             else
             {
@@ -362,15 +362,15 @@ std::string Constraint::toString() const
     text.push_back('=');
 
     if ((Location == SystemElement::SystemRegister) &&
-        (fromScalar<SystemRegister>(Index) == SystemRegister::ProcessorMode))
+        (Ag::fromScalar<SystemRegister>(Index) == SystemRegister::ProcessorMode))
     {
         const auto &modeType = getProcessorModeType();
 
-        text.append(modeType.toString(forceFromScalar<ProcessorMode>(Value)));
+        text.append(modeType.toString(Ag::forceFromScalar<ProcessorMode>(Value)));
     }
     else
     {
-        FormatInfo fmt = FormatInfo::getNeutral();
+        Ag::FormatInfo fmt = Ag::FormatInfo::getNeutral();
 
         if (Value > 9)
         {
@@ -379,7 +379,7 @@ std::string Constraint::toString() const
             text.append("0x");
         }
 
-        appendValue(fmt, text, Value);
+        Ag::appendValue(fmt, text, Value);
     }
 
     return text;
@@ -398,28 +398,28 @@ std::string Constraint::idToString() const
     {
     case SystemElement::CoreRegister:
         text.push_back('R');
-        appendValue(FormatInfo::getNeutral(), text, Index);
+        Ag::appendValue(Ag::FormatInfo::getNeutral(), text, Index);
         break;
 
     case SystemElement::CoProcessor:
         text.append("CP");
-        appendValue(FormatInfo::getNeutral(), text, Index);
+        Ag::appendValue(Ag::FormatInfo::getNeutral(), text, Index);
         break;
 
     case SystemElement::CoProcRegister:
         text.append("CP");
-        appendValue(FormatInfo::getNeutral(), text, Index);
+        Ag::appendValue(Ag::FormatInfo::getNeutral(), text, Index);
         text.append(".CR");
-        appendValue(FormatInfo::getNeutral(), text, SubIndex);
+        Ag::appendValue(Ag::FormatInfo::getNeutral(), text, SubIndex);
         break;
 
     case SystemElement::FpaRegister:
         text.push_back('F');
-        appendValue(FormatInfo::getNeutral(), text, Index);
+        Ag::appendValue(Ag::FormatInfo::getNeutral(), text, Index);
         break;
 
     case SystemElement::SystemRegister:
-        if (getSystemRegisterType().tryFindSymbolIndex(fromScalar<SystemRegister>(Index), index))
+        if (getSystemRegisterType().tryFindSymbolIndex(Ag::fromScalar<SystemRegister>(Index), index))
         {
             const auto &symbol = getSystemRegisterType().getSymbols().at(index);
 
@@ -894,6 +894,6 @@ testing::AssertionResult parseConstraints(const std::string_view &text,
     }
 }
 
-}} // namespace Ag::Arm
+}} // namespace Mo::Arm
 ////////////////////////////////////////////////////////////////////////////////
 

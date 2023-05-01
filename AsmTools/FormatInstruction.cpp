@@ -18,7 +18,7 @@
 #include "Disassembly.hpp"
 #include "FormatInstruction.hpp"
 
-namespace Ag {
+namespace Mo {
 namespace Asm {
 
 namespace {
@@ -43,13 +43,13 @@ void formatShifterOperand(FormatParams &params, const ShifterOperand &shifter,
 
         if (isNegated)
         {
-            appendValue(FormatInfo::getNeutral(), params.Builder,
-                        static_cast<int32_t>(shifter.Immediate) * -1);
+            Ag::appendValue(Ag::FormatInfo::getNeutral(), params.Builder,
+                            static_cast<int32_t>(shifter.Immediate) * -1);
         }
         else
         {
-            appendValue(FormatInfo::getNeutral(), params.Builder,
-                        shifter.Immediate);
+            Ag::appendValue(Ag::FormatInfo::getNeutral(), params.Builder,
+                            shifter.Immediate);
         }
         break;
 
@@ -74,7 +74,8 @@ void formatShifterOperand(FormatParams &params, const ShifterOperand &shifter,
         params.append(shifter.Shift);
         params.Builder.push_back(' ');
         params.Builder.push_back('#');
-        appendValue(FormatInfo::getNeutral(), params.Builder, shifter.Immediate);
+        Ag::appendValue(Ag::FormatInfo::getNeutral(),
+                        params.Builder, shifter.Immediate);
         break;
 
     case ShifterMode::RotateWithExtend:
@@ -240,7 +241,7 @@ void formatCoreMultiTransfer(FormatParams &params)
 
     if (info.Mode < MultiTransferMode::Max)
     {
-        params.Builder.append(modeText[toScalar(info.Mode)], 2);
+        params.Builder.append(modeText[Ag::toScalar(info.Mode)], 2);
     }
 
     params.Builder.push_back(' ');
@@ -258,12 +259,12 @@ void formatCoreMultiTransfer(FormatParams &params)
     while (regSet != 0)
     {
         // Get the next register in the set.
-        Bin::bitScanForward(regSet, firstReg);
+        Ag::Bin::bitScanForward(regSet, firstReg);
         lastReg = firstReg;
         regSet ^= (1u << firstReg);
 
         // Find the last register in the run.
-        while (Bin::bitScanForward(regSet, nextReg) &&
+        while (Ag::Bin::bitScanForward(regSet, nextReg) &&
                (nextReg == (lastReg + 1)))
         {
             lastReg = nextReg;
@@ -281,13 +282,13 @@ void formatCoreMultiTransfer(FormatParams &params)
 
         if (firstReg == lastReg)
         {
-            params.append(fromScalar<CoreRegister>(static_cast<uint8_t>(firstReg)));
+            params.append(Ag::fromScalar<CoreRegister>(static_cast<uint8_t>(firstReg)));
         }
         else
         {
-            params.append(fromScalar<CoreRegister>(static_cast<uint8_t>(firstReg)));
+            params.append(Ag::fromScalar<CoreRegister>(static_cast<uint8_t>(firstReg)));
             params.Builder.push_back('-');
-            params.append(fromScalar<CoreRegister>(static_cast<uint8_t>(lastReg)));
+            params.append(Ag::fromScalar<CoreRegister>(static_cast<uint8_t>(lastReg)));
         }
     }
 
@@ -328,14 +329,14 @@ void formatMoveToPsr(FormatParams &params)
     params.Builder.push_back(' ');
     params.append(info.IsCPSR ? CoreRegister::CPSR : CoreRegister::SPSR);
 
-    if (info.PsrComponents != toScalar(PsrComponent::All))
+    if (info.PsrComponents != Ag::toScalar(PsrComponent::All))
     {
         params.Builder.push_back('_');
 
-        params.appendSuffix('C', info.PsrComponents & toScalar(PsrComponent::Control));
-        params.appendSuffix('X', info.PsrComponents & toScalar(PsrComponent::Extension));
-        params.appendSuffix('S', info.PsrComponents & toScalar(PsrComponent::Status));
-        params.appendSuffix('F', info.PsrComponents & toScalar(PsrComponent::Flags));
+        params.appendSuffix('C', info.PsrComponents & Ag::toScalar(PsrComponent::Control));
+        params.appendSuffix('X', info.PsrComponents & Ag::toScalar(PsrComponent::Extension));
+        params.appendSuffix('S', info.PsrComponents & Ag::toScalar(PsrComponent::Status));
+        params.appendSuffix('F', info.PsrComponents & Ag::toScalar(PsrComponent::Flags));
     }
 
     params.appendSeparator();
@@ -349,15 +350,15 @@ void formatMoveToPsr(FormatParams &params)
         params.Builder.push_back('#');
         params.Builder.push_back('&');
 
-        FormatInfo fmt = FormatInfo::getNeutral();
+        Ag::FormatInfo fmt = Ag::FormatInfo::getNeutral();
         fmt.setRadix(16);
         fmt.setMinimumWholeDigits(2);
 
-        appendValue(fmt, params.Builder, info.SourceImmediate);
+        Ag::appendValue(fmt, params.Builder, info.SourceImmediate);
     }
 }
 
-} // TED
+} // Anonymous namespace
 
 ////////////////////////////////////////////////////////////////////////////////
 // FormatParams Member Function Definitions
@@ -429,12 +430,12 @@ void FormatParams::appendMnemonic()
         "ADR", "ALIGN",
     };
 
-    static_assert(arraySize(names) == toScalar(InstructionMnemonic::MaxMnemonic),
+    static_assert(std::size(names) == Ag::toScalar(InstructionMnemonic::MaxMnemonic),
                   "Instruction mnemonic names are out of sync with the InstructionMnemonic enumeration type.");
 
     if (Mnemonic < InstructionMnemonic::MaxMnemonic)
     {
-        Builder.append(names[toScalar(Mnemonic)]);
+        Builder.append(names[Ag::toScalar(Mnemonic)]);
     }
     else
     {
@@ -455,14 +456,14 @@ void FormatParams::appendConditionCode()
         "HS", "LO",
     };
 
-    static_assert(arraySize(codes) == toScalar(ConditionCode::Max),
+    static_assert(std::size(codes) == Ag::toScalar(ConditionCode::Max),
                   "Condition codes text is out of sync with ConditionCode enumeration definition.");
 
     // The AL (always) condition is implicit.
     if ((Condition != ConditionCode::Al) &&
         (Condition < ConditionCode::Max))
     {
-        Builder.append(codes[toScalar(Condition)], 2u);
+        Builder.append(codes[Ag::toScalar(Condition)], 2u);
     }
 }
 
@@ -470,7 +471,7 @@ void FormatParams::appendConditionCode()
 //! @param[in] offset The offset to format.
 void FormatParams::appendOffset(int32_t offset)
 {
-    FormatInfo options;
+    Ag::FormatInfo options;
 
     // Express the offset as relative to the current address, denoted by '$'.
     Builder.push_back('$');
@@ -496,7 +497,7 @@ void FormatParams::appendOffset(int32_t offset)
         options.setMinimumWholeDigits(2);
     }
 
-    appendValue(options, Builder, offset);
+    Ag::appendValue(options, Builder, offset);
 }
 
 //! @brief Appends an absolute memory address formatted as text to the
@@ -523,12 +524,12 @@ void FormatParams::appendAddress(uint32_t address)
         else
         {
             // Output the branch target as an absolute address.
-            FormatInfo options;
+            Ag::FormatInfo options;
             options.setRadix(16);
             options.setMinimumWholeDigits(6);
 
             Builder.push_back('&');
-            appendValue(options, Builder, address);
+            Ag::appendValue(options, Builder, address);
         }
     }
 }
@@ -537,7 +538,7 @@ void FormatParams::appendAddress(uint32_t address)
 //! @param[in] value The comment value to render as text.
 void FormatParams::appendComment(uint32_t value)
 {
-    FormatInfo options;
+    Ag::FormatInfo options;
 
     if (hasOption(FormatterOptions::UseDecimalComments) == false)
     {
@@ -547,7 +548,7 @@ void FormatParams::appendComment(uint32_t value)
         Builder.push_back('&');
     }
 
-    appendValue(options, Builder, value);
+    Ag::appendValue(options, Builder, value);
 }
 
 //! @brief Appends a single character to the string being built based
@@ -602,7 +603,7 @@ void FormatParams::append(CoreRegister reg)
         ids = aliasIds;
     }
 
-    Builder.append(ids[toScalar(reg)]);
+    Builder.append(ids[Ag::toScalar(reg)]);
 }
 
 //! @brief Appends the identifier of a shift operation to the string
@@ -618,7 +619,7 @@ void FormatParams::append(ShiftType shift)
 
     if (shift < ShiftType::None)
     {
-        Builder.append(types[toScalar(shift)]);
+        Builder.append(types[Ag::toScalar(shift)]);
     }
 }
 
@@ -628,7 +629,7 @@ void FormatParams::append(ShiftType shift)
 void FormatParams::append(CoProcId cpId)
 {
     Builder.append("CP");
-    appendValue(FormatInfo::getNeutral(), Builder, toScalar(cpId));
+    Ag::appendValue(Ag::FormatInfo::getNeutral(), Builder, Ag::toScalar(cpId));
 }
 
 //! @brief Appends the identifier of a co-processor register to the string
@@ -637,9 +638,8 @@ void FormatParams::append(CoProcId cpId)
 void FormatParams::append(CoProcRegister reg)
 {
     Builder.append("CR");
-    appendValue(FormatInfo::getNeutral(), Builder, toScalar(reg));
+    Ag::appendValue(Ag::FormatInfo::getNeutral(), Builder, Ag::toScalar(reg));
 }
-
 
 ////////////////////////////////////////////////////////////////////////////////
 // Global Function Definitions
@@ -770,14 +770,14 @@ bool formatInstruction(FormatParams &params)
 
     case OperationClass::CoProcDataProcessing: {
         const auto &info = params.Params->CoProcDataProcOp;
-        FormatInfo fmt = FormatInfo::getNeutral();
+        Ag::FormatInfo fmt = Ag::FormatInfo::getNeutral();
 
         params.appendMnemonic();
         params.appendConditionCode();
         params.Builder.push_back(' ');
         params.append(info.CoProcessor);
         params.appendSeparator();
-        appendValue(fmt, params.Builder, info.OpCode1);
+        Ag::appendValue(fmt, params.Builder, info.OpCode1);
         params.appendSeparator();
         params.append(info.Rd);
         params.appendSeparator();
@@ -790,14 +790,14 @@ bool formatInstruction(FormatParams &params)
 
     case OperationClass::CoProcRegisterTransfer: {
         const auto &info = params.Params->CoProcRegTransOp;
-        FormatInfo fmt = FormatInfo::getNeutral();
+        Ag::FormatInfo fmt = Ag::FormatInfo::getNeutral();
 
         params.appendMnemonic();
         params.appendConditionCode();
         params.Builder.push_back(' ');
         params.append(info.CoProcessor);
         params.appendSeparator();
-        appendValue(fmt, params.Builder, info.OpCode1);
+        Ag::appendValue(fmt, params.Builder, info.OpCode1);
         params.appendSeparator();
         params.append(info.Rd);
         params.appendSeparator();
@@ -836,6 +836,6 @@ bool formatInstruction(FormatParams &params)
     return params.Builder.empty() == false;
 }
 
-}} // namespace Ag::Asm
+}} // namespace Mo::Asm
 ////////////////////////////////////////////////////////////////////////////////
 

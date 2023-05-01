@@ -344,7 +344,7 @@ GTEST_TEST(App, ShutdownException)
     EXPECT_TRUE(specimen.didExecuteRun());
 }
 
-} // TED
+} // Anonymous namespace
 
 } // namespace Ag
 ////////////////////////////////////////////////////////////////////////////////

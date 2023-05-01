@@ -12,13 +12,13 @@
 #define __ASM_TOOLS_INSTRUCTION_INFO_HPP__
 
 ////////////////////////////////////////////////////////////////////////////////
-// Dependant Header Files
+// Dependent Header Files
 ////////////////////////////////////////////////////////////////////////////////
 #include <cstdint>
 
 #include "Ag/Core/String.hpp"
 
-namespace Ag {
+namespace Mo {
 namespace Asm {
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -123,7 +123,6 @@ enum class ConditionCode : uint8_t
     Nv,
     Hs, // Does not correspond with the actual condition code value (2).
     Lo, // Does not correspond with the actual condition code value (3).
-
 
     Max, // Only used for bounds checking.
 };
@@ -259,7 +258,6 @@ enum class InstructionMnemonic : uint8_t
     Cnf,
     Cnfe,
 
-
     // Pseudo instructions and directives.
     Adr,
     Align,
@@ -374,8 +372,6 @@ enum class OperationClass : uint8_t
 
     Max,
 };
-
-
 
 ////////////////////////////////////////////////////////////////////////////////
 // Class Declarations
@@ -772,14 +768,14 @@ public:
 
     // Operations
     bool assemble(uint32_t &instruction, uint32_t loadAddr,
-                  string_ref_t error) const;
+                  Ag::string_ref_t error) const;
     size_t assemble(uint32_t *instructions, uint32_t loadAddr, size_t maxCount,
-                    string_ref_t error) const;
+                    Ag::string_ref_t error) const;
     bool disassemble(uint32_t instruction, uint32_t loadAddress, uint32_t flags = 0x3F);
     uint8_t disassemble(const uint32_t *instructions, uint8_t count,
                         uint32_t loadAddress, uint32_t flags = 0x3F);
-    String toString(const FormatterOptions *options = nullptr) const;
-    String toString(uint32_t loadAddr, uint32_t formatterOptionsFlags) const;
+    Ag::String toString(const FormatterOptions *options = nullptr) const;
+    Ag::String toString(uint32_t loadAddr, uint32_t formatterOptionsFlags) const;
 
     void clear();
     void reset(InstructionMnemonic mnemonic, OperationClass opClass,
@@ -795,7 +791,7 @@ private:
     OperationClass _opClass;
 };
 
-}} // namespace Ag::Asm
+}} // namespace Mo::Asm
 
 #endif // Header guard
 ////////////////////////////////////////////////////////////////////////////////

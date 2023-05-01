@@ -12,7 +12,7 @@
 #define __ASM_TOOLS_TEST_TOOLS_HPP__
 
 ////////////////////////////////////////////////////////////////////////////////
-// Dependant Header Files
+// Dependent Header Files
 ////////////////////////////////////////////////////////////////////////////////
 #include <gtest/gtest.h>
 
@@ -27,7 +27,7 @@
 //! @brief A macro which captures the current source code location.
 #define LOC TestLocation(__FILE__, __LINE__)
 
-namespace Ag {
+namespace Mo {
 namespace Asm {
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -78,11 +78,11 @@ public:
 
     // Accessors
     const TestLocation &getLocation() const;
-    string_cref_t getName() const;
+    Ag::string_cref_t getName() const;
 private:
     // Internal Fields
     TestLocation _loc;
-    String _name;
+    Ag::String _name;
 };
 
 //! @brief The base class for dynamically registered tests.
@@ -94,10 +94,10 @@ public:
     virtual ~BaseTestFixture() = default;
 
     // Accessors
-    string_cref_t getSuiteName() const;
+    Ag::string_cref_t getSuiteName() const;
 private:
     // Internal Fields
-    String _suiteName;
+    Ag::String _suiteName;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -150,7 +150,7 @@ void registerTestPoints(const char *suiteName, const TPoint *testPoints, size_t 
     }
 }
 
-}} // namespace Ag::Asm
+}} // namespace Mo::Asm
 
 #endif // Header guard
 ////////////////////////////////////////////////////////////////////////////////

@@ -13,37 +13,18 @@
 ////////////////////////////////////////////////////////////////////////////////
 #include "AsmTools/Options.hpp"
 
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
-
-namespace Ag {
+namespace Mo {
 namespace Asm {
 
-namespace {
 ////////////////////////////////////////////////////////////////////////////////
-// Local Data Types
-////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////
-// Local Data
-////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////
-// Local Functions
-////////////////////////////////////////////////////////////////////////////////
-
-} // TED
-
-////////////////////////////////////////////////////////////////////////////////
-// Class Method Definitions
+// Options Member Definitions
 ////////////////////////////////////////////////////////////////////////////////
 //! @brief Constructs a default set of assembly options.
 Options::Options() :
     _loadAddress(0x0000),
     _instructionSet(InstructionSet::ArmV2a),
-    _extensions(toScalar(ArchExtensionEnum::None)),
-    _flags(toScalar(AssemblyFlagsEnum::None))
+    _extensions(Ag::toScalar(ArchExtensionEnum::None)),
+    _flags(Ag::toScalar(AssemblyFlagsEnum::None))
 {
     _includePaths.reserve(16);
 }
@@ -71,7 +52,7 @@ ArchExtensions Options::getArchitectureExtensions() const
 //! @param[in] extension The extension to enable.
 void Options::addArchitecureExtension(ArchExtensionEnum extension)
 {
-    _extensions |= toScalar(extension);
+    _extensions |= Ag::toScalar(extension);
 }
 
 //! @brief Queries whether an architecture extension is enabled.
@@ -80,7 +61,7 @@ void Options::addArchitecureExtension(ArchExtensionEnum extension)
 //! @retval false The extension was disabled.
 bool Options::hasArchitectureExtension(ArchExtensionEnum extension) const
 {
-    return (_extensions & toScalar(extension)) != 0;
+    return (_extensions & Ag::toScalar(extension)) != 0;
 }
 
 //! @brief Gets the address the code expected to be loaded to if not position
@@ -110,19 +91,19 @@ AssemblyFlags Options::getFlags() const
 //! @retval false The option is disabled.
 bool Options::hasFlag(AssemblyFlagsEnum flag) const
 {
-    return (_flags & toScalar(flag)) != 0;
+    return (_flags & Ag::toScalar(flag)) != 0;
 }
 
 //! @brief Sets one of the binary options which affect the assembly process.
 //! @param[in] flag The option to set.
 void Options::setFlag(AssemblyFlagsEnum flag)
 {
-    _flags |= toScalar(flag);
+    _flags |= Ag::toScalar(flag);
 }
 
 //! @brief Gets the set of all folders to be searched for include files
 //! referenced in the source code.
-const std::vector<Fs::Path> &Options::getIncludePaths() const
+const std::vector<Ag::Fs::Path> &Options::getIncludePaths() const
 {
     return _includePaths;
 }
@@ -132,7 +113,7 @@ const std::vector<Fs::Path> &Options::getIncludePaths() const
 //! @param[in] path The path to add.
 //! @throws Fs::InvalidFilePathException If the structure of the path is invalid.
 //! @throws Fs::InvalidPathElementException If an element in the path is invalid.
-void Options::addIncludePath(string_cref_t path)
+void Options::addIncludePath(Ag::string_cref_t path)
 {
     _includePaths.emplace_back(path);
 }
@@ -141,9 +122,9 @@ void Options::addIncludePath(string_cref_t path)
 // Global Function Definitions
 ////////////////////////////////////////////////////////////////////////////////
 //! @brief Gets static metadata for the InstructionSet enumeration type.
-const EnumInfo<InstructionSet> &getInstructionSetType()
+const Ag::EnumInfo<InstructionSet> &getInstructionSetType()
 {
-    static const EnumInfo<InstructionSet> instance({
+    static const Ag::EnumInfo<InstructionSet> instance({
         { InstructionSet::ArmV2, "ArmV2", "ARM v2", "The original ARM 2/250 processor with no cache." },
         { InstructionSet::ArmV2a, "ArmV2a", "ARM v2a", "The ARM 2 + cache, i.e. the ARM 3." },
         { InstructionSet::ArmV3, "ArmV3", "ARM v3", "The version 3 architecture implemented by ARM 610 and ARM 710." },
@@ -157,9 +138,9 @@ const EnumInfo<InstructionSet> &getInstructionSetType()
 }
 
 //! @brief Gets static metadata for the ArchExtensionEnum flag enumeration.
-const EnumInfo<ArchExtensionEnum> &getArchExtensionsType()
+const Ag::EnumInfo<ArchExtensionEnum> &getArchExtensionsType()
 {
-    static const EnumInfo<ArchExtensionEnum> instance({
+    static const Ag::EnumInfo<ArchExtensionEnum> instance({
         { ArchExtensionEnum::None, "None", "None", "No extensions enabled." },
         { ArchExtensionEnum::Fpa, "Fpa", "FPA", "The Floating Point Accelerator used with ARM v2 and v3." },
         { ArchExtensionEnum::VfpV1, "VfpV1", "VFP v1", "The version 1 Vector Floating Point extension." },
@@ -175,7 +156,6 @@ const EnumInfo<ArchExtensionEnum> &getArchExtensionsType()
     return instance;
 }
 
-
-}} // namespace Ag::Asm
+}} // namespace Mo::Asm
 ////////////////////////////////////////////////////////////////////////////////
 

@@ -16,7 +16,7 @@
 #include "LexicalAnalysers.hpp"
 #include "ParseContext.hpp"
 
-namespace Ag {
+namespace Mo {
 namespace Asm {
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -82,7 +82,7 @@ ISyntaxNode *LabelNode::applyNode(ParseContext &context, ISyntaxNode *childNode)
     switch (_state)
     {
     case State::AfterSymbol:
-        if (tryCast(childNode, expr))
+        if (Ag::tryCast(childNode, expr))
         {
             // The label was associated with a value.
             _valueExpr.reset(expr);
@@ -103,7 +103,7 @@ ISyntaxNode *LabelNode::applyNode(ParseContext &context, ISyntaxNode *childNode)
 void LabelNode::recover(ParseContext &context, ISyntaxNode *node)
 {
     restoreLexicalState(context);
-    safeDelete(node);
+    Ag::safeDelete(node);
 
     context.recover(TokenClass::StatementTerminator);
 }
@@ -137,7 +137,7 @@ Statement *LabelNode::compile(Messages &output) const
 //! @param[in] at The location at which the label was defined.
 //! @param[in] value The optional expression evaluating to a value to associate
 //! with the label.
-LabelStatement::LabelStatement(string_cref_t id, const Location &at,
+LabelStatement::LabelStatement(Ag::string_cref_t id, const Location &at,
                                IExprUPtr &&value) :
     Statement(StatementType::Label),
     _at(at),
@@ -147,7 +147,7 @@ LabelStatement::LabelStatement(string_cref_t id, const Location &at,
 }
 
 //! @brief Gets the identifier of the label.
-string_cref_t LabelStatement::getID() const { return _id; }
+Ag::string_cref_t LabelStatement::getID() const { return _id; }
 
 //! @brief Gets the location in source code at which the label was defined.
 const Location &LabelStatement::getSourcePosition() const { return _at; }
@@ -161,6 +161,6 @@ IExprCPtr LabelStatement::getValueExpr() const
     return _valueExpr.get();
 }
 
-}} // namespace Ag::Asm
+}} // namespace Mo::Asm
 ////////////////////////////////////////////////////////////////////////////////
 

@@ -18,7 +18,7 @@
 #include "SymbolTable.hpp"
 #include "SyntaxNode.hpp"
 
-namespace Ag {
+namespace Mo {
 namespace Asm {
 
 namespace {
@@ -117,7 +117,7 @@ ISyntaxNode *ExpressionContainer::applyNode(ParseContext & /* context */,
 {
     ExpressionNodePtr childExpr = nullptr;
 
-    if (!_expr && tryCast(childNode, childExpr))
+    if (!_expr && Ag::tryCast(childNode, childExpr))
     {
         _expr.reset(childExpr);
         return this;
@@ -183,7 +183,7 @@ BaseTestPoint::BaseTestPoint(const TestLocation &loc, const char *name) :
 const TestLocation &BaseTestPoint::getLocation() const { return _loc; }
 
 //! @brief Gets the name of the test.
-string_cref_t BaseTestPoint::getName() const { return _name; }
+Ag::string_cref_t BaseTestPoint::getName() const { return _name; }
 
 ////////////////////////////////////////////////////////////////////////////////
 // BaseTestFixture Member Definitions
@@ -193,7 +193,7 @@ BaseTestFixture::BaseTestFixture(const char *suiteName) :
 {
 }
 
-string_cref_t BaseTestFixture::getSuiteName() const { return _suiteName; }
+Ag::string_cref_t BaseTestFixture::getSuiteName() const { return _suiteName; }
 
 ////////////////////////////////////////////////////////////////////////////////
 // Global Function Definitions
@@ -204,9 +204,9 @@ string_cref_t BaseTestFixture::getSuiteName() const { return _suiteName; }
 //! @return An object encapsulating the input text ready for parsing.
 InputContext createInput(const char *sourceCode)
 {
-    IInputSourcePtr source = createBufferInputSource(String(sourceCode));
+    IInputSourcePtr source = createBufferInputSource(Ag::String(sourceCode));
     Location position("MyProject/Libs/Here.asm");
-    String sourceId("MyProject/Libs/Lib.asm");
+    Ag::String sourceId("MyProject/Libs/Lib.asm");
 
     return InputContext(source, position, sourceId, 2);
 }
@@ -255,7 +255,7 @@ InputContext createInput(const char *sourceCode)
                         createStringInputSet("Primary", sourceCode),
                         output);
 
-    String openError;
+    Ag::String openError;
 
     // Setup for parsing expressions from the outset.
     if (parser.tryBegin(getExpressionLexer(), openError))
@@ -295,7 +295,7 @@ InputContext createInput(const char *sourceCode)
     if (status && container.isValid() && container.isComplete())
     {
         IExprUPtr expr(container.getExpression()->compile(constants));
-        String error;
+        Ag::String error;
 
         if (expr)
         {
@@ -331,9 +331,9 @@ InputContext createInput(const char *sourceCode)
     else
     {
         std::string message;
-        appendFormat(FormatInfo::getNeutral(),
-                     "0x{0:X8} vs 0x{1:X8}",
-                     message, { lhs, rhs });
+        Ag::appendFormat(Ag::FormatInfo::getNeutral(),
+                         "0x{0:X8} vs 0x{1:X8}",
+                         message, { lhs, rhs });
 
         return ::testing::AssertionFailure() << message;
     }
@@ -356,7 +356,7 @@ void appendLog(::testing::AssertionResult &result, const Messages &log)
             result << '\n';
         }
 
-        String entryText = entry.toString();
+        Ag::String entryText = entry.toString();
 
         result << entryText.getUtf8Bytes();
     }
@@ -377,9 +377,9 @@ void appendLog(::testing::AssertionResult &result, const Messages &log)
         auto failure = ::testing::AssertionFailure();
         std::string builder;
 
-        appendFormat(FormatInfo::getNeutral(),
-                     "Machine word expected 0x{0:X8} but found 0x{1:X8}.",
-                     builder, { expected, found });
+        Ag::appendFormat(Ag::FormatInfo::getNeutral(),
+                         "Machine word expected 0x{0:X8} but found 0x{1:X8}.",
+                         builder, { expected, found });
 
         failure << builder;
 
@@ -413,6 +413,6 @@ const Options &getDefaultOptions()
     return opts;
 }
 
-}} // namespace Ag::Asm
+}} // namespace Mo::Asm
 ////////////////////////////////////////////////////////////////////////////////
 

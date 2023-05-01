@@ -12,14 +12,14 @@
 #define __ARM_EMU_V2_REGISTER_FILE_INL__
 
 ////////////////////////////////////////////////////////////////////////////////
-// Dependant Header Files
+// Dependent Header Files
 ////////////////////////////////////////////////////////////////////////////////
 #include "Ag/Core/Utils.hpp"
 
 #include "Hardware.inl"
 #include "RegisterFile.inl"
 
-namespace Ag {
+namespace Mo {
 namespace Arm {
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -119,7 +119,7 @@ private:
             _hardware.setPrivilegedMode(newMode != ProcessorMode::User26);
 
             // Update the mode in the CPSR register.
-            _cpsr = (_cpsr & ~PsrMask26::ModeBits) | toScalar(newMode);
+            _cpsr = (_cpsr & ~PsrMask26::ModeBits) | Ag::toScalar(newMode);
         }
 
         return isChanged;
@@ -156,14 +156,14 @@ public:
     // Construction/Destruction
     ARMv2CoreRegisterFile(THardware &hw) :
         _hardware(hw),
-        _cpsr(toScalar(ProcessorMode::Svc26) | PsrMask26::IrqDisableBits)
+        _cpsr(Ag::toScalar(ProcessorMode::Svc26) | PsrMask26::IrqDisableBits)
     {
         // Zero-fill the registers.
-        std::fill_n(_coreRegisters, arraySize(_coreRegisters), 0);
-        std::fill_n(_userModeRegBank, arraySize(_userModeRegBank), 0);
-        std::fill_n(_firqModeRegBank, arraySize(_firqModeRegBank), 0);
-        std::fill_n(_irqModeRegBank, arraySize(_irqModeRegBank), 0);
-        std::fill_n(_svcModeRegBank, arraySize(_svcModeRegBank), 0);
+        std::fill_n(_coreRegisters, std::size(_coreRegisters), 0);
+        std::fill_n(_userModeRegBank, std::size(_userModeRegBank), 0);
+        std::fill_n(_firqModeRegBank, std::size(_firqModeRegBank), 0);
+        std::fill_n(_irqModeRegBank, std::size(_irqModeRegBank), 0);
+        std::fill_n(_svcModeRegBank, std::size(_svcModeRegBank), 0);
 
         // Disable all IRQs and note we are in a privileged mode for the
         // purposes of hardware access.
@@ -182,7 +182,7 @@ public:
     uint32_t setPSR(uint32_t psr) noexcept
     {
         // Possibly change the processor mode.
-        bool isModeChanged = changeMode(forceFromScalar<ProcessorMode>(psr & PsrMask26::ModeBits));
+        bool isModeChanged = changeMode(Ag::forceFromScalar<ProcessorMode>(psr & PsrMask26::ModeBits));
 
         // Update the PSR.
         _cpsr = psr & PsrMask26::PrivilageBits;
@@ -224,27 +224,27 @@ public:
 
     uint32_t getPC() const noexcept
     {
-        return _coreRegisters[toScalar(CoreRegister::R15)];
+        return _coreRegisters[Ag::toScalar(CoreRegister::R15)];
     }
 
     void setPC(uint32_t pc) noexcept
     {
-        _coreRegisters[toScalar(CoreRegister::R15)] = pc & ~PsrMask26::PrivilageBits;
+        _coreRegisters[Ag::toScalar(CoreRegister::R15)] = pc & ~PsrMask26::PrivilageBits;
     }
 
     void incrementPC(uint32_t delta) noexcept
     {
-        _coreRegisters[toScalar(CoreRegister::R15)] += delta;
+        _coreRegisters[Ag::toScalar(CoreRegister::R15)] += delta;
     }
 
     constexpr ProcessorMode getMode() const noexcept
     {
-        return forceFromScalar<ProcessorMode>(_cpsr & PsrMask26::ModeBits);
+        return Ag::forceFromScalar<ProcessorMode>(_cpsr & PsrMask26::ModeBits);
     }
 
     uint32_t getRn(GeneralRegister regId) const noexcept
     {
-        return _coreRegisters[toScalar(regId)];
+        return _coreRegisters[Ag::toScalar(regId)];
     }
 
     uint32_t setRn(GeneralRegister regId, uint32_t value) noexcept
@@ -259,7 +259,7 @@ public:
         }
         else
         {
-            _coreRegisters[toScalar(regId)] = value;
+            _coreRegisters[Ag::toScalar(regId)] = value;
             result = 0;
         }
 
@@ -283,22 +283,22 @@ public:
             if ((mode == ProcessorMode::User26) ||
                 (regId < GeneralRegister::R8))
             {
-                value = _coreRegisters[toScalar(regId)];
+                value = _coreRegisters[Ag::toScalar(regId)];
             }
             else if (mode == ProcessorMode::FastIrq26)
             {
                 // Registers R8-R14 are banked.
-                value = _userModeRegBank[toScalar(regId) - 8];
+                value = _userModeRegBank[Ag::toScalar(regId) - 8];
             }
             else if (regId < GeneralRegister::R13)
             {
                 // The user mode register is in the current bank.
-                value = _coreRegisters[toScalar(regId)];
+                value = _coreRegisters[Ag::toScalar(regId)];
             }
             else
             {
                 // Get banked user mode R13 or R14.
-                value = _userModeRegBank[toScalar(regId) - 13];
+                value = _userModeRegBank[Ag::toScalar(regId) - 13];
             }
         }
 
@@ -316,19 +316,19 @@ public:
                 (regId < GeneralRegister::R8))
             {
                 // The user bank is currently selected.
-                _coreRegisters[toScalar(regId)] = value;
+                _coreRegisters[Ag::toScalar(regId)] = value;
             }
             else if ((mode == ProcessorMode::FastIrq26) ||
                      (regId >= GeneralRegister::R13))
             {
                 // User mode registers 8-14 (FIRQ mode) or
                 // 13-14 (other non-user modes) are hidden.
-                _userModeRegBank[toScalar(regId) - 8] = value;
+                _userModeRegBank[Ag::toScalar(regId) - 8] = value;
             }
             else
             {
                 // The register in question is not hidden.
-                _coreRegisters[toScalar(regId)] = value;
+                _coreRegisters[Ag::toScalar(regId)] = value;
             }
         }
     }
@@ -337,20 +337,20 @@ public:
     {
         return (regId == GeneralRegister::R15) ?
             (_coreRegisters[15] | (_cpsr & PsrMask26::PrivilageBits)) :
-            _coreRegisters[toScalar(regId)];
+            _coreRegisters[Ag::toScalar(regId)];
     }
 
     uint32_t getRs(GeneralRegister regId) const noexcept
     {
         return (regId == GeneralRegister::R15) ?
             (_coreRegisters[15] + 4) :
-            _coreRegisters[toScalar(regId)];
+            _coreRegisters[Ag::toScalar(regId)];
     }
 
     uint32_t getRd(GeneralRegister regId) const noexcept
     {
         return (regId == GeneralRegister::R15) ? _cpsr :
-                                                 _coreRegisters[toScalar(regId)];
+                                                 _coreRegisters[Ag::toScalar(regId)];
     }
 
     uint32_t setRdAndStatus(GeneralRegister regId, uint32_t value,
@@ -369,7 +369,7 @@ public:
         else
         {
             // Update the target register.
-            _coreRegisters[toScalar(regId)] = value;
+            _coreRegisters[Ag::toScalar(regId)] = value;
 
             // Update the status flags.
             _cpsr &= ~PsrMask::Status;
@@ -384,7 +384,7 @@ public:
     {
         return (regId == GeneralRegister::R15) ?
             ((_coreRegisters[15] + 4) | _cpsr) :
-            _coreRegisters[toScalar(regId)];
+            _coreRegisters[Ag::toScalar(regId)];
     }
 
     // Operations
@@ -487,7 +487,7 @@ public:
     }
 };
 
-}} // namespace Ag::Arm
+}} // namespace Mo::Arm
 
 #endif // Header guard
 ////////////////////////////////////////////////////////////////////////////////

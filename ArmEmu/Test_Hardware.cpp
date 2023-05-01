@@ -21,7 +21,7 @@
 #include "Hardware.inl"
 #include "TestBedHardware.inl"
 
-namespace Ag {
+namespace Mo {
 namespace Arm {
 
 namespace {
@@ -315,6 +315,6 @@ GTEST_TEST(BasicHardware, ExchangeBytes)
 
 } // Anonymous namespace
 
-}} // namespace Ag::Arm
+}} // namespace Mo::Arm
 ////////////////////////////////////////////////////////////////////////////////
 

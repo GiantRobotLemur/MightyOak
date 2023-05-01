@@ -18,7 +18,7 @@
 
 #include "TestTools.hpp"
 
-namespace Ag {
+namespace Mo {
 namespace Arm {
 
 namespace {
@@ -994,6 +994,6 @@ DTPoint testPoints[] = {
 
 INSTANTIATE_TEST_SUITE_P(CPU, DataTransfer, testing::ValuesIn(testPoints));
 
-}} // namespace Ag::Arm
+}} // namespace Mo::Arm
 ////////////////////////////////////////////////////////////////////////////////
 

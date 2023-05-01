@@ -16,21 +16,10 @@
 #include "Ag/Core/Exception.hpp"
 #include "Value.hpp"
 
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
-
-namespace Ag {
+namespace Mo {
 namespace Asm {
 
 namespace {
-////////////////////////////////////////////////////////////////////////////////
-// Local Data Types
-////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////
-// Local Data
-////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////
 // Unit Tests
@@ -42,7 +31,7 @@ GTEST_TEST(Value, DefaultsToNull)
     EXPECT_TRUE(specimen.isNull());
     EXPECT_EQ(specimen.getDataType(), DataType::Unknown);
 
-    EXPECT_THROW(specimen.asInt32(), BadCastException);
+    EXPECT_THROW(specimen.asInt32(), Ag::BadCastException);
 }
 
 GTEST_TEST(Value, ConstructInt32)
@@ -54,7 +43,7 @@ GTEST_TEST(Value, ConstructInt32)
     EXPECT_EQ(specimen.getDataType(), DataType::Int32);
 
     EXPECT_NO_THROW(specimen.asInt32());
-    EXPECT_THROW(specimen.asUint32(), BadCastException);
+    EXPECT_THROW(specimen.asUint32(), Ag::BadCastException);
 }
 
 GTEST_TEST(Value, ConstructUint32)
@@ -66,7 +55,7 @@ GTEST_TEST(Value, ConstructUint32)
     EXPECT_EQ(specimen.getDataType(), DataType::Uint32);
 
     EXPECT_NO_THROW(specimen.asUint32());
-    EXPECT_THROW(specimen.asFloat(), BadCastException);
+    EXPECT_THROW(specimen.asFloat(), Ag::BadCastException);
 }
 
 GTEST_TEST(Value, ConstructInt64)
@@ -78,7 +67,7 @@ GTEST_TEST(Value, ConstructInt64)
     EXPECT_EQ(specimen.getDataType(), DataType::Int64);
 
     EXPECT_NO_THROW(specimen.asInt64());
-    EXPECT_THROW(specimen.asUint64(), BadCastException);
+    EXPECT_THROW(specimen.asUint64(), Ag::BadCastException);
 }
 
 GTEST_TEST(Value, ConstructUint64)
@@ -90,7 +79,7 @@ GTEST_TEST(Value, ConstructUint64)
     EXPECT_EQ(specimen.getDataType(), DataType::Uint64);
 
     EXPECT_NO_THROW(specimen.asUint64());
-    EXPECT_THROW(specimen.asFloat(), BadCastException);
+    EXPECT_THROW(specimen.asFloat(), Ag::BadCastException);
 }
 
 GTEST_TEST(Value, ConstructFloat)
@@ -102,7 +91,7 @@ GTEST_TEST(Value, ConstructFloat)
     EXPECT_EQ(specimen.getDataType(), DataType::Float);
 
     EXPECT_NO_THROW(specimen.asFloat());
-    EXPECT_THROW(specimen.asDouble(), BadCastException);
+    EXPECT_THROW(specimen.asDouble(), Ag::BadCastException);
 }
 
 GTEST_TEST(Value, ConstructDouble)
@@ -114,7 +103,7 @@ GTEST_TEST(Value, ConstructDouble)
     EXPECT_EQ(specimen.getDataType(), DataType::Double);
 
     EXPECT_NO_THROW(specimen.asDouble());
-    EXPECT_THROW(specimen.asInt64(), BadCastException);
+    EXPECT_THROW(specimen.asInt64(), Ag::BadCastException);
 }
 
 GTEST_TEST(Value, ConstructCharacter)
@@ -126,19 +115,19 @@ GTEST_TEST(Value, ConstructCharacter)
     EXPECT_EQ(specimen.getDataType(), DataType::Character);
 
     EXPECT_NO_THROW(specimen.asCharacter());
-    EXPECT_THROW(specimen.asInt64(), BadCastException);
+    EXPECT_THROW(specimen.asInt64(), Ag::BadCastException);
 }
 
 GTEST_TEST(Value, ConstructString)
 {
-    const String value = "Hello World!";
+    const Ag::String value = "Hello World!";
     Value specimen(value);
 
     EXPECT_FALSE(specimen.isNull());
     EXPECT_EQ(specimen.getDataType(), DataType::String);
 
     EXPECT_NO_THROW(specimen.asString());
-    EXPECT_THROW(specimen.asInt64(), BadCastException);
+    EXPECT_THROW(specimen.asInt64(), Ag::BadCastException);
 }
 
 GTEST_TEST(Value, Conversion)
@@ -152,8 +141,8 @@ GTEST_TEST(Value, Conversion)
     EXPECT_EQ(result.asCharacter(), U'A');
 }
 
-} // TED
+} // Anonymous namespace
 
-}} // namespace Ag::Asm
+}} // namespace Mo::Asm
 ////////////////////////////////////////////////////////////////////////////////
 

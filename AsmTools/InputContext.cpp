@@ -12,7 +12,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 #include "InputContext.hpp"
 
-namespace Ag {
+namespace Mo {
 namespace Asm {
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -27,7 +27,7 @@ namespace Asm {
 //! @param[in] lexerStackLevel The count of elements in the lexical context
 //! stack when as the context is created.
 InputContext::InputContext(IInputSourcePtr &source, const Location &sourceReference,
-                           const String &sourceId, size_t lexerStackLevel) :
+                           const Ag::String &sourceId, size_t lexerStackLevel) :
     _source(std::move(source)),
     _reference(sourceReference),
     _position(sourceId),
@@ -137,8 +137,8 @@ void InputContext::ungetCharacter()
     }
     else
     {
-        throw OperationException("Cannot unget a character past the "
-                                 "last input stream break.");
+        throw Ag::OperationException("Cannot unget a character past the "
+                                     "last input stream break.");
     }
 }
 
@@ -209,6 +209,6 @@ bool InputContext::tryRefillBuffer()
     return hasCharacters;
 }
 
-}} // namespace Ag::Asm
+}} // namespace Mo::Asm
 ////////////////////////////////////////////////////////////////////////////////
 

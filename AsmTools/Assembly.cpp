@@ -21,8 +21,7 @@
 
 #include "Assembly.hpp"
 
-
-namespace Ag {
+namespace Mo {
 namespace Asm {
 
 namespace {
@@ -45,7 +44,7 @@ bool tryEncodeImmediateConstant(uint32_t &coding, uint32_t constant)
         // The constant cannot be encoded without a shift of some kind.
         for (int32_t shift = 0; (isEncoded == false) && (shift < 32); shift += 2)
         {
-            uint32_t rotated = Bin::rotateLeft(constant, shift);
+            uint32_t rotated = Ag::Bin::rotateLeft(constant, shift);
 
             if ((rotated & 0xFF) == rotated)
             {
@@ -92,7 +91,7 @@ uint8_t tryEncodeImmdiateOffset(uint32_t offset, uint32_t *parts,
             int32_t lsb;
 
             while ((encodingCount < maxCount) &&
-                   Bin::bitScanForward(bits, lsb))
+                   Ag::Bin::bitScanForward(bits, lsb))
             {
                 // We can only shift values by an even number of places.
                 lsb &= ~1;
@@ -169,7 +168,7 @@ void createEncodableShifterOperand(const ShifterOperand &original,
 void encodeCoreAlu(AssemblyParams &params)
 {
     const ShifterOperand *operand2 = nullptr;
-    params.encodeBits(toScalar(params.Mnemonic), 4, 21);
+    params.encodeBits(Ag::toScalar(params.Mnemonic), 4, 21);
 
     if ((params.Mnemonic == InstructionMnemonic::Cmp) ||
         (params.Mnemonic == InstructionMnemonic::Cmn) ||
@@ -219,12 +218,11 @@ void encodeCoreAlu(AssemblyParams &params)
                                            shifter.Immediate) == false)
             {
                 isOK = false;
-                FormatInfo formatInfo(LocaleInfo::getNeutral());
 
                 params.ErrorMessage =
-                    String::format(formatInfo,
-                                   "Cannot encode &{0:X} as an immediate constant.",
-                                   { shifter.Immediate });
+                    Ag::String::format(Ag::FormatInfo::getNeutral(),
+                                       "Cannot encode &{0:X} as an immediate constant.",
+                                       { shifter.Immediate });
             }
             break;
 
@@ -249,9 +247,9 @@ void encodeCoreAlu(AssemblyParams &params)
                 }
                 else
                 {
-                    params.ErrorMessage = String::format("An immediate value of {0} cannot be "
-                                                         "encode as a logical left shift.",
-                                                         { shifter.Immediate });
+                    params.ErrorMessage = Ag::String::format("An immediate value of {0} cannot be "
+                                                             "encode as a logical left shift.",
+                                                             { shifter.Immediate });
                     isOK = false;
                 }
                 break;
@@ -268,9 +266,9 @@ void encodeCoreAlu(AssemblyParams &params)
                 }
                 else
                 {
-                    params.ErrorMessage = String::format("An immediate value of {0} cannot be "
-                                                         "encode as a logical right shift.",
-                                                         { shifter.Immediate });
+                    params.ErrorMessage = Ag::String::format("An immediate value of {0} cannot be "
+                                                             "encode as a logical right shift.",
+                                                             { shifter.Immediate });
                     isOK = false;
                 }
                 break;
@@ -287,9 +285,9 @@ void encodeCoreAlu(AssemblyParams &params)
                 }
                 else
                 {
-                    params.ErrorMessage = String::format("An immediate value of {0} cannot be "
-                                                         "encode as a arithmetic right shift.",
-                                                         { shifter.Immediate });
+                    params.ErrorMessage = Ag::String::format("An immediate value of {0} cannot be "
+                                                             "encode as a arithmetic right shift.",
+                                                             { shifter.Immediate });
                     isOK = false;
                 }
                 break;
@@ -301,9 +299,9 @@ void encodeCoreAlu(AssemblyParams &params)
                 }
                 else
                 {
-                    params.ErrorMessage = String::format("An immediate value of {0} cannot be "
-                                                         "encode as a rotate right shift.",
-                                                         { shifter.Immediate });
+                    params.ErrorMessage = Ag::String::format("An immediate value of {0} cannot be "
+                                                             "encode as a rotate right shift.",
+                                                             { shifter.Immediate });
                     isOK = false;
                 }
                 break;
@@ -543,11 +541,11 @@ void encodeMultiDataTransfer(AssemblyParams &params)
     if (params.Mnemonic == InstructionMnemonic::Ldm)
     {
         params.encodeBit(20);
-        params.encodeBits(loadModeBits[toScalar(info.Mode)], 2, 23);
+        params.encodeBits(loadModeBits[Ag::toScalar(info.Mode)], 2, 23);
     }
     else
     {
-        params.encodeBits(storeModeBits[toScalar(info.Mode)], 2, 23);
+        params.encodeBits(storeModeBits[Ag::toScalar(info.Mode)], 2, 23);
     }
 
     // Encode the bits defining the registers to load/store.
@@ -586,7 +584,7 @@ void encodeCoreAddress(AssemblyParams &params)
     // Add or subtract from the PC register.
     params.encodeCoreRegister(CoreRegister::R15, 16);
 
-    uint8_t maxInstructions = toScalar(info.Encoding) + 1;
+    uint8_t maxInstructions = Ag::toScalar(info.Encoding) + 1;
 
     uint32_t bitFields[AssemblyParams::MaxInstructions];
     uint8_t count = tryEncodeImmdiateOffset(offset, bitFields,
@@ -620,13 +618,11 @@ void encodeCoreAddress(AssemblyParams &params)
     }
     else
     {
-        FormatInfo formatInfo(LocaleInfo::getNeutral());
-
         params.ErrorMessage =
-            String::format(formatInfo,
-                           "Cannot encode the offset to address &{0:X} as "
-                           "a sequence of {1} immediate constant.",
-                           { info.Address, maxInstructions });
+            Ag::String::format(Ag::FormatInfo::getNeutral(),
+                              "Cannot encode the offset to address &{0:X} as "
+                              "a sequence of {1} immediate constant.",
+                              { info.Address, maxInstructions });
     }
 }
 
@@ -669,7 +665,7 @@ void encodeMoveToPsr(AssemblyParams &params)
     }
     else
     {
-        params.ErrorMessage = String::format(
+        params.ErrorMessage = Ag::String::format(
             "The immediate constant value 0x{0:X8} cannot be encoded.",
             { info.SourceImmediate });
     }
@@ -779,7 +775,7 @@ void encodeCoProcRegTransfer(AssemblyParams &params)
     }
 }
 
-} // TED
+} // Anonymous namespace
 
 ////////////////////////////////////////////////////////////////////////////////
 // AssemblyParams Member Function Definitions
@@ -802,7 +798,7 @@ AssemblyParams::AssemblyParams(OperationClass opClass, InstructionMnemonic mnemo
     Mnemonic(mnemonic),
     Condition(condition)
 {
-    std::fill_n(Instructions, arraySize(Instructions), 0u);
+    std::fill_n(Instructions, std::size(Instructions), 0u);
 }
 
 //! @brief Gets the bits of the instruction currently being encoded.
@@ -826,15 +822,15 @@ void AssemblyParams::encodeCondition(ConditionCode code)
     switch (code)
     {
     case ConditionCode::Hs:
-        encoding = static_cast<uint32_t>(toScalar(ConditionCode::Cs) & 0x0F) << 28;
+        encoding = static_cast<uint32_t>(Ag::toScalar(ConditionCode::Cs) & 0x0F) << 28;
         break;
 
     case ConditionCode::Lo:
-        encoding = static_cast<uint32_t>(toScalar(ConditionCode::Cc) & 0x0F) << 28;
+        encoding = static_cast<uint32_t>(Ag::toScalar(ConditionCode::Cc) & 0x0F) << 28;
         break;
 
     default:
-        encoding = static_cast<uint32_t>(toScalar(code) & 0x0F) << 28;
+        encoding = static_cast<uint32_t>(Ag::toScalar(code) & 0x0F) << 28;
         break;
     }
 
@@ -846,7 +842,7 @@ void AssemblyParams::encodeCondition(ConditionCode code)
 //! @param[in] lowestBit The 0-based index of the lowest bit of the encoding.
 void AssemblyParams::encodeCoreRegister(CoreRegister reg, uint8_t lowestBit)
 {
-    uint32_t encoding = static_cast<uint32_t>(toScalar(reg) & 0x0F) << lowestBit;
+    uint32_t encoding = static_cast<uint32_t>(Ag::toScalar(reg) & 0x0F) << lowestBit;
 
     Instructions[InstructionCount] |= encoding;
 }
@@ -861,15 +857,15 @@ void AssemblyParams::encodeShiftType(ShiftType mode)
     if (mode == ShiftType::Rrx)
     {
         // Rm, RRX => Rm, ROR #0
-        bits = toScalar(ShiftType::Ror);
+        bits = Ag::toScalar(ShiftType::Ror);
     }
     else if (mode == ShiftType::None)
     {
-        bits = toScalar(ShiftType::Lsl);
+        bits = Ag::toScalar(ShiftType::Lsl);
     }
     else
     {
-        bits = toScalar(mode);
+        bits = Ag::toScalar(mode);
     }
 
     encodeBits(bits, 2, 5);
@@ -880,7 +876,7 @@ void AssemblyParams::encodeShiftType(ShiftType mode)
 //! @param[in] lowestBit The 0-based index of the lowest bit of the encoding.
 void AssemblyParams::encodeFpaRegister(FpaRegister reg, uint8_t lowestBit)
 {
-    uint32_t encoding = static_cast<uint32_t>(toScalar(reg) & 0x07) << lowestBit;
+    uint32_t encoding = static_cast<uint32_t>(Ag::toScalar(reg) & 0x07) << lowestBit;
 
     Instructions[InstructionCount] |= encoding;
 }
@@ -890,7 +886,7 @@ void AssemblyParams::encodeFpaRegister(FpaRegister reg, uint8_t lowestBit)
 //! @param[in] lowestBit The 0-based index of the lowest bit of the encoding.
 void AssemblyParams::encodeCoProcRegister(CoProcRegister reg, uint8_t lowestBit)
 {
-    uint32_t encoding = static_cast<uint32_t>(toScalar(reg) & 0x0F) << lowestBit;
+    uint32_t encoding = static_cast<uint32_t>(Ag::toScalar(reg) & 0x0F) << lowestBit;
 
     Instructions[InstructionCount] |= encoding;
 }
@@ -900,7 +896,7 @@ void AssemblyParams::encodeCoProcRegister(CoProcRegister reg, uint8_t lowestBit)
 //! @param[in] lowestBit The 0-based index of the lowest bit of the encoding.
 void AssemblyParams::encodeCoProcID(CoProcId id, uint8_t lowestBit)
 {
-    uint32_t encoding = static_cast<uint32_t>(toScalar(id) & 0x0F) << lowestBit;
+    uint32_t encoding = static_cast<uint32_t>(Ag::toScalar(id) & 0x0F) << lowestBit;
 
     Instructions[InstructionCount] |= encoding;
 }
@@ -1123,6 +1119,6 @@ bool assembleInstruction(AssemblyParams &params)
     return params.InstructionCount > 0;
 }
 
-}} // namespace Ag::Asm
+}} // namespace Mo::Asm
 ////////////////////////////////////////////////////////////////////////////////
 

@@ -17,7 +17,7 @@
 #include "ShifterOperandNode.hpp"
 #include "Statement.hpp"
 
-namespace Ag {
+namespace Mo {
 namespace Asm {
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -309,7 +309,7 @@ ISyntaxNode *ShifterOperandNode::applyNode(ParseContext &context,
     case State::Start:
     case State::AfterInitialSign:
         // Expect a '#' before a constant or a register expression node.
-        if (tryCast(childNode, expr))
+        if (Ag::tryCast(childNode, expr))
         {
             node = this;
             _baseExpr.reset(expr);
@@ -323,7 +323,7 @@ ISyntaxNode *ShifterOperandNode::applyNode(ParseContext &context,
 
     case State::AfterInitialHash:
         // Expect an immediate constant expression node.
-        if (tryCast(childNode, expr))
+        if (Ag::tryCast(childNode, expr))
         {
             // Its an immediate constant.
             node = this;
@@ -348,7 +348,7 @@ ISyntaxNode *ShifterOperandNode::applyNode(ParseContext &context,
 
     case State::AfterShift:
         // Expect a '#' before a constant or a register expression.
-        if (tryCast(childNode, expr))
+        if (Ag::tryCast(childNode, expr))
         {
             node = this;
             _shiftExpr.reset(expr);
@@ -362,7 +362,7 @@ ISyntaxNode *ShifterOperandNode::applyNode(ParseContext &context,
 
     case State::AfterShiftHash:
         // Expect a constant expression.
-        if (tryCast(childNode, expr))
+        if (Ag::tryCast(childNode, expr))
         {
             node = this;
             _shiftExpr.reset(expr);
@@ -389,7 +389,7 @@ ISyntaxNode *ShifterOperandNode::applyNode(ParseContext &context,
 // Inherited from ISyntaxNode.
 void ShifterOperandNode::recover(ParseContext &context, ISyntaxNode *node)
 {
-    safeDelete(node);
+    Ag::safeDelete(node);
 
     if (_expectedEnd == TokenClass::StatementTerminator)
     {
@@ -585,7 +585,7 @@ bool StatementShifterOperand::configure(IEvalContext *context,
     {
         isOK = true;
         wasNegated = _isNegated;
-        String evalError;
+        Ag::String evalError;
 
         if (tryEvaluateCoreRegister(context, _baseExpr.get(),
                                     operand.Rm, evalError) == false)
@@ -593,9 +593,9 @@ bool StatementShifterOperand::configure(IEvalContext *context,
             if (isFinalPass)
             {
                 std::string builder("Failed to evaluate shifted register expression: ");
-                appendAgString(builder, evalError);
+                Ag::appendAgString(builder, evalError);
 
-                log.appendError(_start, String(builder));
+                log.appendError(_start, builder);
             }
 
             isOK = false;
@@ -611,7 +611,7 @@ bool StatementShifterOperand::configure(IEvalContext *context,
                     std::string builder("Failed to evaluate shift register expression: ");
                     appendAgString(builder, evalError);
 
-                    log.appendError(_start, String(builder));
+                    log.appendError(_start, builder);
                 }
 
                 isOK = false;
@@ -628,7 +628,7 @@ bool StatementShifterOperand::configure(IEvalContext *context,
                     std::string builder("Failed to evaluate shift value expression: ");
                     appendAgString(builder, evalError);
 
-                    log.appendError(_start, String(builder));
+                    log.appendError(_start, builder);
                 }
                 isOK = false;
             }
@@ -636,7 +636,7 @@ bool StatementShifterOperand::configure(IEvalContext *context,
     }
     else if (_mode == ShifterMode::ImmediateConstant)
     {
-        String evalError;
+        Ag::String evalError;
 
         if (tryEvaluateOrdinal(context, _baseExpr.get(),
                                operand.Immediate,
@@ -658,15 +658,15 @@ bool StatementShifterOperand::configure(IEvalContext *context,
         else if (isFinalPass)
         {
             std::string builder("Failed to evaluate immediate constant expression: ");
-            appendAgString(builder, evalError);
+            Ag::appendAgString(builder, evalError);
 
-            log.appendError(_start, String(builder));
+            log.appendError(_start, builder);
         }
     }
 
     return isOK;
 }
 
-}} // namespace Ag::Asm
+}} // namespace Mo::Asm
 ////////////////////////////////////////////////////////////////////////////////
 

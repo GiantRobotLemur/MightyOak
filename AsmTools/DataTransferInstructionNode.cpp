@@ -18,11 +18,7 @@
 #include "ParseContext.hpp"
 #include "Token.hpp"
 
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
-
-namespace Ag {
+namespace Mo {
 namespace Asm {
 
 namespace {
@@ -67,7 +63,7 @@ protected:
                                       bool isFinalPass) const override
     {
         auto &info = instruction.getCoreDataTransferParameters();
-        String error;
+        Ag::String error;
         bool isOK = true;
 
         if (getMnemonic() == InstructionMnemonic::Str)
@@ -103,7 +99,7 @@ protected:
                 std::string builder("Failed to evaluate destination register: ");
                 appendAgString(builder, error);
 
-                log.appendError(getStart(), String(builder));
+                log.appendError(getStart(), builder);
 
             }
 
@@ -141,7 +137,7 @@ protected:
 // Local Functions
 ////////////////////////////////////////////////////////////////////////////////
 
-} // TED
+} // Anonymous namespace
 
 ////////////////////////////////////////////////////////////////////////////////
 // DataTransferInstructionNode Member Definitions
@@ -218,7 +214,7 @@ ISyntaxNode *DataTransferInstructionNode::applyNode(ParseContext &context,
     {
     case State::AfterMnemonic:
         // Expect destination register expression.
-        if (tryCast(childNode, expr))
+        if (Ag::tryCast(childNode, expr))
         {
             restoreLexicalState(context);
             _destReg.reset(expr);
@@ -233,7 +229,7 @@ ISyntaxNode *DataTransferInstructionNode::applyNode(ParseContext &context,
 
     case State::BeforeAddr:
         // Expect an address operand.
-        if (tryCast(childNode, addr))
+        if (Ag::tryCast(childNode, addr))
         {
             _addr.reset(addr);
             result = this;
@@ -282,10 +278,6 @@ Statement *DataTransferInstructionNode::compile(Messages &output) const
     return statement;
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// Global Function Definitions
-////////////////////////////////////////////////////////////////////////////////
-
-}} // namespace Ag::Asm
+}} // namespace Mo::Asm
 ////////////////////////////////////////////////////////////////////////////////
 

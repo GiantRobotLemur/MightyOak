@@ -12,7 +12,7 @@
 #define __AG_CORE_UTILS_HPP__
 
 ////////////////////////////////////////////////////////////////////////////////
-// Dependant Header Files
+// Dependent Header Files
 ////////////////////////////////////////////////////////////////////////////////
 #include <cmath>
 #include <cstdio>
@@ -93,7 +93,6 @@ int compareBoundedStringsIgnoreCase(utf8_cptr_t lhs, utf8_cptr_t rhs, size_t len
 // Implemented in CoreInternal.cpp.
 bool tryOpenFile(const String &fileName, const utf8_cptr_t mode,
                  FILE *&stream, String &error);
-
 
 ////////////////////////////////////////////////////////////////////////////////
 // Templates
@@ -322,16 +321,6 @@ bool isType(const std::shared_ptr<U> &basePtr)
 template<typename T> void zeroFill(T &object)
 {
     std::memset(static_cast<void *>(&object), 0, sizeof(T));
-}
-
-//! @brief Gets the size of an array specified at compile time.
-//! @tparam T The data type of elements in the array, this can be deduced.
-//! @tparam U The count of elements in the array, this can be deduced from a
-//! statically defined array.
-//! @returns The count of elements in the array.
-template<typename T, size_t U> constexpr size_t arraySize(const T (&)[U])
-{
-    return U;
 }
 
 //! @brief Converts a scoped enumeration value to its underlying scalar type.

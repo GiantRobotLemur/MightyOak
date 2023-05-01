@@ -12,7 +12,7 @@
 #define __ASM_TOOLS_EXPRESSION_NODE_HPP__
 
 ////////////////////////////////////////////////////////////////////////////////
-// Dependant Header Files
+// Dependent Header Files
 ////////////////////////////////////////////////////////////////////////////////
 #include "AsmTools/Messages.hpp"
 #include "Expr.hpp"
@@ -22,7 +22,7 @@
 // Macro Definitions
 ////////////////////////////////////////////////////////////////////////////////
 
-namespace Ag {
+namespace Mo {
 namespace Asm {
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -151,18 +151,18 @@ class IntegerLiteralNode : public TerminalExpressionNode
 {
 public:
     // Construction/Destruction
-    IntegerLiteralNode(const Location &at, string_cref_t value, int radix);
+    IntegerLiteralNode(const Location &at, Ag::string_cref_t value, int radix);
     virtual ~IntegerLiteralNode() = default;
 
     // Accessors
     int getRadix() const;
-    string_cref_t getValue() const;
+    Ag::string_cref_t getValue() const;
 
     // Overrides
     virtual IExpr *compile(const ConstantSet &constants) const override;
 private:
     // Internal Fields
-    String _value;
+    Ag::String _value;
     int _radix;
 };
 
@@ -171,16 +171,16 @@ class RealLiteralNode : public TerminalExpressionNode
 {
 public:
     // Construction/Destruction
-    RealLiteralNode(const Location &at, string_cref_t value);
+    RealLiteralNode(const Location &at, Ag::string_cref_t value);
     virtual ~RealLiteralNode() = default;
 
-    string_cref_t getValue() const;
+    Ag::string_cref_t getValue() const;
 
     // Overrides
     virtual IExpr *compile(const ConstantSet &constants) const override;
 private:
     // Internal Fields
-    String _value;
+    Ag::String _value;
 };
 
 //! @brief Represents a literal string value, possibly only a single character.
@@ -188,17 +188,17 @@ class StringLiteralNode : public TerminalExpressionNode
 {
 public:
     // Construction/Destruction
-    StringLiteralNode(const Location &at, string_cref_t value, bool isUnterminted);
+    StringLiteralNode(const Location &at, Ag::string_cref_t value, bool isUnterminted);
     virtual ~StringLiteralNode() = default;
 
     // Accessors
-    string_cref_t getValue() const;
+    Ag::string_cref_t getValue() const;
 
     // Overrides
     virtual IExpr *compile(const ConstantSet &constants) const override;
 private:
     // Internal Fields
-    String _value;
+    Ag::String _value;
     bool _isUnterminted;
 };
 
@@ -207,17 +207,17 @@ class SymbolNode : public TerminalExpressionNode
 {
 public:
     // Construction/Destruction
-    SymbolNode(const Location &at, string_cref_t id);
+    SymbolNode(const Location &at, Ag::string_cref_t id);
     virtual ~SymbolNode() = default;
 
     // Accessors
-    string_cref_t getId() const;
+    Ag::string_cref_t getId() const;
 
     // Overrides
     virtual IExpr *compile(const ConstantSet &constants) const override;
 private:
     // Internal Fields
-    String _id;
+    Ag::String _id;
 };
 
 //! @brief Represents the use of the '$' symbol meaning the current
@@ -244,8 +244,6 @@ public:
     // Accessors
     ExpressionNodeCPtr getChildExpr() const;
 
-    // Operations
-
     // Overrides
     virtual bool isComplete() const override;
     virtual bool isValid() const override;
@@ -261,8 +259,6 @@ private:
         AfterExpr,
         Complete,
     };
-
-    // Internal Functions
 
     // Internal Fields
     ExpressionNodeUPtr _child;
@@ -315,8 +311,6 @@ private:
         Complete,
     };
 
-    // Internal Functions
-
     // Internal Fields
     ExpressionNodeUPtr _child;
     UnaryOperatorType _operatorType;
@@ -355,8 +349,6 @@ private:
         BeforeRhsExpr,
         Complete,
     };
-
-    // Internal Functions
 
     // Internal Fields
     ExpressionNodeUPtr _lhsChild;
@@ -417,8 +409,7 @@ bool compileExpressionArray(ExprToCompile(&nodes)[NodeCount],
     return compileExpressionNodes(nodes, exprs, NodeCount, log);
 }
 
-
-}} // namespace Ag::Asm
+}} // namespace Mo::Asm
 
 #endif // Header guard
 ////////////////////////////////////////////////////////////////////////////////

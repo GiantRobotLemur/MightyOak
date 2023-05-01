@@ -629,7 +629,7 @@ void appendIntegralValue(const FormatInfo &options, std::string &buffer, T value
     char sign = options.isUpperCase() ? 0 : 1;
 
     size_t digitCount = appendDigits(digitBuffer, sign,
-                                     arraySize(digitBuffer),
+                                     std::size(digitBuffer),
                                      options.getRadix(), value);
 
     NumericCharacters characters(sign, digitBuffer, digitCount);
@@ -972,7 +972,7 @@ void formatValue(std::string &buffer, const InsertionToken &token,
     }
 }
 
-} // TED
+} // Anonymous namespace
 
 ////////////////////////////////////////////////////////////////////////////////
 // MemberFunction Definitions
@@ -1518,7 +1518,7 @@ void appendValue(const FormatInfo &options, std::string &buffer, double value)
             //                         size_t bufferSize, int *decPtIndex, int *sign)
 
             errorCode = realToSignificantDigits(value, options.getRequiredSignificantFigures(),
-                                                digitBuffer, arraySize(digitBuffer),
+                                                digitBuffer, std::size(digitBuffer),
                                                 &decPtIndex, &sign);
 
             characters = NumericCharacters((sign == 0) ? '+' : '-',
@@ -1527,7 +1527,7 @@ void appendValue(const FormatInfo &options, std::string &buffer, double value)
         else if (options.getRequiredFractionDigits() > 0)
         {
             errorCode = realToFractionDigits(value, options.getRequiredFractionDigits(),
-                                             digitBuffer, arraySize(digitBuffer),
+                                             digitBuffer, std::size(digitBuffer),
                                              &decPtIndex, &sign);
 
             characters = NumericCharacters((sign == 0) ? '+' : '-',
@@ -1539,7 +1539,7 @@ void appendValue(const FormatInfo &options, std::string &buffer, double value)
             // supported by the data type.
             errorCode = realToSignificantDigits(value,
                                                 std::numeric_limits<double>::max_digits10,
-                                                digitBuffer, arraySize(digitBuffer),
+                                                digitBuffer, std::size(digitBuffer),
                                                 &decPtIndex, &sign);
 
             if (errorCode == 0)
@@ -1611,7 +1611,7 @@ void appendValue(const FormatInfo &options, std::string &buffer, double value)
 
                     // Calculate the exponent digits and add them to the
                     // buffer after the fraction digits.
-                    size_t expMaxLen = arraySize(digitBuffer) - sigFigs;
+                    size_t expMaxLen = std::size(digitBuffer) - sigFigs;
                     char *expDigits = digitBuffer + sigFigs;
                     char expSign;
 
@@ -1632,7 +1632,7 @@ void appendValue(const FormatInfo &options, std::string &buffer, double value)
                     // Calculate the exponent digits and add them to the
                     // buffer after the fraction digits.
                     digitBuffer[sigFigs] = '\0';
-                    size_t expMaxLen = arraySize(digitBuffer) - sigFigs - 1;
+                    size_t expMaxLen = std::size(digitBuffer) - sigFigs - 1;
                     char *expDigits = digitBuffer + sigFigs + 1;
                     char expSign;
 

@@ -12,26 +12,17 @@
 #define __ASM_TOOLS_ASSEMBLY_DIRECTIVE_STATEMENT_HPP__
 
 ////////////////////////////////////////////////////////////////////////////////
-// Dependant Header Files
+// Dependent Header Files
 ////////////////////////////////////////////////////////////////////////////////
 #include <memory>
 #include <vector>
 
-//#include "AsmEnums.hpp"
 #include "Expr.hpp"
 #include "ExpressionNode.hpp"
 #include "StatementListNode.hpp"
 
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
-
-namespace Ag {
+namespace Mo {
 namespace Asm {
-
-////////////////////////////////////////////////////////////////////////////////
-// Data Type Declarations
-////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////
 // Class Declarations
@@ -44,10 +35,6 @@ public:
     AssemblyDirectiveNode(ParseContext &context, const Token &directive);
     virtual ~AssemblyDirectiveNode() = default;
 
-    // Accessors
-
-    // Operations
-
     // Overrides
     // Inherited from ISyntaxNode
     virtual bool isComplete() const override;
@@ -57,10 +44,6 @@ public:
     virtual void recover(ParseContext &context, ISyntaxNode *node) override;
     virtual Statement *compile(Messages &output) const override;
 private:
-    // Internal Types
-
-    // Internal Functions
-
     // Internal Fields
     AssemblyDirectiveType _type;
     InstructionSet _instructionSet;
@@ -70,7 +53,6 @@ private:
     bool _isComplete;
 };
 
-
 //! @brief An object representing a statement an ALIGN directive.
 class AlignDirectiveNode : public StatementNode
 {
@@ -78,10 +60,6 @@ public:
     // Construction/Destruction
     AlignDirectiveNode(ParseContext &context, const Token &directive);
     virtual ~AlignDirectiveNode() = default;
-
-    // Accessors
-
-    // Operations
 
     // Overrides
     // Inherited from ISyntaxNode
@@ -108,15 +86,7 @@ private:
     State _state;
 };
 
-////////////////////////////////////////////////////////////////////////////////
-// Function Declarations
-////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////
-// Templates
-////////////////////////////////////////////////////////////////////////////////
-
-}} // namespace Ag::Asm
+}} // namespace Mo::Asm
 
 #endif // Header guard
 ////////////////////////////////////////////////////////////////////////////////

@@ -17,7 +17,7 @@
 
 #include "ArmCore.hpp"
 
-namespace Ag {
+namespace Mo {
 namespace Arm {
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -187,6 +187,6 @@ bool canExecuteInstruction(uint32_t instruction, uint8_t statusFlags) noexcept
     return (bits & (1 << static_cast<uint8_t>(instruction >> 28))) != 0;
 }
 
-}} // namespace Ag::Arm
+}} // namespace Mo::Arm
 ////////////////////////////////////////////////////////////////////////////////
 

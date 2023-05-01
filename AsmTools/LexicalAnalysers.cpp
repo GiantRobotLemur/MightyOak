@@ -1,4 +1,4 @@
-//! @file LexicalAnalysers.cpp
+//! @file AsmTools/LexicalAnalysers.cpp
 //! @brief The definition of various ILexicalContext implementations.
 //! @author GiantRobotLemur@na-se.co.uk
 //! @date 2021-2023
@@ -36,7 +36,7 @@
 #include "AsmTools/InstructionInfo.hpp"
 #include "AsmTools/Options.hpp"
 
-namespace Ag {
+namespace Mo {
 namespace Asm {
 
 namespace {
@@ -53,7 +53,7 @@ void skipNoneNewlineWhiteSpace(InputContext &input)
 
     while (input.tryGetNextCharacter(next))
     {
-        if ((next == U'\n') || (CodePoint::isWhiteSpace(next) == false))
+        if ((next == U'\n') || (Ag::CodePoint::isWhiteSpace(next) == false))
         {
             input.ungetCharacter();
             break;
@@ -64,17 +64,17 @@ void skipNoneNewlineWhiteSpace(InputContext &input)
 //! @brief Creates an upper case UTF-8 string from a UTF-32 STL string.
 //! @param[in] text The STL string to process.
 //! @return A string containing the transformed and converted characters.
-String makeKey(const std::u32string &text, size_t length)
+Ag::String makeKey(const std::u32string &text, size_t length)
 {
     std::string buffer;
     size_t hintLength = std::min(length, text.length());
     buffer.reserve((hintLength * 110) / 100);
 
-    Utf::ToUtf8Converter converter;
+    Ag::Utf::ToUtf8Converter converter;
 
     for (size_t index = 0; index < hintLength; ++index)
     {
-        converter.setCodePoint(CodePoint::toUpper(text[index]));
+        converter.setCodePoint(Ag::CodePoint::toUpper(text[index]));
         uint8_t next;
 
         while (converter.tryGetNextByte(next))
@@ -83,7 +83,7 @@ String makeKey(const std::u32string &text, size_t length)
         }
     }
 
-    return String(buffer);
+    return Ag::String(buffer);
 }
 
 //! @brief Determines if a raw UTF-32 string begins with a static prefix.
@@ -118,7 +118,7 @@ void accumulateAlphaNumeric(InputContext &input, std::u32string &buffer)
 
     while (input.tryGetNextCharacter(next))
     {
-        if (CodePoint::isAlphaNumeric(next))
+        if (Ag::CodePoint::isAlphaNumeric(next))
         {
             buffer.push_back(next);
         }
@@ -140,7 +140,7 @@ void accumulateSymbol(InputContext &input, std::u32string &buffer)
 
     while (input.tryGetNextCharacter(next))
     {
-        if ((next == U'_') || CodePoint::isAlphaNumeric(next))
+        if ((next == U'_') || Ag::CodePoint::isAlphaNumeric(next))
         {
             buffer.push_back(next);
         }
@@ -240,7 +240,7 @@ struct MnemonicContext
 
         if (index < Text.length())
         {
-            ch = CodePoint::toUpper(Text[index]);
+            ch = Ag::CodePoint::toUpper(Text[index]);
             hasCharacter = true;
         }
 
@@ -257,8 +257,8 @@ struct MnemonicContext
 
         if (length > 1)
         {
-            char32_t first = CodePoint::toUpper(Text[Index]);
-            char32_t second = CodePoint::toUpper(Text[Index + 1]);
+            char32_t first = Ag::CodePoint::toUpper(Text[Index]);
+            char32_t second = Ag::CodePoint::toUpper(Text[Index + 1]);
             bool hasCondition = true;
             ConditionCode code = ConditionCode::Al;
 
@@ -446,7 +446,7 @@ struct MnemonicContext
 
         if (length > 0)
         {
-            char32_t suffix = CodePoint::toUpper(Text[Index]);
+            char32_t suffix = Ag::CodePoint::toUpper(Text[Index]);
 
             if (suffix == suffixChar)
             {
@@ -564,7 +564,7 @@ struct MnemonicContext
     //! @param[in] length The length of the prefix.
     //! @retval true The suffix matches and the index moved on.
     //! @retval false The suffix doesn't match.
-    bool ensureSuffix(const utf32_cptr_t suffix, size_t length)
+    bool ensureSuffix(const Ag::utf32_cptr_t suffix, size_t length)
     {
         size_t charsLeft = Text.length() - Index;
         bool hasSuffix = false;
@@ -575,7 +575,7 @@ struct MnemonicContext
 
             for (size_t offset = 0; hasSuffix && (offset < length); ++offset)
             {
-                hasSuffix = CodePoint::toUpper(Text[Index + offset]) == suffix[offset];
+                hasSuffix = Ag::CodePoint::toUpper(Text[Index + offset]) == suffix[offset];
             }
 
             if (hasSuffix)
@@ -595,7 +595,7 @@ struct MnemonicContext
     template<size_t TLen>
     bool ensureSuffix(const char32_t (&suffix)[TLen])
     {
-        return ensureSuffix(suffix, arraySize(suffix) - 1);
+        return ensureSuffix(suffix, std::size(suffix) - 1);
     }
 
     //! @brief Ensures there are no characters after the end of the recognised
@@ -606,9 +606,10 @@ struct MnemonicContext
         if (Index < Text.length())
         {
             // There are unrecognised characters after those which were recognised.
-            String instruction(Text);
-            String message = String::format("The instruction mnemonic '{0}' is invalid.",
-                                            { instruction });
+            Ag::String instruction(Text);
+            Ag::String message = Ag::String::format("The instruction mnemonic "
+                                                    "'{0}' is invalid.",
+                                                    { instruction });
 
             Location oldLocation = mnemonic.getLocation();
             mnemonic.reset(oldLocation, TokenClass::Error, message);
@@ -660,7 +661,7 @@ Token parseLongMulOp(MnemonicContext &context)
     if (context.Text.length() >= 5)
     {
         addTokenEnum(result, TokenProperty::Mnemonic, context.Mnemonic);
-        char32_t third = CodePoint::toUpper(context.Text[2]);
+        char32_t third = Ag::CodePoint::toUpper(context.Text[2]);
 
         if (third == U'U')
         {
@@ -920,9 +921,10 @@ Token parseMultiDataTransfer(MnemonicContext &context)
         else
         {
             // Define a custom error.
-            String mnemonic(context.Text);
-            String message = String::format("Invalid suffix on multi-data transfer instruction '{0}'.",
-                                            { mnemonic });
+            Ag::String mnemonic(context.Text);
+            Ag::String message = Ag::String::format("Invalid suffix on multi-data "
+                                                    "transfer instruction '{0}'.",
+                                                    { mnemonic });
 
             instruction.reset(context.Position, TokenClass::Error, message);
             context.Index = context.Text.length();
@@ -931,9 +933,10 @@ Token parseMultiDataTransfer(MnemonicContext &context)
     else
     {
         // Define a custom error.
-        String mnemonic(context.Text);
-        String message = String::format("Multi-data transfer instruction '{0}' missing transfer mode suffix.",
-                                        { mnemonic });
+        Ag::String mnemonic(context.Text);
+        Ag::String message = Ag::String::format("Multi-data transfer instruction "
+                                                "'{0}' missing transfer mode suffix.",
+                                                { mnemonic });
 
         instruction.reset(context.Position, TokenClass::Error, message);
         context.Index = context.Text.length();
@@ -995,7 +998,7 @@ Token parseSequencedEncoding(MnemonicContext &context)
 
     if (context.tryGetChar(0, suffix))
     {
-        switch (CodePoint::toUpper(suffix))
+        switch (Ag::CodePoint::toUpper(suffix))
         {
         case U'L':
             addTokenEnum(instruction, TokenProperty::SequenceEncoding,
@@ -1055,9 +1058,10 @@ Token parseFpaDataOp(MnemonicContext &context)
     else
     {
         // Create a custom error message for a missing suffix.
-        String mnemonic(context.Text);
-        String message = String::format("Missing precision suffix on FPA instruction mnemonic '{0}'.",
-                                        { mnemonic });
+        Ag::String mnemonic(context.Text);
+        Ag::String message = Ag::String::format("Missing precision suffix on "
+                                                "FPA instruction mnemonic '{0}'.",
+                                                { mnemonic });
 
         instruction.reset(context.Position, TokenClass::Error, message);
 
@@ -1082,7 +1086,7 @@ Token parseFpaCmpOp(MnemonicContext &context)
     }
     else if ((excess == 1) || (excess == 3))
     {
-        if (CodePoint::toUpper(context.Text[context.Index]) == U'E')
+        if (Ag::CodePoint::toUpper(context.Text[context.Index]) == U'E')
         {
             if (context.Mnemonic == InstructionMnemonic::Cmf)
             {
@@ -1337,7 +1341,7 @@ Token parseAlign(MnemonicContext &context)
 Token interpretLabelDefinition(const Location &position, std::u32string &buffer)
 {
     TokenClass classification = TokenClass::Error;
-    String value;
+    Ag::String value;
 
     if (buffer.empty())
     {
@@ -1346,7 +1350,7 @@ Token interpretLabelDefinition(const Location &position, std::u32string &buffer)
     else
     {
         classification = TokenClass::Label;
-        value = String(buffer.c_str(), buffer.length());
+        value = Ag::String(buffer.c_str(), buffer.length());
     }
 
     return Token(position, classification, value);
@@ -1368,7 +1372,7 @@ Token interpretDirective(const Location &position, std::u32string &buffer)
     else
     {
         // Store the possible matches in a hash table for fast lookup.
-        static std::unordered_map<String, Token> directiveById;
+        static std::unordered_map<Ag::String, Token> directiveById;
 
         if (directiveById.empty())
         {
@@ -1421,15 +1425,16 @@ Token interpretDirective(const Location &position, std::u32string &buffer)
             directiveById["32BIT"] = temp;
         }
 
-        String key = makeKey(buffer, buffer.length());
+        Ag::String key = makeKey(buffer, buffer.length());
         auto match = directiveById.find(key);
 
         if (match == directiveById.end())
         {
             // The directive was not recognised, return an error.
-            String directiveText(buffer);
-            String message = String::format("Unknown assembly directive '%{0}'.",
-                                            { directiveText });
+            Ag::String directiveText(buffer);
+            Ag::String message = Ag::String::format("Unknown assembly "
+                                                    "directive '%{0}'.",
+                                                    { directiveText });
 
             result = Token(position, TokenClass::Error, message);
         }
@@ -1449,8 +1454,8 @@ Token interpretMnemonic(const Location &position, std::u32string &buffer)
 
     if (buffer.length() < 3)
     {
-        char32_t first = buffer.empty() ? U'\0' : CodePoint::toUpper(buffer[0]);
-        char32_t second = (buffer.size() < 2) ? U'\0' : CodePoint::toUpper(buffer[1]);
+        char32_t first = buffer.empty() ? U'\0' : Ag::CodePoint::toUpper(buffer[0]);
+        char32_t second = (buffer.size() < 2) ? U'\0' : Ag::CodePoint::toUpper(buffer[1]);
 
         if (first == U'B')
         {
@@ -1475,7 +1480,7 @@ Token interpretMnemonic(const Location &position, std::u32string &buffer)
     {
         // Somewhat harder now: use the first three characters as a key
         // into a hash map.
-        static std::unordered_map<String, MnemonicMapping> mnemonicParsersById;
+        static std::unordered_map<Ag::String, MnemonicMapping> mnemonicParsersById;
 
         if (mnemonicParsersById.empty())
         {
@@ -1618,7 +1623,7 @@ Token interpretMnemonic(const Location &position, std::u32string &buffer)
             mnemonicParsersById["RRX"] = MnemonicMapping(TokenClass::RotateRightWithExtendShift);
         }
 
-        String key = makeKey(buffer, 3);
+        Ag::String key = makeKey(buffer, 3);
         auto match = mnemonicParsersById.find(key);
 
         if (match != mnemonicParsersById.end())
@@ -1646,9 +1651,10 @@ Token interpretMnemonic(const Location &position, std::u32string &buffer)
 
     if (result.getClass() == TokenClass::Empty)
     {
-        String mnemonic(buffer);
-        String message = String::format("Unknown mnemonic '{0}' at the beginning of a statement.",
-                                        { mnemonic });
+        Ag::String mnemonic(buffer);
+        Ag::String message = Ag::String::format("Unknown mnemonic '{0}' at "
+                                                "the beginning of a statement.",
+                                                { mnemonic });
 
         result = Token(position, TokenClass::Error, message);
     }
@@ -1675,7 +1681,7 @@ bool processContinuationMarker(InputContext &input, Token &token)
     while (input.tryGetNextCharacter(next) && (next != '\n'))
     {
         if ((hasGarbage == false) &&
-            (CodePoint::isWhiteSpace(next) == false))
+            (Ag::CodePoint::isWhiteSpace(next) == false))
         {
             // We've found characters after the statement
             // continuation marker. Unless it's a comment
@@ -1719,8 +1725,9 @@ void recover(InputContext &input)
 //! @returns An error token with an appropriate message.
 Token makeUnexpectedInputToken(const Location &location, char32_t ch)
 {
-    String message = String::format("Unexpected character '{0}' in the input stream.",
-                                    { ch });
+    Ag::String message = Ag::String::format("Unexpected character '{0}' in "
+                                            "the input stream.",
+                                            { ch });
 
     return Token(location, TokenClass::Error, message);
 }
@@ -1763,11 +1770,11 @@ public:
             Location position = input.getCurrentLocation();
             hasToken = true;
 
-            static LinearSortedMap<char32_t, TokenClass> tokenIdByCharacter;
+            static Ag::LinearSortedMap<char32_t, TokenClass> tokenIdByCharacter;
 
             if (tokenIdByCharacter.isEmpty())
             {
-                LinearSortedMapIndexer indexer(tokenIdByCharacter);
+                Ag::LinearSortedMapIndexer indexer(tokenIdByCharacter);
                 tokenIdByCharacter.push_back(U'\n', TokenClass::StatementTerminator);
                 tokenIdByCharacter.push_back(U':', TokenClass::StatementTerminator);
                 tokenIdByCharacter.push_back(U'!', TokenClass::Bang);
@@ -1822,7 +1829,7 @@ public:
 
                 token = interpretLabelDefinition(position, buffer);
             }
-            else if (CodePoint::isLetter(next))
+            else if (Ag::CodePoint::isLetter(next))
             {
                 // It could be an instruction mnemonic or keyword of
                 // some kind?
@@ -1856,8 +1863,8 @@ public:
                     }
                 }
 
-                String message = String::format("Unknown statement text '{0}'.",
-                                                { String(buffer) });
+                Ag::String message = Ag::String::format("Unknown statement text '{0}'.",
+                                                        { Ag::String(buffer) });
 
                 token.reset(position, TokenClass::Error, message);
             }
@@ -1995,9 +2002,9 @@ private:
     //! @return A token created from the specified characters.
     static Token parseSymbol(const Location &position, std::u32string &text)
     {
-        String key = makeKey(text, text.length());
+        Ag::String key = makeKey(text, text.length());
 
-        static std::unordered_map<String, TokenClass> keywordClassesById;
+        static std::unordered_map<Ag::String, TokenClass> keywordClassesById;
 
         if (keywordClassesById.empty())
         {
@@ -2014,7 +2021,7 @@ private:
 
         if (pos == keywordClassesById.end())
         {
-            token.reset(position, TokenClass::Symbol, String(text));
+            token.reset(position, TokenClass::Symbol, text);
         }
         else
         {
@@ -2099,7 +2106,7 @@ private:
         // Ensure we have at least one hex digit.
         if (input.tryGetNextCharacter(next))
         {
-            if (CodePoint::isHexDigit(next))
+            if (Ag::CodePoint::isHexDigit(next))
             {
                 // Consume all subsequent hex digits.
                 std::u32string buffer;
@@ -2109,7 +2116,7 @@ private:
 
                 while (input.tryGetNextCharacter(next))
                 {
-                    if (CodePoint::isHexDigit(next))
+                    if (Ag::CodePoint::isHexDigit(next))
                     {
                         buffer.push_back(next);
                     }
@@ -2165,7 +2172,7 @@ private:
         // Consume any further decimal digits.
         while (input.tryGetNextCharacter(next))
         {
-            if (CodePoint::isNumeric(next))
+            if (Ag::CodePoint::isNumeric(next))
             {
                 buffer.push_back(static_cast<char>(next));
             }
@@ -2200,14 +2207,14 @@ private:
                 // Ensure there is at least one fraction digit.
                 if (input.tryGetNextCharacter(next))
                 {
-                    if (CodePoint::isNumeric(next))
+                    if (Ag::CodePoint::isNumeric(next))
                     {
                         // Consume all further fraction digits.
                         buffer.push_back(static_cast<char>(next));
 
                         while (input.tryGetNextCharacter(next))
                         {
-                            if (CodePoint::isNumeric(next))
+                            if (Ag::CodePoint::isNumeric(next))
                             {
                                 buffer.push_back(static_cast<char>(next));
                             }
@@ -2257,14 +2264,14 @@ private:
                 // Ensure we have at least one exponent digit.
                 if (input.tryGetNextCharacter(next))
                 {
-                    if (CodePoint::isNumeric(next))
+                    if (Ag::CodePoint::isNumeric(next))
                     {
                         // Consume all further exponent digits.
                         buffer.push_back(static_cast<char>(next));
 
                         while (input.tryGetNextCharacter(next))
                         {
-                            if (CodePoint::isNumeric(next))
+                            if (Ag::CodePoint::isNumeric(next))
                             {
                                 buffer.push_back(static_cast<char>(next));
                             }
@@ -2292,12 +2299,12 @@ private:
             if (isValid == false)
             {
                 // Create an error message in the buffer.
-                String digits(buffer);
+                Ag::String digits(buffer);
                 buffer.clear();
 
-                FormatInfo format(LocaleInfo::getDisplay());
-                appendFormat(format, "Invalid floating point literal '{0}'.",
-                             buffer, { digits });
+                Ag::appendFormat(Ag::FormatInfo::getDisplay(),
+                                 "Invalid floating point literal '{0}'.",
+                                 buffer, { digits });
 
                 tokenClass = TokenClass::Error;
                 recover(input);
@@ -2329,9 +2336,9 @@ private:
 
             if (input.tryGetNextCharacter(second))
             {
-                char32_t key = CodePoint::toUpper(second);
+                char32_t key = Ag::CodePoint::toUpper(second);
 
-                if (CodePoint::isNumeric(second) || (second == '.') ||
+                if (Ag::CodePoint::isNumeric(second) || (second == '.') ||
                     (second == U'E') || (second == U'e'))
                 {
                     input.ungetCharacter();
@@ -2424,7 +2431,7 @@ private:
 
             if (input.tryGetNextCharacter(next))
             {
-                if (CodePoint::isHexDigit(next))
+                if (Ag::CodePoint::isHexDigit(next))
                 {
                     sequence.push_back(next);
                 }
@@ -2445,7 +2452,7 @@ private:
 
         if ((sequence.size() - sequenceStart) == digitCount)
         {
-            String digits(sequence.c_str() + sequenceStart, digitCount);
+            Ag::String digits(sequence.c_str() + sequenceStart, digitCount);
 
             uint32_t codePoint;
 
@@ -2486,11 +2493,11 @@ private:
         {
             if (isEscaped)
             {
-                static LinearSortedMap<char32_t, char32_t> singleCharEscape;
+                static Ag::LinearSortedMap<char32_t, char32_t> singleCharEscape;
 
                 if (singleCharEscape.isEmpty())
                 {
-                    LinearSortedMapIndexer reindex(singleCharEscape);
+                    Ag::LinearSortedMapIndexer reindex(singleCharEscape);
                     singleCharEscape.push_back(U'\\', U'\\');
                     singleCharEscape.push_back(U'0', U'\0');
                     singleCharEscape.push_back(U't', U'\t');
@@ -2561,9 +2568,9 @@ private:
 
                 if (isValid == false)
                 {
-                    String message =
-                        String::format("Invalid escape sequence '{0}'.",
-                                       { String(escapeSequence) });
+                    Ag::String message =
+                        Ag::String::format("Invalid escape sequence '{0}'.",
+                                           { Ag::String(escapeSequence) });
 
                     Token error(currentEscape, TokenClass::Error, message);
                     recoverFromStringLiteral(input, openingQuote);
@@ -2630,11 +2637,11 @@ public:
             Location position = input.getCurrentLocation();
             hasToken = true;
 
-            static LinearSortedMap<char32_t, TokenClass> tokenClassesByCharacter;
+            static Ag::LinearSortedMap<char32_t, TokenClass> tokenClassesByCharacter;
 
             if (tokenClassesByCharacter.isEmpty())
             {
-                LinearSortedMapIndexer reindex(tokenClassesByCharacter);
+                Ag::LinearSortedMapIndexer reindex(tokenClassesByCharacter);
                 tokenClassesByCharacter.push_back(U'\n', TokenClass::StatementTerminator);
                 tokenClassesByCharacter.push_back(U':', TokenClass::StatementTerminator);
                 tokenClassesByCharacter.push_back(U'+', TokenClass::Plus);
@@ -2731,12 +2738,12 @@ public:
                     recover(input);
                 }
             }
-            else if (CodePoint::isNumeric(next))
+            else if (Ag::CodePoint::isNumeric(next))
             {
                 // A numeric literal.
                 token = parseNumericLiteral(position, input, next);
             }
-            else if ((next == U'_') || CodePoint::isLetter(next))
+            else if ((next == U'_') || Ag::CodePoint::isLetter(next))
             {
                 // A symbol or keyword.
                 std::u32string buffer;
@@ -2847,11 +2854,11 @@ public:
             Location position = input.getCurrentLocation();
             hasToken = true;
 
-            static LinearSortedMap<char32_t, TokenClass> tokenClassesByCharacter;
+            static Ag::LinearSortedMap<char32_t, TokenClass> tokenClassesByCharacter;
 
             if (tokenClassesByCharacter.isEmpty())
             {
-                LinearSortedMapIndexer reindex(tokenClassesByCharacter);
+                Ag::LinearSortedMapIndexer reindex(tokenClassesByCharacter);
                 tokenClassesByCharacter.push_back(U'\n', TokenClass::StatementTerminator);
                 tokenClassesByCharacter.push_back(U':', TokenClass::StatementTerminator);
                 tokenClassesByCharacter.push_back(U'-', TokenClass::Minus);
@@ -2885,7 +2892,7 @@ public:
 
                 hasToken = (token.getClass() != TokenClass::Empty);
             }
-            else if (CodePoint::isLetter(next))
+            else if (Ag::CodePoint::isLetter(next))
             {
                 // A symbol or keyword.
                 std::u32string buffer;
@@ -2894,7 +2901,7 @@ public:
                 buffer.push_back(next);
                 accumulateAlphaNumeric(input, buffer);
 
-                token.reset(position, TokenClass::Symbol, String(buffer));
+                token.reset(position, TokenClass::Symbol, buffer);
             }
             else
             {
@@ -2931,7 +2938,7 @@ private:
     bool tryParseSuffix(const std::u32string &source, uint8_t &components) const
     {
         bool isSuffixValid = true;
-        components = toScalar(PsrComponent::All);
+        components = Ag::toScalar(PsrComponent::All);
 
         if ((source.length() > 4) && (source[4] == U'_'))
         {
@@ -2949,15 +2956,15 @@ private:
 
                 if (suffix == allSuffix)
                 {
-                    components = toScalar(PsrComponent::All);
+                    components = Ag::toScalar(PsrComponent::All);
                 }
                 else if (suffix == flgSuffix)
                 {
-                    components = toScalar(PsrComponent::Flags);
+                    components = Ag::toScalar(PsrComponent::Flags);
                 }
                 else if (suffix == ctlSuffix)
                 {
-                    components = toScalar(PsrComponent::Control);
+                    components = Ag::toScalar(PsrComponent::Control);
                 }
                 else
                 {
@@ -2985,7 +2992,7 @@ private:
                         break;
                     }
 
-                    uint8_t rawComponent = toScalar(component);
+                    uint8_t rawComponent = Ag::toScalar(component);
 
                     if (components & rawComponent)
                     {
@@ -3046,7 +3053,7 @@ public:
 
                 hasToken = (token.getClass() != TokenClass::Empty);
             }
-            else if (CodePoint::isLetter(next))
+            else if (Ag::CodePoint::isLetter(next))
             {
                 // A symbol or keyword.
                 std::u32string buffer;
@@ -3066,7 +3073,7 @@ public:
                     key.reserve(buffer.size());
 
                     std::transform(buffer.begin(), buffer.end(),
-                                   std::back_inserter(key), CodePoint::toUpper);
+                                   std::back_inserter(key), Ag::CodePoint::toUpper);
 
                     if (startsWith(key, cpsr))
                     {
@@ -3092,7 +3099,7 @@ public:
                             // Apply the PSR component detail to the token.
                             token.addScalarProperty(TokenProperty::PsrComponent, components);
                         }
-                        else if (components != toScalar(PsrComponent::All))
+                        else if (components != Ag::toScalar(PsrComponent::All))
                         {
                             token.reset(position, TokenClass::Error,
                                         "The status register cannot specify a sub-component.");
@@ -3100,9 +3107,11 @@ public:
                     }
                     else
                     {
-                        String value(buffer);
-                        String message = String::format("Status register specification '{0}' has an invalid suffix.",
-                                                        { value });
+                        Ag::String value(buffer);
+                        Ag::String message =
+                            Ag::String::format("Status register specification "
+                                               "'{0}' has an invalid suffix.",
+                                               { value });
 
                         token.reset(position, TokenClass::Error, message);
                         hasToken = true;
@@ -3111,9 +3120,11 @@ public:
 
                 if (hasToken == false)
                 {
-                    String value(buffer);
-                    String message = String::format("Token '{0}' is not a valid status register specification.",
-                                                    { value });
+                    Ag::String value(buffer);
+                    Ag::String message =
+                        Ag::String::format("Token '{0}' is not a valid status "
+                                           "register specification.",
+                                           { value });
 
                     token.reset(position, TokenClass::Error, message);
                     hasToken = true;
@@ -3177,6 +3188,6 @@ ILexicalContext *getPsrComponentLexer()
     return &instance;
 }
 
-}} // namespace Ag::Asm
+}} // namespace Mo::Asm
 ////////////////////////////////////////////////////////////////////////////////
 

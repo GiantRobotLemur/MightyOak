@@ -251,7 +251,7 @@ bool tryAppendArgument(ArgumentCollection &argTokens,
     return isOK;
 }
 
-} // TED
+} // Anonymous namespace
 
 ////////////////////////////////////////////////////////////////////////////////
 // ProgramArguments Member Function Definitions

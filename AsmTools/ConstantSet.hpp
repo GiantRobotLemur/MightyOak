@@ -12,23 +12,15 @@
 #define __ASM_TOOLS_CONSTANT_SET_HPP__
 
 ////////////////////////////////////////////////////////////////////////////////
-// Dependant Header Files
+// Dependent Header Files
 ////////////////////////////////////////////////////////////////////////////////
 #include <unordered_map>
 
 #include "Ag/Core/String.hpp"
 #include "Value.hpp"
 
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
-
-namespace Ag {
+namespace Mo {
 namespace Asm {
-
-////////////////////////////////////////////////////////////////////////////////
-// Data Type Declarations
-////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////
 // Class Declarations
@@ -48,12 +40,12 @@ public:
 
     // Accessors
     bool isEmpty() const;
-    bool contains(string_cref_t id) const;
-    bool tryLookupValue(string_cref_t id, Value &value) const;
+    bool contains(Ag::string_cref_t id) const;
+    bool tryLookupValue(Ag::string_cref_t id, Value &value) const;
 
     // Operations
-    void addConstant(string_cref_t id, const Value &value);
-    void addBasedConstant(string_cref_t id, uint32_t minOrdinal,
+    void addConstant(Ag::string_cref_t id, const Value &value);
+    void addBasedConstant(Ag::string_cref_t id, uint32_t minOrdinal,
                           uint32_t maxOrdinal, int32_t valueOffset = 0);
 private:
     struct BaseConstant
@@ -67,8 +59,8 @@ private:
     };
 
     // Internal Fields
-    std::unordered_map<String, Value> _fixedConstants;
-    std::unordered_map<String, BaseConstant> _basedConstants;
+    std::unordered_map<Ag::String, Value> _fixedConstants;
+    std::unordered_map<Ag::String, BaseConstant> _basedConstants;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -79,11 +71,7 @@ const ConstantSet &getCoProcIDSymbols();
 const ConstantSet &getCoProcRegSymbols();
 const ConstantSet &getFPARegSymbols();
 
-////////////////////////////////////////////////////////////////////////////////
-// Templates
-////////////////////////////////////////////////////////////////////////////////
-
-}} // namespace Ag::Asm
+}} // namespace Mo::Asm
 
 #endif // Header guard
 ////////////////////////////////////////////////////////////////////////////////

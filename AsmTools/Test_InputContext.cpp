@@ -17,30 +17,19 @@
 
 #include "ParseContext.hpp"
 #include "Ag/GTest_Core.hpp"
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
 
-namespace Ag {
+namespace Mo {
 namespace Asm {
 
 namespace {
-////////////////////////////////////////////////////////////////////////////////
-// Local Data Types
-////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////
-// Local Data
-////////////////////////////////////////////////////////////////////////////////
-
 ////////////////////////////////////////////////////////////////////////////////
 // Unit Tests
 ////////////////////////////////////////////////////////////////////////////////
 GTEST_TEST(InputContext, EmptyBuffer)
 {
-    IInputSourcePtr source = createBufferInputSource(String::Empty);
+    IInputSourcePtr source = createBufferInputSource(Ag::String::Empty);
     Location position("MyProject/Libs/Here.asm");
-    String sourceId("MyProject/Libs/Lib.asm");
+    Ag::String sourceId("MyProject/Libs/Lib.asm");
     InputContext specimen(source, position, sourceId, 12);
 
     EXPECT_STREQ(specimen.getCurrentLocation().FileName.getUtf8Bytes(),
@@ -64,7 +53,7 @@ GTEST_TEST(InputContext, ReadCharacters)
 {
     IInputSourcePtr source = createBufferInputSource("EOR R0,R1,R4");
     Location position("MyProject/Libs/Here.asm");
-    String sourceId("MyProject/Libs/Lib.asm");
+    Ag::String sourceId("MyProject/Libs/Lib.asm");
     InputContext specimen(source, position, sourceId, 0);
 
     EXPECT_STREQ(specimen.getCurrentLocation().FileName.getUtf8Bytes(),
@@ -100,7 +89,7 @@ GTEST_TEST(InputContext, ReadLines)
 {
     IInputSourcePtr source = createBufferInputSource("\nA\n");
     Location position("MyProject/Libs/Here.asm");
-    String sourceId("MyProject/Libs/Lib.asm");
+    Ag::String sourceId("MyProject/Libs/Lib.asm");
     InputContext specimen(source, position, sourceId, 0);
 
     EXPECT_STREQ(specimen.getCurrentLocation().FileName.getUtf8Bytes(),
@@ -138,7 +127,7 @@ GTEST_TEST(InputContext, UngetCharacters)
 {
     IInputSourcePtr source = createBufferInputSource("\nAB");
     Location position("MyProject/Libs/Here.asm");
-    String sourceId("MyProject/Libs/Lib.asm");
+    Ag::String sourceId("MyProject/Libs/Lib.asm");
     InputContext specimen(source, position, sourceId, 0);
 
     EXPECT_STREQ(specimen.getCurrentLocation().FileName.getUtf8Bytes(),
@@ -200,7 +189,7 @@ GTEST_TEST(InputContext, UngetOverNewLine)
 {
     IInputSourcePtr source = createBufferInputSource("A\nB");
     Location position("MyProject/Libs/Here.asm");
-    String sourceId("MyProject/Libs/Lib.asm");
+    Ag::String sourceId("MyProject/Libs/Lib.asm");
     InputContext specimen(source, position, sourceId, 0);
 
     EXPECT_STRINGEQ(specimen.getCurrentLocation().FileName, sourceId);
@@ -245,7 +234,7 @@ GTEST_TEST(InputContext, EnsureNextCharacter)
 {
     IInputSourcePtr source = createBufferInputSource("AB");
     Location position("MyProject/Libs/Here.asm");
-    String sourceId("MyProject/Libs/Lib.asm");
+    Ag::String sourceId("MyProject/Libs/Lib.asm");
     InputContext specimen(source, position, sourceId, 0);
 
     char32_t next;
@@ -284,7 +273,7 @@ GTEST_TEST(InputContext, BreakInputStream)
 
     IInputSourcePtr source = createBufferInputSource(sample);
     Location position("MyProject/Libs/Here.asm");
-    String sourceId("MyProject/Libs/Lib.asm");
+    Ag::String sourceId("MyProject/Libs/Lib.asm");
     InputContext specimen(source, position, sourceId, 0);
 
     EXPECT_STREQ(specimen.getCurrentLocation().FileName.getUtf8Bytes(),
@@ -313,7 +302,7 @@ GTEST_TEST(InputContext, BreakInputStream)
     EXPECT_NO_THROW({ specimen.ungetCharacter(); });
 
     // Ensure we can't unget to a character before the break.
-    EXPECT_THROW({ specimen.ungetCharacter(); }, OperationException);
+    EXPECT_THROW({ specimen.ungetCharacter(); }, Ag::OperationException);
 }
 
 
@@ -333,7 +322,7 @@ GTEST_TEST(InputContext, BreakInputStreamWithShuffle)
 
     IInputSourcePtr source = createBufferInputSource(sample);
     Location position("MyProject/Libs/Here.asm");
-    String sourceId("MyProject/Libs/Lib.asm");
+    Ag::String sourceId("MyProject/Libs/Lib.asm");
     InputContext specimen(source, position, sourceId, 0);
 
     EXPECT_STREQ(specimen.getCurrentLocation().FileName.getUtf8Bytes(),
@@ -370,8 +359,8 @@ GTEST_TEST(InputContext, BreakInputStreamWithShuffle)
     EXPECT_NO_THROW({ specimen.ungetCharacter(); });
 }
 
-} // TED
+} // Anonymous namespace
 
-}} // namespace Ag::Asm
+}} // namespace Mo::Asm
 ////////////////////////////////////////////////////////////////////////////////
 

@@ -12,7 +12,7 @@
 #define __ASM_TOOLS_TOKEN_HPP__
 
 ////////////////////////////////////////////////////////////////////////////////
-// Dependant Header Files
+// Dependent Header Files
 ////////////////////////////////////////////////////////////////////////////////
 #include <cstdint>
 #include <type_traits>
@@ -21,11 +21,7 @@
 #include "Ag/Core.hpp"
 #include "AsmTools/Messages.hpp"
 
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
-
-namespace Ag {
+namespace Mo {
 namespace Asm {
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -152,12 +148,13 @@ public:
     Token();
     Token(const Location &at, Token &original);
     Token(const Location &at, TokenClass classification);
-    Token(const Location &at, TokenClass classification, const String &value);
+    Token(const Location &at, TokenClass classification,
+          Ag::string_cref_t value);
     ~Token() = default;
 
     // Accessors
     TokenClass getClass() const;
-    const String &getValue() const;
+    const Ag::String &getValue() const;
     const Location &getLocation() const;
     bool tryGetScalarProperty(TokenProperty propId, uint8_t &value) const;
     void addScalarProperty(TokenProperty propId, uint8_t value);
@@ -167,7 +164,8 @@ public:
     void clearProperties();
 
     void reset(const Location &at, TokenClass classification);
-    void reset(const Location &at, TokenClass classification, const String &value);
+    void reset(const Location &at, TokenClass classification,
+               Ag::string_cref_t value);
 
 private:
     // Internal Constants
@@ -178,7 +176,7 @@ private:
 
     // Internal Fields
     Location _location;
-    String _value;
+    Ag::String _value;
     TokenClass _classification;
     PropValue _properties[MaxPropCount];
 };
@@ -272,7 +270,7 @@ void addTokenEnum(Token &token, TokenProperty propId, TEnum value)
                             static_cast<uint8_t>(static_cast<std::underlying_type_t<TEnum>>(value)));
 }
 
-}} // namespace Ag::Asm
+}} // namespace Mo::Asm
 
 #endif // Header guard
 ////////////////////////////////////////////////////////////////////////////////

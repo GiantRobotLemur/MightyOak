@@ -12,17 +12,13 @@
 #define __ASM_TOOLS_OPTIONS_HPP__
 
 ////////////////////////////////////////////////////////////////////////////////
-// Dependant Header Files
+// Dependent Header Files
 ////////////////////////////////////////////////////////////////////////////////
 #include <type_traits>
 
 #include <Ag/Core.hpp>
 
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
-
-namespace Ag {
+namespace Mo {
 namespace Asm {
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -104,17 +100,17 @@ public:
     AssemblyFlags getFlags() const;
     bool hasFlag(AssemblyFlagsEnum flag) const;
     void setFlag(AssemblyFlagsEnum flag);
-    const std::vector<Fs::Path> &getIncludePaths() const;
+    const std::vector<Ag::Fs::Path> &getIncludePaths() const;
 
     // Operations
-    void addIncludePath(string_cref_t path);
+    void addIncludePath(Ag::string_cref_t path);
 private:
     // Internal Types
 
     // Internal Functions
 
     // Internal Fields
-    std::vector<Fs::Path> _includePaths;
+    std::vector<Ag::Fs::Path> _includePaths;
     uint32_t _loadAddress;
     InstructionSet _instructionSet;
     ArchExtensions _extensions;
@@ -124,14 +120,10 @@ private:
 ////////////////////////////////////////////////////////////////////////////////
 // Function Declarations
 ////////////////////////////////////////////////////////////////////////////////
-const EnumInfo<InstructionSet> &getInstructionSetType();
-const EnumInfo<ArchExtensionEnum> &getArchExtensionsType();
+const Ag::EnumInfo<InstructionSet> &getInstructionSetType();
+const Ag::EnumInfo<ArchExtensionEnum> &getArchExtensionsType();
 
-////////////////////////////////////////////////////////////////////////////////
-// Templates
-////////////////////////////////////////////////////////////////////////////////
-
-}} // namespace Ag::Asm
+}} // namespace Mo::Asm
 
 #endif // Header guard
 ////////////////////////////////////////////////////////////////////////////////

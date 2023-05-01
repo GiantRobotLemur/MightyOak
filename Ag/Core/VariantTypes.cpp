@@ -537,7 +537,7 @@ void initialiseStandardConversions(VariantConversionMap &map)
     DECLARE_TO_STRING_CONVERSION(Double);
 }
 
-} // TED
+} // Anonymous namespace
 
 ////////////////////////////////////////////////////////////////////////////////
 // Class Method Definitions

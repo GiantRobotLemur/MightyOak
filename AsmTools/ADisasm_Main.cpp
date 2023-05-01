@@ -13,7 +13,12 @@
 #include "Ag/Core.hpp"
 #include "AsmTools.hpp"
 
-namespace Ag {
+// A bit lazy, but it's only one file.
+// TODO: If ADisasm is expanded to more than a single file, resolve the Ag
+// namespaced element references.
+using namespace Ag;
+
+namespace Mo {
 namespace Asm {
 
 namespace {
@@ -493,12 +498,12 @@ protected:
 
 } // Anonymous namespace
 
-}} // namespace Ag::Asm
+}} // namespace Mo::Asm
 
 ////////////////////////////////////////////////////////////////////////////////
 // Global Function Definitions
 ////////////////////////////////////////////////////////////////////////////////
-IMPLEMENT_MAIN(Ag::Asm::ADisasmApp);
+IMPLEMENT_MAIN(Mo::Asm::ADisasmApp);
 
 ////////////////////////////////////////////////////////////////////////////////
 

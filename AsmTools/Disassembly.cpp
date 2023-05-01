@@ -16,7 +16,7 @@
 
 #include "Disassembly.hpp"
 
-namespace Ag {
+namespace Mo {
 namespace Asm {
 
 namespace {
@@ -89,8 +89,8 @@ OperationClass interpretCoProcDataTransfer(DisassemblyParams &params)
     params.Mnemonic = params.isSet(20) ? InstructionMnemonic::Ldc :
                                          InstructionMnemonic::Stc;
     info.IsLong = params.isSet(22);
-    info.CoProcessor = fromScalar<CoProcId>(params.extract8(8, 4));
-    info.Rd = fromScalar<CoProcRegister>(params.extract8(12, 4));
+    info.CoProcessor = Ag::fromScalar<CoProcId>(params.extract8(8, 4));
+    info.Rd = Ag::fromScalar<CoProcRegister>(params.extract8(12, 4));
 
     if (params.isSet(24))
     {
@@ -108,7 +108,7 @@ OperationClass interpretCoProcDataTransfer(DisassemblyParams &params)
     }
 
     info.Addr.Offset.Mode = ShifterMode::ImmediateConstant;
-    info.Addr.Rn = fromScalar<CoreRegister>(params.extract8(16, 4));
+    info.Addr.Rn = Ag::fromScalar<CoreRegister>(params.extract8(16, 4));
     info.Addr.Offset.Immediate = params.extract16(0, 8) << 2;
     ++params.Decoded;
 
@@ -123,7 +123,7 @@ OperationClass interpretCoreAlu(DisassemblyParams &params)
 {
     // Bits Interpreted:
     // 0bXXXX 00?? ???? ???? ???? ???? ???? ????
-    params.Mnemonic = fromScalar<InstructionMnemonic>(params.extract8(21, 4));
+    params.Mnemonic = Ag::fromScalar<InstructionMnemonic>(params.extract8(21, 4));
     OperationClass opClass = OperationClass::None;
     ShifterOperand *shifter = nullptr;
 
@@ -164,13 +164,13 @@ OperationClass interpretCoreAlu(DisassemblyParams &params)
         {
             // Its an immediate constant.
             shifter->Mode = ShifterMode::ImmediateConstant;
-            shifter->Immediate = Bin::rotateRight(params.extract32(0, 8),
-                                                  params.extract16(8, 4) * 2);
+            shifter->Immediate = Ag::Bin::rotateRight(params.extract32(0, 8),
+                                                      params.extract16(8, 4) * 2);
         }
         else
         {
             shifter->Rm = params.decodeCoreRegister(0);
-            shifter->Shift = fromScalar<ShiftType>(params.extract8(5, 2));
+            shifter->Shift = Ag::fromScalar<ShiftType>(params.extract8(5, 2));
 
             if (params.isSet(4) == false)
             {
@@ -256,8 +256,8 @@ OperationClass interpretCoreAlu(DisassemblyParams &params)
             {
                 // The next instruction add to/subtracts from the
                 // originally calculated PC-relative offset.
-                uint32_t offset = Bin::rotateRight(params.extract32(0, 8),
-                                                   params.extract8(8, 4) << 1);
+                uint32_t offset = Ag::Bin::rotateRight(params.extract32(0, 8),
+                                                       params.extract8(8, 4) << 1);
 
                 if (isPositiveOffset)
                 {
@@ -405,7 +405,7 @@ OperationClass interpretCoreDataTransfer(DisassemblyParams &params)
     {
         // Operand 2 is a register, possibly shifted by a constant.
         info.Addr.Offset.Mode = ShifterMode::ShiftByConstant;
-        info.Addr.Offset.Shift = fromScalar<ShiftType>(params.extract8(5, 2));
+        info.Addr.Offset.Shift = Ag::fromScalar<ShiftType>(params.extract8(5, 2));
         info.Addr.Offset.Rm = params.decodeCoreRegister(0);
         info.Addr.Offset.Immediate = params.extract8(7, 5);
 
@@ -733,7 +733,7 @@ uint32_t DisassemblyParams::extract32(uint8_t offset, uint8_t bitCount) const no
 //! @return The extracted register value.
 CoreRegister DisassemblyParams::decodeCoreRegister(uint8_t lowestBit) const noexcept
 {
-    return fromScalar<CoreRegister>(static_cast<uint8_t>((Instructions[Decoded] >> lowestBit) & 0x0F));
+    return Ag::fromScalar<CoreRegister>(static_cast<uint8_t>((Instructions[Decoded] >> lowestBit) & 0x0F));
 }
 
 //! @brief Extracts the value of a co-processor register from an instruction bit field.
@@ -741,7 +741,7 @@ CoreRegister DisassemblyParams::decodeCoreRegister(uint8_t lowestBit) const noex
 //! @return The extracted register value.
 CoProcRegister DisassemblyParams::decodeCoProcessorRegister(uint8_t lowestBit) const noexcept
 {
-    return fromScalar<CoProcRegister>(static_cast<uint8_t>((Instructions[Decoded] >> lowestBit) & 0x0F));
+    return Ag::fromScalar<CoProcRegister>(static_cast<uint8_t>((Instructions[Decoded] >> lowestBit) & 0x0F));
 }
 
 //! @brief Extracts the value of an FPA register from an instruction bit field.
@@ -749,7 +749,7 @@ CoProcRegister DisassemblyParams::decodeCoProcessorRegister(uint8_t lowestBit) c
 //! @return The extracted register value.
 FpaRegister DisassemblyParams::decodeFPARegister(uint8_t lowestBit) const noexcept
 {
-    return fromScalar<FpaRegister>(static_cast<uint8_t>((Instructions[Decoded] >> lowestBit) & 0x07));
+    return Ag::fromScalar<FpaRegister>(static_cast<uint8_t>((Instructions[Decoded] >> lowestBit) & 0x07));
 }
 
 //! @brief Extracts the value of a co-processor identifier from an instruction bit field.
@@ -757,7 +757,7 @@ FpaRegister DisassemblyParams::decodeFPARegister(uint8_t lowestBit) const noexce
 //! @return The extracted co-processor identifier value.
 CoProcId DisassemblyParams::decodeCoProcessorID(uint8_t lowestBit) const noexcept
 {
-    return fromScalar<CoProcId>(static_cast<uint8_t>((Instructions[Decoded] >> lowestBit) & 0x0F));
+    return Ag::fromScalar<CoProcId>(static_cast<uint8_t>((Instructions[Decoded] >> lowestBit) & 0x0F));
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -772,7 +772,7 @@ OperationClass disassembleInstruction(DisassemblyParams &params)
 
     // Initialise the condition code, it is unlikely but possible that it
     // might be overwritten.
-    params.Condition = fromScalar<ConditionCode>(static_cast<uint8_t>(params.Instructions[params.Decoded] >> 28));
+    params.Condition = Ag::fromScalar<ConditionCode>(static_cast<uint8_t>(params.Instructions[params.Decoded] >> 28));
     uint8_t opCode;
 
     // Perform base decoding using bits 25-27.
@@ -939,8 +939,8 @@ OperationClass disassembleInstruction(DisassemblyParams &params)
                 info.IsCPSR = params.isClear(22);
                 info.IsSourceReg = false;
                 info.PsrComponents = params.extract8(16, 4);
-                info.SourceImmediate = Bin::rotateRight(params.extract32(0, 8),
-                                                        params.extract8(8, 4) << 1);
+                info.SourceImmediate = Ag::Bin::rotateRight(params.extract32(0, 8),
+                                                            params.extract8(8, 4) << 1);
                 info.SourceReg = CoreRegister::R0;
                 ++params.Decoded;
             }
@@ -1051,6 +1051,6 @@ void fixDisasmShifterMode(ShifterOperand &shiftOperand)
     }
 }
 
-}} // namespace Ag::Asm
+}} // namespace Mo::Asm
 ////////////////////////////////////////////////////////////////////////////////
 

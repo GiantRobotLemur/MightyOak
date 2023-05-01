@@ -15,27 +15,8 @@
 
 #include "Token.hpp"
 
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
-
-namespace Ag {
+namespace Mo {
 namespace Asm {
-
-namespace {
-////////////////////////////////////////////////////////////////////////////////
-// Local Data Types
-////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////
-// Local Data
-////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////
-// Local Functions
-////////////////////////////////////////////////////////////////////////////////
-
-} // TED
 
 ////////////////////////////////////////////////////////////////////////////////
 // Class Method Definitions
@@ -74,7 +55,8 @@ Token::Token(const Location &at, TokenClass classification) :
 //! @param[in] at The location for the new token.
 //! @param[in] classification The classification of the recognised token.
 //! @param[in] value The significant characters of the token.
-Token::Token(const Location &at, TokenClass classification, const String &value) :
+Token::Token(const Location &at, TokenClass classification,
+             Ag::string_cref_t value) :
     _location(at),
     _value(value),
     _classification(classification)
@@ -89,7 +71,7 @@ TokenClass Token::getClass() const
 }
 
 //! @brief Gets the significant characters of the token, if any.
-const String &Token::getValue() const
+Ag::string_cref_t Token::getValue() const
 {
     return _value;
 }
@@ -127,7 +109,7 @@ void Token::addScalarProperty(TokenProperty propId, uint8_t value)
 
     if (index >= MaxPropCount)
     {
-        throw OperationException("Too many token properties.");
+        throw Ag::OperationException("Too many token properties.");
     }
 }
 
@@ -159,7 +141,7 @@ bool Token::tryGetScalarProperty(TokenProperty propId, uint8_t &value) const
 void Token::clear()
 {
     _classification = TokenClass::Empty;
-    _value = String::Empty;
+    _value = Ag::String::Empty;
     clearProperties();
 }
 
@@ -179,7 +161,7 @@ void Token::reset(const Location &at, TokenClass classification)
 {
     _location = at;
     _classification = classification;
-    _value = String::Empty;
+    _value = Ag::String::Empty;
 
     clearProperties();
 }
@@ -189,7 +171,8 @@ void Token::reset(const Location &at, TokenClass classification)
 //! @param[in] at The location for the new token.
 //! @param[in] classification The classification of the recognised token.
 //! @param[in] value The significant characters of the token.
-void Token::reset(const Location &at, TokenClass classification, const String &value)
+void Token::reset(const Location &at, TokenClass classification,
+                  Ag::string_cref_t value)
 {
     _location = at;
     _classification = classification;
@@ -210,7 +193,8 @@ bool getTokenFlag(const Token &token, TokenProperty propId, bool defaultValue)
 {
     uint8_t rawValue;
 
-    return token.tryGetScalarProperty(propId, rawValue) ? (rawValue != 0) : defaultValue;
+    return token.tryGetScalarProperty(propId, rawValue) ? (rawValue != 0) :
+                                                          defaultValue;
 }
 
 //! @brief Sets the value of a property with a boolean value.
@@ -222,6 +206,6 @@ void addTokenFlag(Token &token, TokenProperty propId, bool value)
     token.addScalarProperty(propId, value ? 0xFF : 0x00);
 }
 
-}} // namespace Ag::Asm
+}} // namespace Mo::Asm
 ////////////////////////////////////////////////////////////////////////////////
 

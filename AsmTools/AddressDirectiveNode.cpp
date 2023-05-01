@@ -19,7 +19,7 @@
 #include "ParseContext.hpp"
 #include "Token.hpp"
 
-namespace Ag {
+namespace Mo {
 namespace Asm {
 
 namespace {
@@ -64,7 +64,7 @@ protected:
     {
         // Calculate the length based on the instruction suffix used, even
         // if it cannot be immediately encoded.
-        return (toScalar(_encoding) + 1) * 4u;
+        return (Ag::toScalar(_encoding) + 1) * 4u;
     }
 
     // Inherited from InstructionStatement.
@@ -76,7 +76,7 @@ protected:
 
         if (_rd && _addr)
         {
-            String error;
+            Ag::String error;
             auto &info = instruction.getCoreAddressParameters();
             info.Encoding = _encoding;
 
@@ -86,7 +86,7 @@ protected:
                 {
                     std::string builder("Failed to evaluate destination "
                                         "register expression: ");
-                    appendAgString(builder, error);
+                    Ag::appendAgString(builder, error);
 
                     log.appendError(getStart(), error);
                 }
@@ -96,7 +96,7 @@ protected:
                 if (isFinalPass)
                 {
                     std::string builder("Failed to evaluate address expression: ");
-                    appendAgString(builder, error);
+                    Ag::appendAgString(builder, error);
 
                     log.appendError(getStart(), error);
                 }
@@ -111,7 +111,7 @@ protected:
     }
 };
 
-} // TED
+} // Anonymous namespace
 
 ////////////////////////////////////////////////////////////////////////////////
 // AddressDirectiveNode Member Function Definitions
@@ -175,7 +175,7 @@ ISyntaxNode *AddressDirectiveNode::applyNode(ParseContext &context, ISyntaxNode 
     {
     case State::AfterMnemonic:
         // Expect destination register.
-        if (tryCast(childNode, expr))
+        if (Ag::tryCast(childNode, expr))
         {
             _destRegExpr.reset(expr);
             _state = State::AfterDestReg;
@@ -189,7 +189,7 @@ ISyntaxNode *AddressDirectiveNode::applyNode(ParseContext &context, ISyntaxNode 
 
     case State::BeforeAddress:
         // Expects address expression.
-        if (tryCast(childNode, expr))
+        if (Ag::tryCast(childNode, expr))
         {
             _addrExpr.reset(expr);
             _state = State::Complete;
@@ -230,6 +230,6 @@ Statement *AddressDirectiveNode::compile(Messages &/*output*/) const
     return statement;
 }
 
-}} // namespace Ag::Asm
+}} // namespace Mo::Asm
 ////////////////////////////////////////////////////////////////////////////////
 

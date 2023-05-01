@@ -14,7 +14,7 @@
 
 #include "TestTools.hpp"
 
-namespace Ag {
+namespace Mo {
 namespace Asm {
 
 namespace {
@@ -25,7 +25,7 @@ namespace {
 GTEST_TEST(AssemblyLabel, PreDefinedLabel)
 {
     Messages log;
-    String source = "EQUD 0xCAFEBABE\n"
+    Ag::String source = "EQUD 0xCAFEBABE\n"
         ".myLabel\n"
         "EQUD myLabel";
     ObjectCode code = assembleText(source, getDefaultOptions(), log);
@@ -47,7 +47,7 @@ GTEST_TEST(AssemblyLabel, PreDefinedLabel)
 GTEST_TEST(AssemblyLabel, PostDefinedLabel)
 {
     Messages log;
-    String source = "EQUD 0xCAFEBABE\n"
+    Ag::String source = "EQUD 0xCAFEBABE\n"
         "EQUD myLabel\n"
         "EQUS 'Hello World!',13,10\n"
         "ALIGN\n"
@@ -71,7 +71,7 @@ GTEST_TEST(AssemblyLabel, PostDefinedLabel)
 GTEST_TEST(AssemblyLabel, DuplicateLabelCausesError)
 {
     Messages log;
-    String source = "EQUD 0xCAFEBABE\n"
+    Ag::String source = "EQUD 0xCAFEBABE\n"
         ".myLabel: EQUD myLabel\n"
         ".myLabel\n";
     ObjectCode code = assembleText(source, getDefaultOptions(), log);
@@ -88,7 +88,7 @@ GTEST_TEST(AssemblyLabel, DuplicateLabelCausesError)
 GTEST_TEST(AssemblyLabel, PreDefinedLabelWithValue)
 {
     Messages log;
-    String source = ".myLabel 0xCAFEBABE\n"
+    Ag::String source = ".myLabel 0xCAFEBABE\n"
         "EQUD myLabel";
     ObjectCode code = assembleText(source, getDefaultOptions(), log);
 
@@ -107,7 +107,7 @@ GTEST_TEST(AssemblyLabel, PreDefinedLabelWithValue)
 GTEST_TEST(AssemblyLabel, PostDefinedLabelWithValue)
 {
     Messages log;
-    String source = "EQUS myLabel\n"
+    Ag::String source = "EQUS myLabel\n"
         ".myLabel 'Hello World!\\0'\n";
     ObjectCode code = assembleText(source, getDefaultOptions(), log);
 
@@ -125,6 +125,6 @@ GTEST_TEST(AssemblyLabel, PostDefinedLabelWithValue)
 
 } // Anonymous namespace
 
-}} // namespace Ag::Asm
+}} // namespace Mo::Asm
 ////////////////////////////////////////////////////////////////////////////////
 
