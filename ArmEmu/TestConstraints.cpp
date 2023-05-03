@@ -389,8 +389,8 @@ bool compileConstraints(ConstraintCollection &constraints,
 //! @brief Constructs an empty constraint.
 Constraint::Constraint() :
     Value(0),
-    Element(SystemElement::Max),
-    ElementIndex(0)
+    ElementIndex(0),
+    Element(SystemElement::Max)
 {
 }
 
@@ -400,8 +400,8 @@ Constraint::Constraint() :
 //! @param[in] value The value to load, store or be expected.
 Constraint::Constraint(SystemElement location, uint32_t index, uint32_t value) :
     Value(value),
-    Element(location),
-    ElementIndex(index)
+    ElementIndex(index),
+    Element(location)
 {
 }
 
@@ -1218,7 +1218,7 @@ std::ostream &operator<<(std::ostream &os, const CoreTestParams &rhs)
 //! @brief Extracts the name of a set of execution test parameters.
 //! @param[in] rhs The test parameters to render as text.
 //! @return The name of the test.
-std::string CoreTestParamsName::operator()(const testing::TestParamInfo<typename CoreTestParams> &rhs) const
+std::string CoreTestParamsName::operator()(const testing::TestParamInfo<CoreTestParams> &rhs) const
 {
     return std::string(rhs.param.Name);
 }

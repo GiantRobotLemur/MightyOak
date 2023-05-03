@@ -24,6 +24,7 @@
 #include "Ag/Core/Binary.hpp"
 #include "Ag/Core/Format.hpp"
 
+#include "ArmSystem.inl"
 
 ////////////////////////////////////////////////////////////////////////////////
 // Macro Definitions
@@ -179,7 +180,7 @@ std::ostream &operator<<(std::ostream &os, const CoreTestParams &rhs);
 
 struct CoreTestParamsName
 {
-    std::string operator()(const testing::TestParamInfo<typename CoreTestParams> &rhs) const;
+    std::string operator()(const testing::TestParamInfo<CoreTestParams> &rhs) const;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -194,9 +195,9 @@ testing::AssertionResult parseConstraints(const TestLocation &loc,
 ////////////////////////////////////////////////////////////////////////////////
 //! @brief The specification for an object which can apply and extract constraint
 //! values.
-//! @tparam TTarget The data type of the object values are applied to or
-//! extracted from.
-template<typename TTarget>
+//! @tparam TTargetTraits The data type of traits class describing the emulated
+//! system values are applied to or extracted from.
+template<typename TTargetTraits>
 struct ConstraintInterpretor
 {
     //! @brief Attempts to set a constraint value on the target.
@@ -204,7 +205,7 @@ struct ConstraintInterpretor
     //! @param[in] constraint The constraint to apply.
     //! @retval true The constraint could be applied.
     //! @retval false The constraint is incompatible with the target.
-    bool apply(TTarget &target, const Constraint &constraint) const
+    bool apply(ArmSystem<TTargetTraits> &target, const Constraint &constraint) const
     {
         // The default implementation fails in all cases.
         return false;
@@ -216,7 +217,7 @@ struct ConstraintInterpretor
     //! @param[out] value The extracted value.
     //! @retval true A value for the constraint was successfully extracted.
     //! @retval false The constraint was incompatible with the target.
-    bool extract(TTarget &target, const Constraint &constraint,
+    bool extract(ArmSystem<TTargetTraits> &target, const Constraint &constraint,
                  uint32_t &value) const
     {
         // The default implementation fails in all cases.
@@ -225,15 +226,16 @@ struct ConstraintInterpretor
 };
 
 //! @brief Applies a set of constraint value to a target object.
-//! @tparam TTarget The data type of the target.
+//! @tparam TTargetTraits The data type of the traits class describing the target.
 //! @tparam TInterpretor The data type of the object which can apply constraints.
 //! @param[in] target The object to apply constraints to.
 //! @param[in] loc The location of the test definition in source code.
 //! @param[in] constraintsExpr The set of constraints to apply expressed as text.
 //! @return An assertion result indicating if the constraints were
 //! successfully applied.
-template<typename TTarget, typename TInterpretor = ConstraintInterpretor<typename TTarget>>
-testing::AssertionResult applyConstraints(TTarget &target, const TestLocation &loc,
+template<typename TTargetTraits, typename TInterpretor = ConstraintInterpretor<TTargetTraits> >
+testing::AssertionResult applyConstraints(ArmSystem<TTargetTraits> &target,
+                                          const TestLocation &loc,
                                           const std::string_view &constraintsExpr)
 {
     ConstraintCollection items;
@@ -270,8 +272,9 @@ testing::AssertionResult applyConstraints(TTarget &target, const TestLocation &l
 //! @param[in] loc The location of the test definition in source code.
 //! @param[in] constraintsExpr A set of expected constraint values to validate.
 //! @return An assertion result detailing whether all constraints were satisfied.
-template<typename TTarget, typename TInterpretor = ConstraintInterpretor<typename TTarget>>
-testing::AssertionResult verifyConstraints(TTarget &target, const TestLocation &loc,
+template<typename TTargetTraits, typename TInterpretor = ConstraintInterpretor<TTargetTraits> >
+testing::AssertionResult verifyConstraints(ArmSystem<TTargetTraits> &target,
+                                           const TestLocation &loc,
                                            const std::string_view &constraintsExpr)
 {
     ConstraintCollection items;

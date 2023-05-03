@@ -36,7 +36,7 @@ namespace Arm {
 // Templates
 ////////////////////////////////////////////////////////////////////////////////
 //! @brief A quick and dirty constraint adapter for the one system supported.
-template<> struct ConstraintInterpretor<ArmSystem<ArmV2TestSystemTraits>>
+template<> struct ConstraintInterpretor<ArmV2TestSystemTraits>
 {
     bool apply(ArmSystem<ArmV2TestSystemTraits> &target, const Constraint &constraint) const
     {
