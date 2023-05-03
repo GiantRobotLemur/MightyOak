@@ -55,13 +55,16 @@ add_ag_test_app(ArmEmu_Tests    TEST_LIB ArmEmu
                                          TestTools.hpp
                                          TestConstraints.cpp
                                          TestConstraints.hpp
+                                         TestExecTools.cpp
+                                         TestExecTools.hpp
                                          Test_Constraints.cpp
                                          Test_Core.cpp
                                          Test_RegisterFile.cpp
                                          Test_Hardware.cpp
                                          Test_AluOperations.cpp
                                          Test_ALU.cpp
-                                         Test_DataTransfer.cpp)
+                                         Test_DataTransfer.cpp
+                                         Test_Main.cpp)
 
 # We need the assembly language tools to perform the tests.
 target_link_libraries(ArmEmu_Tests PRIVATE AsmTools)
