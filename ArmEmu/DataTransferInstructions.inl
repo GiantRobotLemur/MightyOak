@@ -319,7 +319,7 @@ uint32_t execLoadMultiple(THardware &hardware, TRegisterFile &regs,
 
     // Determine the data to read into a temporary buffer as a single transaction.
     uint32_t transferSize = regCount * 4;
-    uint32_t blockStart, blockEnd;
+    uint32_t blockStart, blockEnd, firstAddr = baseAddr;
 
     switch (Ag::Bin::extractBits<uint8_t, 23, 2>(instruction))
     {
@@ -337,22 +337,29 @@ uint32_t execLoadMultiple(THardware &hardware, TRegisterFile &regs,
     case 0x02: // LDMDB
         blockStart = baseAddr - transferSize;
         blockEnd = baseAddr - transferSize;
+        firstAddr = baseAddr - 4;
         break;
 
     case 0x03: // LDMIB
         blockStart = baseAddr + 4;
         blockEnd = baseAddr + transferSize;
+        firstAddr = blockStart;
         break;
     }
 
     if constexpr (TRegisterFile::HasCombinedPcPsr)
     {
-        // For 26-bit mode, ensure the top 6 bits are clear.
-        if (blockStart >> 26)
+        // For 26-bit mode, ensure the top 6 bits are clear in the first
+        // address calculated.
+        if (firstAddr >> 26)
         {
             // Raise Address Exception and exit.
             return regs.raiseAddressException() | 2;
         }
+
+        // Limit the addresses used to 26-bits.
+        blockStart &= 0x03FFFFFF;
+        blockEnd &= 0x03FFFFFF;
     }
 
     uint32_t values[16];
@@ -502,7 +509,7 @@ uint32_t execStoreMultiple(THardware &hardware, TRegisterFile &regs,
 
     // Determine the data to read into a temporary buffer as a single transaction.
     uint32_t transferSize = regCount * 4;
-    uint32_t blockStart, blockEnd;
+    uint32_t blockStart, blockEnd, firstAddr = baseAddr;
 
     switch (Ag::Bin::extractBits<uint8_t, 23, 2>(instruction))
     {
@@ -520,22 +527,28 @@ uint32_t execStoreMultiple(THardware &hardware, TRegisterFile &regs,
     case 0x02: // STMDB
         blockStart = baseAddr - transferSize;
         blockEnd = baseAddr - transferSize;
+        firstAddr = baseAddr - 4;
         break;
 
     case 0x03: // STMIB
         blockStart = baseAddr + 4;
         blockEnd = baseAddr + transferSize;
+        firstAddr = baseAddr + 4;
         break;
     }
 
     if constexpr (TRegisterFile::HasCombinedPcPsr)
     {
         // For 26-bit mode, ensure the top 6 bits are clear.
-        if (blockStart >> 26)
+        if (firstAddr >> 26)
         {
             // Raise Address Exception and exit.
             return regs.raiseAddressException() | 2;
         }
+
+        // Limit the addresses used to 26-bits.
+        blockStart &= 0x03FFFFFF;
+        blockEnd &= 0x03FFFFFF;
     }
 
     uint32_t values[16];

@@ -16,12 +16,20 @@
 ////////////////////////////////////////////////////////////////////////////////
 #include <cstdint>
 
+#include <string_view>
 #include <vector>
 
 #include <gtest/gtest.h>
 
 #include "Ag/Core/Binary.hpp"
 #include "Ag/Core/Format.hpp"
+
+
+////////////////////////////////////////////////////////////////////////////////
+// Macro Definitions
+////////////////////////////////////////////////////////////////////////////////
+//! @brief Captures the current position in source code.
+#define TLOC TestLocation(__FILE__, __LINE__)
 
 namespace Mo {
 namespace Arm {
@@ -32,22 +40,60 @@ namespace Arm {
 //! @brief Identifies elements of a processor which can be read or written to.
 enum class SystemElement : uint8_t
 {
+    //! @brief Represents core registers R0-R15, including  A1-A4 and V1-V6.
     CoreRegister,
+
+    //! @brief Represents co-processor identifiers C0-C15 or CP0-CP15 used to
+    //! disambiguate co-processor register references.
     CoProcessor,
+
+    //! @brief Represents a co-processor register CR0-CR15, although should be
+    //! disambiguated by previously specifying a co-processor identifier.
     CoProcRegister,
+
+    //! @brief A Floating Point Accelerator register F0-F7.
     FpaRegister,
+
+    //! @brief A system register, identified by the SystemRegister enumeration.
     SystemRegister,
 
+    //! @brief A byte located by its physical address.
+    PhysicalByte,
+
+    //! @brief A 16-bit half-word located by its physical address.
+    PhysicalHalfWord,
+
+    //! @brief A 32-bit word located by its physical address.
+    PhysicalWord,
+
+    //! @brief A byte located by its logical address based on current address
+    //! translation settings.
+    LogicalByte,
+
+    //! @brief A 16-bit half-word located by its logical address based on
+    //! current address translation settings.
+    LogicalHalfWord,
+
+    //! @brief A 32-bit word located by its logical address based on
+    //! current address translation settings.
+    LogicalWord,
+
+    //! @brief The physical address which maps to the specified logical address
+    //! based on current address translation settings.
+    MappedPhysicalAddress,
+
+    //! @brief A value used for bounds checking.
     Max,
 };
 
 //! @brief Identifies individual processor registers to be read or written by
 //! constraints.
-enum class SystemRegister : uint8_t
+enum class SystemRegister : uint32_t
 {
     PC,
     CPSR,
     SPSR,
+    Status,
     ProcessorMode,
     IrqStatus,
     IrqMask,
@@ -61,13 +107,21 @@ enum class SystemRegister : uint8_t
 //! @todo Support FPA real values.
 struct Constraint
 {
+    //! @brief The value to store in the specified Element or compare with
+    //! the value stored in that Element.
     uint32_t Value;
-    SystemElement Location;
-    uint8_t Index;
-    uint8_t SubIndex;
+
+    //! @brief The Location index, i.e. the index of the register given a
+    //! specific bank of registers, or a system register if Location is
+    //! SystemRegister, or a memory address if Element is Memory.
+    uint32_t ElementIndex;
+
+    //! @brief Specifies the classification of location to query, either
+    //! a register bank or memory.
+    SystemElement Element;
 
     Constraint();
-    Constraint(SystemElement location, uint8_t index, uint32_t value);
+    Constraint(SystemElement location, uint32_t index, uint32_t value);
 
     bool operator==(const Constraint &rhs) const;
     bool operator<(const Constraint &rhs) const;
@@ -78,10 +132,61 @@ struct Constraint
 
 using ConstraintCollection = std::vector<Constraint>;
 
+//! @brief Describes the location of the definition of a set of test
+//! parameters in the source code.
+struct TestLocation
+{
+    std::string_view SourceFile;
+    int SourceLine;
+
+    // Construction
+    TestLocation();
+    TestLocation(const char *sourceFile, int sourceLine);
+
+    // Accessors
+    void appendToString(std::string &buffer) const;
+};
+
+//! @brief Defines the conditions of a test using constraints expressions.
+struct CoreTestParams
+{
+    //! @brief The name of the test to report.
+    std::string_view Name;
+
+    //! @brief The constraints expression describing the initial processor state.
+    std::string_view Inputs;
+
+    //! @brief The constraints expression describing the expected processor state
+    //! after the code has been executed.
+    std::string_view ExpectedOutputs;
+
+    //! @brief The assembly language source code to run.
+    std::string_view Code;
+
+    //! @brief The location in source code where the test parameters were defined.
+    TestLocation Location;
+
+    CoreTestParams() = default;
+    CoreTestParams(const TestLocation &loc, const std::string_view &name,
+                   const std::string_view &inputs, const std::string_view &outputs,
+                   const std::string_view &assemblerCode);
+
+    // Accessors
+    void appendIdToString(std::string &buffer) const;
+};
+
+std::ostream &operator<<(std::ostream &os, const CoreTestParams &rhs);
+
+struct CoreTestParamsName
+{
+    std::string operator()(const testing::TestParamInfo<typename CoreTestParams> &rhs) const;
+};
+
 ////////////////////////////////////////////////////////////////////////////////
 // Function Declarations
 ////////////////////////////////////////////////////////////////////////////////
-testing::AssertionResult parseConstraints(const std::string_view &text,
+testing::AssertionResult parseConstraints(const TestLocation &loc,
+                                          const std::string_view &text,
                                           ConstraintCollection &constraints);
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -99,7 +204,11 @@ struct ConstraintInterpretor
     //! @param[in] constraint The constraint to apply.
     //! @retval true The constraint could be applied.
     //! @retval false The constraint is incompatible with the target.
-    bool apply(TTarget &target, const Constraint &constraint) const;
+    bool apply(TTarget &target, const Constraint &constraint) const
+    {
+        // The default implementation fails in all cases.
+        return false;
+    }
 
     //! @brief Attempts to get the value of a constraint from the target.
     //! @param[in] target The target object to query.
@@ -107,21 +216,28 @@ struct ConstraintInterpretor
     //! @param[out] value The extracted value.
     //! @retval true A value for the constraint was successfully extracted.
     //! @retval false The constraint was incompatible with the target.
-    bool extract(const TTarget &target, const Constraint &constraint, uint32_t &value) const;
+    bool extract(TTarget &target, const Constraint &constraint,
+                 uint32_t &value) const
+    {
+        // The default implementation fails in all cases.
+        return false;
+    }
 };
 
 //! @brief Applies a set of constraint value to a target object.
 //! @tparam TTarget The data type of the target.
 //! @tparam TInterpretor The data type of the object which can apply constraints.
 //! @param[in] target The object to apply constraints to.
+//! @param[in] loc The location of the test definition in source code.
 //! @param[in] constraintsExpr The set of constraints to apply expressed as text.
 //! @return An assertion result indicating if the constraints were
 //! successfully applied.
-template<typename TTarget, typename TInterpretor>
-testing::AssertionResult applyConstraints(TTarget &target, const std::string_view &constraintsExpr)
+template<typename TTarget, typename TInterpretor = ConstraintInterpretor<typename TTarget>>
+testing::AssertionResult applyConstraints(TTarget &target, const TestLocation &loc,
+                                          const std::string_view &constraintsExpr)
 {
     ConstraintCollection items;
-    testing::AssertionResult result = parseConstraints(constraintsExpr, items);
+    testing::AssertionResult result = parseConstraints(loc, constraintsExpr, items);
 
     if (result)
     {
@@ -132,8 +248,12 @@ testing::AssertionResult applyConstraints(TTarget &target, const std::string_vie
             if (interpretor.apply(target, item) == false)
             {
                 result = testing::AssertionFailure();
+                std::string message("Failed to apply constraint at: ");
+                loc.appendToString(message);
+                message.push_back('\n');
+                message.append(item.toString());
 
-                result << "Failed to apply constraint " << item.toString();
+                result << message;
                 break;
             }
         }
@@ -147,14 +267,15 @@ testing::AssertionResult applyConstraints(TTarget &target, const std::string_vie
 //! @tparam TInterpretor The data type of the object which can extract
 //! constraint values.
 //! @param[in] target The object to extract values from.
+//! @param[in] loc The location of the test definition in source code.
 //! @param[in] constraintsExpr A set of expected constraint values to validate.
 //! @return An assertion result detailing whether all constraints were satisfied.
-template<typename TTarget, typename TInterpretor>
-testing::AssertionResult verifyConstraints(const TTarget &target,
+template<typename TTarget, typename TInterpretor = ConstraintInterpretor<typename TTarget>>
+testing::AssertionResult verifyConstraints(TTarget &target, const TestLocation &loc,
                                            const std::string_view &constraintsExpr)
 {
     ConstraintCollection items;
-    testing::AssertionResult result = parseConstraints(constraintsExpr, items);
+    testing::AssertionResult result = parseConstraints(loc, constraintsExpr, items);
 
     if (result)
     {
@@ -176,9 +297,15 @@ testing::AssertionResult verifyConstraints(const TTarget &target,
                     else
                     {
                         result = testing::AssertionFailure();
+                        std::string message("Constraints failure: ");
+                        loc.appendToString(message);
+                        message.push_back('\n');
+
+                        result << message;
+                        hasErrors = true;
                     }
 
-                    result << "Constraint not met. " << item.idToString() << ": ";
+                    result << item.idToString() << ": Expected ";
 
                     Ag::FormatInfo fmt;
                     uint32_t maxValue = std::max(value, item.Value);
@@ -225,10 +352,16 @@ testing::AssertionResult verifyConstraints(const TTarget &target,
                 else
                 {
                     result = testing::AssertionFailure();
+
+                    std::string message("Constraints failure: ");
+                    loc.appendToString(message);
+                    message.push_back('\n');
+
+                    result << message;
+                    hasErrors = true;
                 }
 
                 result << "Failed to extract a constraint value from " << item.idToString();
-                hasErrors = true;
             }
         }
     }

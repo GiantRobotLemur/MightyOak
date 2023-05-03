@@ -19,55 +19,39 @@
 #include "ArmSystem.inl"
 #include "SystemConfigurations.inl"
 
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
-
 namespace Mo {
 namespace Arm {
 
-namespace {
 ////////////////////////////////////////////////////////////////////////////////
-// Local Data Types
+// GenerateBreakPoint Member Definitions
 ////////////////////////////////////////////////////////////////////////////////
-struct GenerateBreakPoint
+//! @brief Constructs an object to produce sequential break point instructions.
+GenerateBreakPoint::GenerateBreakPoint() :
+    _index(0)
 {
-private:
-    Asm::InstructionInfo _instruction;
-    uint16_t _index;
-public:
-    GenerateBreakPoint() :
-        _index(0)
+    _instruction.reset(Asm::InstructionMnemonic::Bkpt,
+                        Asm::OperationClass::Breakpoint);
+}
+
+//! @brief Generates a BKPT instruction with a new comment value.
+//! @return An ARM BKPT instruction.
+uint32_t GenerateBreakPoint::operator()()
+{
+    _instruction.getBreakpointParameters().Comment = _index++;
+
+    Ag::String error;
+    uint32_t instruction = 0;
+
+    if (_instruction.assemble(instruction, 0x0000, error) == false)
     {
-        _instruction.reset(Asm::InstructionMnemonic::Bkpt,
-                           Asm::OperationClass::Breakpoint);
+        std::string buffer("Could not assemble numbered breakpoint:");
+        Ag::appendAgString(buffer, error);
+
+        throw Ag::OperationException(buffer.c_str());
     }
 
-    uint32_t operator()()
-    {
-        _instruction.getBreakpointParameters().Comment = _index++;
-
-        Ag::String error;
-        uint32_t instruction = 0;
-        if (_instruction.assemble(instruction, 0x0000, error) == false)
-        {
-            throw Ag::OperationException("Could not assemble numbered breakpoint.");
-        }
-
-        return instruction;
-    }
-};
-
-////////////////////////////////////////////////////////////////////////////////
-// Local Data
-////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////
-// Local Functions
-////////////////////////////////////////////////////////////////////////////////
-
-
-} // Anonymous namespace
+    return instruction;
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // Global Function Definitions
@@ -205,7 +189,7 @@ IArmSystemUPtr createUserModeTestSystem(const char *assembler)
                 builder.push_back('\n');
             }
 
-            appendAgString(builder, msg.toString());
+            Ag::appendAgString(builder, msg.toString());
         }
 
         throw Ag::CustomException("Assembly", "Could not assemble test code.",
