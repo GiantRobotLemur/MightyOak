@@ -14,6 +14,7 @@
 
 #include <gtest/gtest.h>
 
+#include "Ag/GTest_Core.hpp"
 #include "Ag/Core/ErrorGuard.hpp"
 
 #ifdef __GNUC__
@@ -136,10 +137,8 @@ public:
 ////////////////////////////////////////////////////////////////////////////////
 // Disable optimization so that this function actually performs a deliberate
 // memory access violation.
-#ifdef _MSC_VER
-#pragma optimize("gt", off)
-#endif
-void derefMemoryAddress(const size_t *ptr)
+NO_OPTIMIZE_FN
+void derefMemoryAddress(const size_t *ptr) NO_OPTIMIZE_FN_ATTRIB
 {
     size_t value = *ptr;
 
@@ -148,10 +147,8 @@ void derefMemoryAddress(const size_t *ptr)
 
 // Disable optimization so that this function actually performs a deliberate
 // division by zero.
-#ifdef _MSC_VER
-#pragma optimize("gt", off)
-#endif
-void integerDivide(int denominator)
+NO_OPTIMIZE_FN
+void integerDivide(int denominator) NO_OPTIMIZE_FN_ATTRIB
 {
     size_t result = 424242 / denominator;
 

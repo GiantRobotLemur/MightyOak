@@ -13,6 +13,7 @@
 #include <vector>
 #include <gtest/gtest.h>
 
+#include "Ag/GTest_Core.hpp"
 #include "Ag/Core/Exception.hpp"
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -39,10 +40,8 @@ public:
 ////////////////////////////////////////////////////////////////////////////////
 // Unit Tests
 ////////////////////////////////////////////////////////////////////////////////
-#ifdef _MSC_VER
-#pragma optimize("gt", off)
-#endif
-GTEST_TEST(Exception, CreateSimple)
+NO_OPTIMIZE_FN
+GTEST_TEST(Exception, CreateSimple) NO_OPTIMIZE_FN_ATTRIB
 {
     const char *message("Hello World!");
     const char *detail("Something went wrong!");

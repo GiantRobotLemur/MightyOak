@@ -23,6 +23,22 @@
 
 #define EXPECT_NEAREQ(x, y, z) EXPECT_LT(std::abs((x) - (y)), (z))
 
+#ifdef __GNUC__
+#define NO_OPTIMIZE_FN_ATTRIB __attribute__((optimize("-O0")));
+#else
+#define NO_OPTIMIZE_FN_ATTRIB
+#endif
+
+#ifdef _MSC_VER
+#ifdef __INTELLISENSE__
+#define NO_OPTIMIZE_FN
+#else
+#define NO_OPTIMIZE_FN _Pragma("optimize(\"gt\", off)")
+#endif // ifdef __INTELLISENSE__
+#else // ifndef _MSC_VER
+#define NO_OPTIMIZE_FN
+#endif
+
 #endif // Header guard
 
 #endif // GTEST include guard
