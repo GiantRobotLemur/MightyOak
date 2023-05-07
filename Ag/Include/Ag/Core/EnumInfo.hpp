@@ -360,6 +360,30 @@ public:
                                                    defaultValue;
     }
 
+    //! @brief Gets information about an enumeration symbol based on its index.
+    //! @param[in] index The index of the symbol to obtain.
+    //! @return A reference to an object describing the symbol.
+    const SymbolInfo &getSymbolByIndex(size_t index) { return _symbols.at(index); }
+
+    //! @brief Gets information about an enumeration symbol based on its identifier.
+    //! @param[in] id The identifier of the symbol to obtain.
+    //! @return A reference to an object describing the symbol.
+    //! @throws ArgumentException Thrown if the identifier does not have a
+    //! corresponding description.
+    const SymbolInfo &getSymbolById(TEnum id)
+    {
+        size_t index;
+
+        if (tryFindSymbolIndex(id, index))
+        {
+            return _symbols.at(index);
+        }
+        else
+        {
+            throw ArgumentException("id");
+        }
+    }
+
     //! @brief Looks up the locale-neutral textual representation of a symbol.
     //! @param[in] symbol The symbol value to look up.
     //! @return A locale-neutral string representation of the symbol,

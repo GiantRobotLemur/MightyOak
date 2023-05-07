@@ -1,21 +1,26 @@
-//! @file ArmEmu/IrqSink.hpp
-//! @brief The declaration of an interface to an object which can receive
-//! emulated interrupt signals.
+//! @file ArmEmu/ArmSystemBuilder.hpp
+//! @brief The declaration of an object used to incrementally construct another
+//! object representing an emulated ARM-based system.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2022-2023
+//! @date 2023
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
 ////////////////////////////////////////////////////////////////////////////////
 
-#ifndef __ARM_EMU_IRQ_SINK_HPP__
-#define __ARM_EMU_IRQ_SINK_HPP__
+#ifndef __ARM_EMU_ARM_SYSTEM_BUILDER_HPP__
+#define __ARM_EMU_ARM_SYSTEM_BUILDER_HPP__
 
 ////////////////////////////////////////////////////////////////////////////////
 // Dependent Header Files
 ////////////////////////////////////////////////////////////////////////////////
-#include <cstdint>
-#include <cstddef>
+#include "EmuOptions.hpp"
+#include "AddressMap.hpp"
+#include "ArmSystem.hpp"
+
+////////////////////////////////////////////////////////////////////////////////
+// Macro Definitions
+////////////////////////////////////////////////////////////////////////////////
 
 namespace Mo {
 namespace Arm {
@@ -27,28 +32,31 @@ namespace Arm {
 ////////////////////////////////////////////////////////////////////////////////
 // Class Declarations
 ////////////////////////////////////////////////////////////////////////////////
-//! @brief The interface to an object which can receive emulated interrupt
-//! signals.
-class IIrqSink
+//! @brief An object used to incrementally construct an implementation of the
+//! IArmSystem interface representing an emulated ARM-based system.
+class ArmSystemBuilder
 {
 public:
     // Construction/Destruction
-    virtual ~IIrqSink() = default;
+    ArmSystemBuilder();
+    ArmSystemBuilder(const Options &baseOptions);
+    ~ArmSystemBuilder() = default;
 
     // Accessors
 
     // Operations
-    //! @brief Marks an interrupt as pending.
-    virtual void raiseIrq() = 0;
+    void addMapping(IAddressRegionPtr region, uint32_t baseAddr, MemoryAccess access);
+    void reset(const Options &baseOptions);
+    IArmSystemUPtr createSystem() const;
+private:
+    // Internal Types
 
-    //! @brief Clears any pending interrupt.
-    virtual void clearIrq() = 0;
+    // Internal Functions
 
-    //! @brief Marks a fast interrupt as pending.
-    virtual void raiseFirq() = 0;
-
-    //! @brief Clears any pending fast interrupt.
-    virtual void clearFirq() = 0;
+    // Internal Fields
+    Options _baseOptions;
+    AddressMap _readMap;
+    AddressMap _writeMap;
 };
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -229,34 +229,57 @@ class GenericHardware
     ///////////////////////////////////////////////////////////////////////////
     // Address Map Inspection
     ///////////////////////////////////////////////////////////////////////////
-
-    //! @brief Attempts to look up the block of host memory which corresponds
-    //! to a logical address.
+    //! @brief Attempts to convert a logical address to a physical address
+    //! given the current state of the system.
     //! @param[in] logicalAddr The logical address to translate.
-    //! @param[in] isRead True of the address is to be read, false if it is
-    //! to be written.
-    //! @param[out] mapping Receives a description of the mapped block of
-    //! memory the address is within.
-    //! @retval true The logical address was backed by host memory.
-    //! @retval false The logical address was not backed by host memory, but
-    //! might have been in a simulated memory mapped I/O region.
-    bool tryMapLogicalAddress(uint32_t logicalAddr, bool isRead,
-                              MemoryMapping &mapping);
+    //! @param[out] physAddr The physical address produced by the conversion if
+    //! one was possible. The next available logical address if conversion
+    //! wasn't possible.
+    //! @retval true The logical address had a corresponding physical address
+    //! which was returned in the physAddr parameter.
+    //! @retval false The logical address was not mapped to a physical address.
+    //! The physAddr parameter is updated with the next logical address after
+    //! logicalAddr which can be mapped, or 0.
+    bool logicalToPhysicalAddress(uint32_t logicalAddr,
+                                  uint32_t &physAddr) const;
+
+    //! @brief Gets a map describing the entities read from indexed by physical
+    //! address.
+    const AddressMap &getReadAddressMap() const;
+
+    //! @brief Gets a map describing the entities written to indexed by physical
+    //! address.
+    const AddressMap &getWriteAddressMap() const;
 };
 
 //! @brief An implementation of the common interrupt management requirements of
 //! GenericHardware.
 class BasicIrqManagerHardware
 {
-private:
+protected:
     // Internal Fields
+    AddressMap _masterReadMap;
+    AddressMap _masterWriteMap;
+
+private:
     uint8_t _irqStatus;
     uint8_t _irqMask;
     bool _isPriviledged;
 
+
 public:
     // Construction/Destruction
     BasicIrqManagerHardware() :
+        _irqStatus(0),
+        _irqMask(0),
+        _isPriviledged(false)
+    {
+    }
+
+    BasicIrqManagerHardware(const AddressMap &readMap,
+                            const AddressMap writeMap) :
+        _masterReadMap(readMap),
+        _masterWriteMap(writeMap),
         _irqStatus(0),
         _irqMask(0),
         _isPriviledged(false)
@@ -303,6 +326,10 @@ public:
         _irqStatus = (_irqStatus & ~IrqState::FastIrqPending) |
                      (-static_cast<uint8_t>(isRaised) & IrqState::FastIrqPending);
     }
+
+    const AddressMap &getReadAddressMap() const { return _masterReadMap; }
+
+    const AddressMap &getWriteAddressMap() const { return _masterWriteMap; }
 };
 
 }} // namespace Mo::Arm

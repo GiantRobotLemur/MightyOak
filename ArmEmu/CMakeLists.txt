@@ -17,6 +17,16 @@ add_ag_library(ArmEmu   FOLDER      ARM
                                     SystemConfigurations.inl
                                     ArmSystem.inl
                                     ArmEmu.cpp
+                                    EmuOptions.cpp
+                                    ${MO_INCLUDE_DIR}/ArmEmu/EmuOptions.hpp
+                                    AddressMap.cpp
+                                    ${MO_INCLUDE_DIR}/ArmEmu/AddressMap.hpp
+                                    ArmSystemBuilder.cpp
+                                    ${MO_INCLUDE_DIR}/ArmEmu/ArmSystemBuilder.hpp
+                                    ExecutionMetrics.cpp
+                                    ${MO_INCLUDE_DIR}/ArmEmu/ExecutionMetrics.hpp
+                                    ArmSystem.cpp
+                                    ${MO_INCLUDE_DIR}/ArmEmu/ArmSystem.hpp
                         HEADERS     ${MO_INCLUDE_DIR}/ArmEmu.hpp
                         PUBLIC_LIBS AgCore)
 
@@ -47,24 +57,39 @@ source_group(Emulation FILES
 
 source_group(Interface FILES
              IrqSink.hpp
-             ${MO_INCLUDE_DIR}/ArmEmu.hpp)
+             EmuOptions.cpp
+             ${MO_INCLUDE_DIR}/ArmEmu/EmuOptions.hpp
+             ArmEmu.cpp
+             ${MO_INCLUDE_DIR}/ArmEmu.hpp
+             AddressMap.cpp
+             ${MO_INCLUDE_DIR}/ArmEmu/AddressMap.hpp
+             ArmSystemBuilder.cpp
+             ${MO_INCLUDE_DIR}/ArmEmu/ArmSystemBuilder.hpp
+             ExecutionMetrics.cpp
+             ${MO_INCLUDE_DIR}/ArmEmu/ExecutionMetrics.hpp
+             ArmSystem.cpp
+             ${MO_INCLUDE_DIR}/ArmEmu/ArmSystem.hpp)
 
 # Define the unit test harness.
 add_ag_test_app(ArmEmu_Tests    TEST_LIB ArmEmu
-                                SOURCES  TestTools.cpp
-                                         TestTools.hpp
-                                         TestConstraints.cpp
-                                         TestConstraints.hpp
-                                         TestExecTools.cpp
-                                         TestExecTools.hpp
-                                         Test_Constraints.cpp
-                                         Test_Core.cpp
-                                         Test_RegisterFile.cpp
-                                         Test_Hardware.cpp
-                                         Test_AluOperations.cpp
-                                         Test_ALU.cpp
-                                         Test_DataTransfer.cpp
-                                         Test_Main.cpp)
+                                SOURCES  Test/TestTools.cpp
+                                         Test/TestTools.hpp
+                                         Test/TestConstraints.cpp
+                                         Test/TestConstraints.hpp
+                                         Test/TestExecTools.cpp
+                                         Test/TestExecTools.hpp
+                                         Test/Test_Constraints.cpp
+                                         Test/Test_Core.cpp
+                                         Test/Test_RegisterFile.cpp
+                                         Test/Test_Hardware.cpp
+                                         Test/Test_AluOperations.cpp
+                                         Test/Test_ALU.cpp
+                                         Test/Test_DataTransfer.cpp
+                                         Test/Test_Options.cpp
+                                         Test/Test_ArmSystemBuilder.cpp
+                                         Test/Test_Main.cpp)
+
+target_include_directories(ArmEmu_Tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
 
 # We need the assembly language tools to perform the tests.
 target_link_libraries(ArmEmu_Tests PRIVATE AsmTools)

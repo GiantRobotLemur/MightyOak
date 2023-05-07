@@ -16,6 +16,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 #include <vector>
 
+#include "ArmEmu/AddressMap.hpp"
 #include "Hardware.inl"
 
 namespace Mo {
@@ -45,13 +46,39 @@ private:
     // Internal Fields
     HostBuffer _rom;
     HostBuffer _ram;
+    AddressMap _readAddrDecoder;
+    AddressMap _writeAddrDecoder;
+    GenericHostBlock _romBlock;
+    GenericHostBlock _ramBlock;
 
+    // Internal Functions
+    void initialise()
+    {
+        _rom.resize(RomSize, 0);
+        _ram.resize(RamSize, 0);
+        _romBlock = GenericHostBlock("ROM", "Main ROM", _rom.data(),
+                                     static_cast<uint32_t>(_rom.size()));
+        _ramBlock = GenericHostBlock("RAM", "Main RAM", _ram.data(),
+                                     static_cast<uint32_t>(_ram.size()));
+
+        _masterReadMap.tryInsert(0, &_romBlock);
+        _masterReadMap.tryInsert(HighRomBase, &_romBlock);
+        _masterWriteMap.tryInsert(RamBase, &_ramBlock);
+        _masterReadMap.tryInsert(RamBase, &_ramBlock);
+    }
 public:
     // Construction/Destruction
     TestBedHardware()
     {
-        _rom.resize(RomSize, 0);
-        _ram.resize(RamSize, 0);
+        initialise();
+    }
+
+    TestBedHardware(const AddressMap &readMap, const AddressMap &writeMap) :
+        BasicIrqManagerHardware(readMap, writeMap),
+        _readAddrDecoder(readMap),
+        _writeAddrDecoder(writeMap)
+    {
+        initialise();
     }
 
     // Accessors
@@ -187,6 +214,15 @@ public:
         }
 
         return isRead;
+    }
+
+    bool logicalToPhysicalAddress(uint32_t logicalAddr, uint32_t &physAddr) const
+    {
+        // There is no address translation, the mapping from the logical to
+        // physical address space is 1:1.
+        physAddr = logicalAddr;
+
+        return true;
     }
 
     bool tryMapLogicalAddress(uint32_t logicalAddr, bool /*isRead*/,
