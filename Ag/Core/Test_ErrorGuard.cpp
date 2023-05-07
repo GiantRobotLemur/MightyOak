@@ -137,23 +137,25 @@ public:
 ////////////////////////////////////////////////////////////////////////////////
 // Disable optimization so that this function actually performs a deliberate
 // memory access violation.
-NO_OPTIMIZE_FN
-void derefMemoryAddress(const size_t *ptr) NO_OPTIMIZE_FN_ATTRIB
+NO_OPTIMIZE_FN_BEGIN
+void derefMemoryAddress(const size_t *ptr)
 {
     size_t value = *ptr;
 
     value = 0;
 }
+NO_OPTIMIZE_FN_END
 
 // Disable optimization so that this function actually performs a deliberate
 // division by zero.
-NO_OPTIMIZE_FN
-void integerDivide(int denominator) NO_OPTIMIZE_FN_ATTRIB
+NO_OPTIMIZE_FN_BEGIN
+void integerDivide(int denominator)
 {
     size_t result = 424242 / denominator;
 
     result = 0;
 }
+NO_OPTIMIZE_FN_END
 
 // void floatingPointDivide(double denominator)
 // {

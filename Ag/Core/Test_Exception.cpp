@@ -40,8 +40,8 @@ public:
 ////////////////////////////////////////////////////////////////////////////////
 // Unit Tests
 ////////////////////////////////////////////////////////////////////////////////
-NO_OPTIMIZE_FN
-GTEST_TEST(Exception, CreateSimple) NO_OPTIMIZE_FN_ATTRIB
+NO_OPTIMIZE_FN_BEGIN
+GTEST_TEST(Exception, CreateSimple)
 {
     const char *message("Hello World!");
     const char *detail("Something went wrong!");
@@ -80,6 +80,7 @@ GTEST_TEST(Exception, CreateSimple) NO_OPTIMIZE_FN_ATTRIB
 
     EXPECT_NE(stackTop.Symbol.find(__FUNCTION__), std::string_view::npos);
 }
+NO_OPTIMIZE_FN_END
 
 } // namespace Ag
 ////////////////////////////////////////////////////////////////////////////////
