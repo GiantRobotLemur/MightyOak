@@ -37,7 +37,7 @@
 #endif // ifdef __INTELLISENSE__
 #elif defined(__GNUC__)
 #define NO_OPTIMIZE_FN_BEGIN _Pragma("GCC push_options") \
-_Pragma("optimize(\"-O0\")")
+_Pragma("GCC optimize(\"-O0\")")
 #else // ifndef _MSC_VER || __GNUC__
 #define NO_OPTIMIZE_FN_BEGIN
 #endif
