@@ -14,7 +14,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 // Dependent Header Files
 ////////////////////////////////////////////////////////////////////////////////
-#include "ArmEmu.hpp"
+#include "ArmEmu/ArmSystem.hpp"
 #include "SystemConfigurations.inl"
 
 namespace Mo {
@@ -38,12 +38,32 @@ private:
     Hardware _hardware;
     RegisterFile _registers;
     ExecutionUnit _execUnit;
-
+    AddressMap _addrDecoderReadMap;
+    AddressMap _addrDecoderWriteMap;
 public:
     // Construction/Destruction
+    //! @brief Constructs an emulator for a system which has no additional
+    //! hardware over and above what the Hardware typs supplies.
     ArmSystem() :
         _registers(_hardware),
         _execUnit(_hardware, _registers)
+    {
+        // Set the instruction pipeline to a known start-up state.
+        _registers.raiseReset();
+    }
+
+    //! @brief Constructs an emulator for a system which as additional host
+    //! mapped blocks of RAM, ROM or memory mapped I/O.
+    //! @param[in] read The additional mappings of regions of memory which can
+    //! be read over and above standard devices, ROM and RAM.
+    //! @param[in] write The additional mappings of regions of memory which can
+    //! be written over and above standard devices, ROM and RAM.
+    ArmSystem(const AddressMap &read, const AddressMap &write) :
+        _hardware(read, write),
+        _registers(_hardware),
+        _execUnit(_hardware, _registers),
+        _addrDecoderReadMap(read),
+        _addrDecoderWriteMap(write)
     {
         // Set the instruction pipeline to a known start-up state.
         _registers.raiseReset();
@@ -121,76 +141,20 @@ public:
         }
     }
 
-    virtual uint32_t readFromLogicalAddress(uint32_t logicalAddr, uint32_t length,
-                                            void *buffer) const override
+    virtual const AddressMap &getReadAddresses() const override
     {
-        MemoryMapping mapping;
-        uint32_t bytesRead = 0;
-        uint32_t currentAddr = logicalAddr;
-
-        // Bless me father, for I have sinned. But a thousand promises that
-        // I won't ACTUALLY write to the object, I just need to translate
-        // some addresses...
-        Hardware *writableHw = const_cast<Hardware *>(&_hardware);
-        uint8_t *target = reinterpret_cast<uint8_t *>(buffer);
-
-        while (bytesRead < length)
-        {
-            if (writableHw->tryMapLogicalAddress(currentAddr, true, mapping))
-            {
-                uint32_t offset = currentAddr - mapping.GuestAddress;
-                uint32_t maxRead = mapping.Size - offset;
-                uint32_t readLength = std::min(maxRead, length - bytesRead);
-
-                // Transfer the bytes.
-                std::memcpy(target + bytesRead,
-                            static_cast<uint8_t *>(mapping.HostAddress) + offset,
-                            readLength);
-
-                bytesRead += readLength;
-                currentAddr += readLength;
-            }
-            else
-            {
-                // The region of memory did not map to host memory.
-                break;
-            }
-        }
-
-        return bytesRead;
+        return _hardware.getReadAddressMap();
     }
 
-    virtual void writeToLogicalAddress(uint32_t logicalAddr, uint32_t length,
-                                       const void *buffer) override
+    virtual const AddressMap &getWriteAddresses() const override
     {
-        MemoryMapping mapping;
-        uint32_t bytesWritten = 0;
-        uint32_t currentAddr = logicalAddr;
+        return _hardware.getWriteAddressMap();
+    }
 
-        const uint8_t *source = reinterpret_cast<const uint8_t *>(buffer);
-
-        while (bytesWritten < length)
-        {
-            if (_hardware.tryMapLogicalAddress(currentAddr, false, mapping))
-            {
-                uint32_t offset = currentAddr - mapping.GuestAddress;
-                uint32_t maxWrite = mapping.Size - offset;
-                uint32_t writeLength = std::min(maxWrite, length - bytesWritten);
-
-                // Transfer the bytes.
-                std::memcpy(static_cast<uint8_t *>(mapping.HostAddress) + offset,
-                            source + bytesWritten,
-                            writeLength);
-
-                bytesWritten += writeLength;
-                currentAddr += writeLength;
-            }
-            else
-            {
-                // The region of memory did not map to host memory.
-                break;
-            }
-        }
+    virtual bool logicalToPhysicalAddress(uint32_t logicalAddr,
+                                          uint32_t &physAddr) const override
+    {
+        return _hardware.logicalToPhysicalAddress(logicalAddr, physAddr);
     }
 
     // Operations

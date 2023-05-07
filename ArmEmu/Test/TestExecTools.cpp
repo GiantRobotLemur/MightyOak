@@ -60,9 +60,9 @@ namespace Arm {
     else
     {
         // Install the code in the RAM of the test system.
-        systemUnderTest->writeToLogicalAddress(TestBedHardware::RamBase,
-                                               static_cast<uint32_t>(objectCode.getCodeSize()),
-                                               objectCode.getCode());
+        writeToLogicalAddress(systemUnderTest, TestBedHardware::RamBase,
+                              objectCode.getCode(),
+                              static_cast<uint32_t>(objectCode.getCodeSize()));
 
         // Fill the ROM with sequential break point instructions.
         Ag::String error;
@@ -80,7 +80,7 @@ namespace Arm {
             if (bkptInstruction.assemble(op, romAddr, error))
             {
                 // Write the breakpoint instruction into the ROM.
-                systemUnderTest->writeToLogicalAddress(romAddr, 4, &op);
+                writeToLogicalAddress(systemUnderTest, romAddr, &op, 4, true);
             }
             else
             {
@@ -102,7 +102,7 @@ namespace Arm {
         if (resetBranchInstruction.assemble(op, 0x0000, error))
         {
             // Write the breakpoint instruction into the ROM.
-            systemUnderTest->writeToLogicalAddress(0x0000, 4, &op);
+            writeToLogicalAddress(systemUnderTest, 0x0000, &op, 4, true);
         }
         else
         {

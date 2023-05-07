@@ -130,6 +130,8 @@ public:
     size_t getPrintLength() const;
     utf8_cptr_t getUtf8Bytes() const;
     long getReferenceCount() const;
+    bool contains(utf8_cptr_t rhsUtf8) const;
+    bool contains(const std::string_view &rhsUtf8) const;
     bool contains(const String &rhs) const;
     iterator begin() const;
     iterator end() const;

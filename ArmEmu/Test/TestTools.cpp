@@ -134,8 +134,8 @@ uint32_t GenerateBreakPoint::operator()()
     {
         std::string message;
         Ag::appendFormat(Ag::FormatInfo::getNeutral(),
-                         "{0}: 0x{1:X8} vs 0x{2:X8}",
-                         message, { coreRegisterToString(regId), lhs, rhs });
+                         "R{0}: 0x{1:X8} vs 0x{2:X8}",
+                         message, { Ag::toScalar(regId), lhs, rhs });
 
         return ::testing::AssertionFailure() << message;
     }
@@ -156,95 +156,6 @@ uint32_t GenerateBreakPoint::operator()()
 
         return ::testing::AssertionFailure() << message;
     }
-}
-
-//! @brief Constructs an implementation of an object representing an emulation
-//! of an ARM-based system for testing to run specified code assembled at the
-//! 32KB address mark in user mode.
-//! @param[in] assembler The assembly language source code to assemble into
-//! the RAM at 32KB and run up to the first breakpoint.
-IArmSystemUPtr createUserModeTestSystem(const char *assembler)
-{
-    // Assemble code into emulated RAM.
-    Asm::Options opts;
-    opts.setLoadAddress(TestBedHardware::RamBase);
-    opts.setInstructionSet(Asm::InstructionSet::ArmV4);
-
-    std::string source;
-    source.append("%26bit\n");
-    source.append("TSTP PC,#0\n"); // Force a switch to User mode with IRQs enabled.
-    source.append(assembler);
-
-    Asm::Messages log;
-    Asm::ObjectCode ramObjectCode = Asm::assembleText(source, opts, log);
-
-    if (log.hasErrors())
-    {
-        std::string builder;
-
-        for (const auto &msg : log.getMessages())
-        {
-            if (builder.empty() == false)
-            {
-                builder.push_back('\n');
-            }
-
-            Ag::appendAgString(builder, msg.toString());
-        }
-
-        throw Ag::CustomException("Assembly", "Could not assemble test code.",
-                                  builder);
-    }
-
-    // Create a ROM image filled with breakpoints.
-    std::vector<uint32_t> rom;
-
-    std::generate_n(std::back_inserter(rom),
-                    TestBedHardware::RomSize / 4,
-                    GenerateBreakPoint());
-
-    // Create an instruction which at the hardware reset vector which
-    // branches to the first work in memory.
-    Asm::InstructionInfo resetBranch(Asm::InstructionMnemonic::B,
-                                     Asm::OperationClass::Branch);
-    resetBranch.getBranchParameters().Address = TestBedHardware::RamBase;
-
-    Ag::String error;
-    if (resetBranch.assemble(rom.front(), TestBedHardware::RomBase, error) == false)
-    {
-        throw Ag::OperationException("Could not assemble reset vector.");
-    }
-
-    //TestSystem *testSystem = new TestSystem();
-    auto *testSystem = new ArmSystem<ArmV2TestSystemTraits>();
-
-    // Fill the ROM with breakpoints and a branch to RAM on reset.
-    testSystem->writeToLogicalAddress(TestBedHardware::RomBase,
-                                      static_cast<uint32_t>(rom.size() * 4),
-                                      rom.data());
-
-    // Copy the assembled code into RAM.
-    testSystem->writeToLogicalAddress(TestBedHardware::RamBase,
-                                      static_cast<uint32_t>(ramObjectCode.getCodeSize()),
-                                      ramObjectCode.getCode());
-
-    // Assemble a breakpoint at the end of the program.
-    resetBranch.reset(Asm::InstructionMnemonic::Bkpt,
-                      Asm::OperationClass::Breakpoint);
-    resetBranch.getBreakpointParameters().Comment = 0xFFFF;
-
-    uint32_t bkptInstruction;
-    if (resetBranch.assemble(bkptInstruction, 0x0000, error) == false)
-    {
-        throw Ag::OperationException("Could not assemble final break point.");
-    }
-
-    // Write the final breakpoint to RAM.
-    testSystem->writeToLogicalAddress(static_cast<uint32_t>(TestBedHardware::RamBase + ramObjectCode.getCodeSize()),
-                                      4, &bkptInstruction);
-
-    // Return a unique pointer to the emulated system.
-    return IArmSystemUPtr(testSystem);
 }
 
 }} // namespace Mo::Arm

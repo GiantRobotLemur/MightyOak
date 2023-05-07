@@ -16,9 +16,8 @@
 
 #include "ArmEmu.hpp"
 #include "DhrystoneProgram.hpp"
-
-#include "ArmSystem.inl"
-#include "SystemConfigurations.inl"
+#include "ArmEmu/ArmSystemBuilder.hpp"
+#include "TestBedHardware.inl"
 
 // A bit lazy, but it's only one file.
 // TODO: If EmuPerfTest is expanded to more than a single file, resolve the Ag
@@ -45,12 +44,24 @@ enum Configuration
 {
     None,
     ArmV2_Test,
+    ArmV2a_Test,
+    ArmV2a_FPA_Test,
+    ArmV3_Test,
+    ArmV3_FPA_Test,
+    ArmV4_Test,
+    ArmV4_FPA_Test,
 };
 
 const EnumInfo<Configuration> &getConfigMetadata()
 {
     static const EnumInfo<Configuration> instance({
         { Configuration::ArmV2_Test, "ARMv2-Test" },
+        { Configuration::ArmV2a_Test, "ARMv2a-Test" },
+        { Configuration::ArmV2a_FPA_Test, "ARMv2a-FPA-Test" },
+        { Configuration::ArmV3_Test, "ARMv3-Test" },
+        { Configuration::ArmV3_FPA_Test, "ARMv3-FPA-Test" },
+        { Configuration::ArmV4_Test, "ARMv4-Test" },
+        { Configuration::ArmV4_FPA_Test, "ARMv4-FPA-Test" },
     });
 
     return instance;
@@ -70,6 +81,7 @@ private:
     // Internal Fields
     EmuPerfTestCommand _command;
     Configuration _config;
+    uint32_t _cycleCount;
 
     // Internal Functions
 public:
@@ -86,6 +98,12 @@ public:
         builder.defineAlias(Option::ShowHelp, U'?');
         builder.defineAlias(Option::ShowHelp, "help");
 
+        builder.defineOption(Option::CycleCount,
+                             "Specifies the number of Dhrystone cycles to execute.",
+                             Cli::OptionValue::Mandatory, "cycle count");
+        builder.defineAlias(Option::CycleCount, U'c');
+        builder.defineAlias(Option::CycleCount, "cycles");
+
         return builder.createSchema();
     }
 
@@ -93,7 +111,8 @@ public:
     EmuPerfTestArgs() :
         Cli::ProgramArguments(createSchema()),
         _command(EmuPerfTestCommand::Auto),
-        _config(Configuration::None)
+        _config(Configuration::None),
+        _cycleCount(0)
     {
     }
 
@@ -102,6 +121,7 @@ public:
     // Accessors
     EmuPerfTestCommand getCommand() const { return _command; }
     Configuration getConfiguration() const { return _config; }
+    uint32_t getCycleCount() const { return _cycleCount; }
 
 protected:
     // Overrides
@@ -124,8 +144,19 @@ protected:
             else
             {
                 isOK = false;
-                error = String::format("Unknown help topic '{0}'.",
+                error = String::format(FormatInfo::getDisplay(),
+                                       "Unknown help topic '{0}'.",
                                        { value });
+            }
+            break;
+
+        case CycleCount:
+            if (value.tryParseScalar(_cycleCount) == false)
+            {
+                error = String::format(FormatInfo::getDisplay(),
+                                       "Invalid cycle count '{0}' specified.",
+                                       { value });
+                isOK = false;
             }
             break;
 
@@ -174,10 +205,22 @@ protected:
             _command = EmuPerfTestCommand::RunTest;
         }
 
-        if ((_command == EmuPerfTestCommand::RunTest) &&
-            (_config == Configuration::None))
+        if (_command == EmuPerfTestCommand::RunTest)
         {
-            _config = Configuration::ArmV2_Test;
+            if (_config == Configuration::None)
+            {
+                _config = Configuration::ArmV2_Test;
+            }
+
+            if (_cycleCount == 0)
+            {
+                // Set the default count of loops to execute.
+#ifdef _DEBUG
+                _cycleCount = 500000;
+#else
+                _cycleCount = 3000000;
+#endif
+            }
         }
     }
 };
@@ -217,62 +260,99 @@ private:
     // Internal Fields
     EmuPerfTestCommand _command;
     Configuration _config;
+    uint32_t _cycleCount;
 
     // Internal Functions
-    static void initialiseEmbeddedTestSystem(IArmSystem *testSystem)
+    IArmSystemUPtr initialiseEmbeddedTestSystem(Options &systemOptions) const
     {
-        // Create a ROM image filled with breakpoints.
-        std::vector<uint32_t> rom;
+        IArmSystemUPtr testSystem;
+        systemOptions.setSystemRom(SystemROMPreset::Custom);
+        systemOptions.setHardwareArchitecture(SystemModel::TestBed);
 
-        std::generate_n(std::back_inserter(rom),
-                        TestBedHardware::RomSize / 4,
-                        GenerateBreakPoint());
-
-        // Create an instruction which at the hardware reset vector which
-        // branches to the first work in memory.
-        Asm::InstructionInfo resetBranch(Asm::InstructionMnemonic::B,
-                                         Asm::OperationClass::Branch);
-        resetBranch.getBranchParameters().Address = TestBedHardware::RamBase;
-
-        String error;
-        if (resetBranch.assemble(rom.front(), TestBedHardware::RomBase, error) == false)
+        switch (_config)
         {
-            throw Ag::OperationException("Could not assemble reset vector.");
+        case ArmV2_Test:
+            systemOptions.setProcessorVariant(ProcessorModel::ARM2);
+            break;
+
+        case ArmV2a_Test:
+            systemOptions.setProcessorVariant(ProcessorModel::ARM3);
+            break;
+
+        case ArmV2a_FPA_Test:
+            systemOptions.setProcessorVariant(ProcessorModel::ARM3_FPA);
+            break;
+
+        case ArmV3_Test:
+            systemOptions.setProcessorVariant(ProcessorModel::ARM610);
+            break;
+
+        case ArmV3_FPA_Test:
+            systemOptions.setProcessorVariant(ProcessorModel::ARM710_FPA);
+            break;
+
+        case ArmV4_Test:
+            systemOptions.setProcessorVariant(ProcessorModel::ARM810);
+            break;
+
+        case ArmV4_FPA_Test:
+            systemOptions.setProcessorVariant(ProcessorModel::ARM810_FPA);
+            break;
+
+        default:
+            puts("Error: Emulated system configuration not supported.");
+            return testSystem;
         }
 
-        //auto *testSystem = new ArmSystem<ArmV2TestSystemTraits>();
+        Ag::String error;
 
-        // Fill the ROM with breakpoints and a branch to RAM on reset.
-        testSystem->writeToLogicalAddress(TestBedHardware::RomBase,
-                                          static_cast<uint32_t>(rom.size() * 4),
-                                          rom.data());
-
-        // Copy the assembled code into RAM.
-        size_t byteCount;
-        const void *program = getDhrystoneData(byteCount);
-
-        testSystem->writeToLogicalAddress(TestBedHardware::RamBase,
-                                          static_cast<uint32_t>(byteCount),
-                                          program);
-
-        // Assemble a breakpoint at the end of the program.
-        resetBranch.reset(Asm::InstructionMnemonic::Bkpt,
-                          Asm::OperationClass::Breakpoint);
-        resetBranch.getBreakpointParameters().Comment = 0xFFFF;
-
-        uint32_t bkptInstruction;
-        if (resetBranch.assemble(bkptInstruction, 0x0000, error) == false)
+        if (systemOptions.validate(error))
         {
-            throw Ag::OperationException("Could not assemble final break point.");
+            // Create the emulated system based on the settings provided.
+            ArmSystemBuilder builder(systemOptions);
+            testSystem = builder.createSystem();
+
+            // Create a ROM image filled with breakpoints.
+            std::vector<uint32_t> rom;
+
+            std::generate_n(std::back_inserter(rom),
+                            TestBedHardware::RomSize / 4,
+                            GenerateBreakPoint());
+
+            // Create an instruction which at the hardware reset vector which
+            // branches to the first work in memory.
+            Asm::InstructionInfo resetBranch(Asm::InstructionMnemonic::B,
+                                             Asm::OperationClass::Branch);
+            resetBranch.getBranchParameters().Address = TestBedHardware::RamBase;
+
+            if (resetBranch.assemble(rom.front(), TestBedHardware::RomBase, error) == false)
+            {
+                throw Ag::OperationException("Could not assemble reset vector.");
+            }
+
+            // Fill the ROM with breakpoints and a branch to RAM on reset.
+            writeToLogicalAddress(testSystem.get(), TestBedHardware::RomBase,
+                                  rom.data(), static_cast<uint32_t>(rom.size() * 4),
+                                  true);
+
+            // Copy the assembled code into RAM.
+            size_t byteCount;
+            const void *program = getDhrystoneData(byteCount);
+
+            writeToLogicalAddress(testSystem.get(), TestBedHardware::RamBase,
+                                  program, static_cast<uint32_t>(byteCount));
+
+            // Setup a full-descending stack in R13 after the reset.
+            uint32_t ramEnd = TestBedHardware::RamEnd - 4;
+            testSystem->setCoreRegister(CoreRegister::R13, ramEnd);
+        }
+        else
+        {
+            // Option validation failed.
+            printf("Error: %s\n", error.getUtf8Bytes());
         }
 
-        // Write the final breakpoint to RAM.
-        testSystem->writeToLogicalAddress(static_cast<uint32_t>(TestBedHardware::RamBase + byteCount),
-                                          4, &bkptInstruction);
-
-        // Setup a full-descending stack in R13 after the reset.
-        uint32_t ramEnd = TestBedHardware::RamEnd - 4;
-        testSystem->setCoreRegister(CoreRegister::R13, ramEnd);
+        return testSystem;
     }
 
     void displayConfigs() const
@@ -286,28 +366,26 @@ private:
 
     bool runTest() const
     {
-        ArmSystem<ArmV2TestSystemTraits> testSystem;
-        initialiseEmbeddedTestSystem(&testSystem);
+        Options testSystemOptions;
+        IArmSystemUPtr testSystem = initialiseEmbeddedTestSystem(testSystemOptions);
 
-        // Set count of loops to execute.
-#ifdef _DEBUG
-        constexpr uint32_t loops = 500000;
-#else
-        constexpr uint32_t loops = 3000000;
-#endif
+        if (!testSystem)
+            return false;
 
         // Pass the look count to the program.
-        testSystem.setCoreRegister(CoreRegister::R0, loops);
+        testSystem->setCoreRegister(CoreRegister::R0, _cycleCount);
 
         std::string output;
         appendFormat(FormatInfo::getDisplay(),
-                     "Running {0} loops of the Dhrystone 2.1 benchmark...",
-                     output, { loops });
+                     "Selected {0} processor.\n"
+                     "Running {1} loops of the Dhrystone 2.1 benchmark...", output,
+                     { getProcessorModelType().toDisplayName(testSystemOptions.getProcessorVariant()),
+                       _cycleCount });
 
         puts(output.c_str());
-        ExecutionMetrics metrics = testSystem.run();
+        ExecutionMetrics metrics = testSystem->run();
 
-        uint32_t endPC = testSystem.getCoreRegister(CoreRegister::PC) - 12;
+        uint32_t endPC = testSystem->getCoreRegister(CoreRegister::PC) - 12;
 
         if (endPC < 0x20)
         {
@@ -329,8 +407,8 @@ private:
             for (uint8_t i = 0; i < 16; i += 2)
             {
                 printf("\tR%u = 0x%.8X, R%u = 0x%.8X\n",
-                       i, testSystem.getCoreRegister(fromScalar<CoreRegister>(i)),
-                       i + 1, testSystem.getCoreRegister(fromScalar<CoreRegister>(i + 1)));
+                       i, testSystem->getCoreRegister(fromScalar<CoreRegister>(i)),
+                       i + 1, testSystem->getCoreRegister(fromScalar<CoreRegister>(i + 1)));
             }
         }
 
@@ -353,7 +431,8 @@ public:
     // Construction/Destruction
     EmuPerfTestApp() :
         _command(EmuPerfTestCommand::Auto),
-        _config(Configuration::None)
+        _config(Configuration::None),
+        _cycleCount(100)
     {
     }
 
@@ -381,6 +460,7 @@ protected:
             {
                 // Extract the options we need.
                 _config = testArgs->getConfiguration();
+                _cycleCount = testArgs->getCycleCount();
             }
             else if (_command == EmuPerfTestCommand::Auto)
             {

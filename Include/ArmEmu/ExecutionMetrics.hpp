@@ -1,21 +1,24 @@
-//! @file ArmEmu/IrqSink.hpp
-//! @brief The declaration of an interface to an object which can receive
-//! emulated interrupt signals.
+//! @file ArmEmu/ExecutionMetrics.hpp
+//! @brief The declaration of a structure which contains statistics gathered
+//! by the execution pipeline of an emulated system.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2022-2023
+//! @date 2023
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
 ////////////////////////////////////////////////////////////////////////////////
 
-#ifndef __ARM_EMU_IRQ_SINK_HPP__
-#define __ARM_EMU_IRQ_SINK_HPP__
+#ifndef __ARM_EMU_EXECUTION_METRICS_HPP__
+#define __ARM_EMU_EXECUTION_METRICS_HPP__
 
 ////////////////////////////////////////////////////////////////////////////////
 // Dependent Header Files
 ////////////////////////////////////////////////////////////////////////////////
-#include <cstdint>
-#include <cstddef>
+#include "Ag/Core/Timer.hpp"
+
+////////////////////////////////////////////////////////////////////////////////
+// Macro Definitions
+////////////////////////////////////////////////////////////////////////////////
 
 namespace Mo {
 namespace Arm {
@@ -27,28 +30,32 @@ namespace Arm {
 ////////////////////////////////////////////////////////////////////////////////
 // Class Declarations
 ////////////////////////////////////////////////////////////////////////////////
-//! @brief The interface to an object which can receive emulated interrupt
-//! signals.
-class IIrqSink
+//! @brief An object which describes the performance of the run of the
+//! emulated instruction pipeline.
+struct ExecutionMetrics
 {
-public:
-    // Construction/Destruction
-    virtual ~IIrqSink() = default;
+    // Public Fields
+    //! @brief The count of emulated processor clock cycles used.
+    uint64_t CycleCount;
+
+    //! @brief The count of instructions executed.
+    uint64_t InstructionCount;
+
+    //! @brief The amount of physical time calculated using the
+    //! High Resolution Monotonic timer.
+    Ag::MonotonicTicks ElapsedTime;
+
+    // Construction
+    ExecutionMetrics();
 
     // Accessors
+    double calculateClockFrequency() const;
+    double calculateSpeedInMIPS() const;
 
     // Operations
-    //! @brief Marks an interrupt as pending.
-    virtual void raiseIrq() = 0;
-
-    //! @brief Clears any pending interrupt.
-    virtual void clearIrq() = 0;
-
-    //! @brief Marks a fast interrupt as pending.
-    virtual void raiseFirq() = 0;
-
-    //! @brief Clears any pending fast interrupt.
-    virtual void clearFirq() = 0;
+    void reset();
+    ExecutionMetrics operator+(const ExecutionMetrics &rhs) const;
+    ExecutionMetrics &operator+=(const ExecutionMetrics &rhs);
 };
 
 ////////////////////////////////////////////////////////////////////////////////
