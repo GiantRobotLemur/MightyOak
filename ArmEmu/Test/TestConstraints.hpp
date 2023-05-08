@@ -321,7 +321,6 @@ public:
                                            &constraint.Value, 2) == 2;
             break;
 
-
         case SystemElement::LogicalHalfWord:
             isSet = writeToLogicalAddress(&target, constraint.ElementIndex,
                                           &constraint.Value, 2) == 2;
@@ -422,7 +421,6 @@ public:
                                               &value, 2) == 2;
             break;
 
-
         case SystemElement::LogicalHalfWord:
             isFound = readFromLogicalAddress(&target, constraint.ElementIndex,
                                              &value, 2) == 2;
@@ -431,6 +429,7 @@ public:
         case SystemElement::PhysicalWord:
             isFound = readFromPhysicalAddress(&target, constraint.ElementIndex,
                                               &value, 4) == 4;
+            break;
 
         case SystemElement::LogicalWord:
             isFound = readFromLogicalAddress(&target, constraint.ElementIndex,

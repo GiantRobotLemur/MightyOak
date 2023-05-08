@@ -513,7 +513,7 @@ public:
 
     // Construction/Destruction
     ARMv2aCoreRegisterFile(THardware &hw) :
-        ARMv2CoreRegisterFile(hw)
+        ARMv2CoreRegisterFile<THardware>(hw)
     {
         // Set the ID register to a fixed value.
         _cp15Registers[0] = IdRegisterValue;
@@ -571,7 +571,7 @@ public:
         std::fill_n(_cp15Registers + 1,
                     std::size(_cp15Registers) - 1, 0u);
 
-        return ARMv2CoreRegisterFile::raiseReset();
+        return ARMv2CoreRegisterFile<THardware>::raiseReset();
     }
 };
 
