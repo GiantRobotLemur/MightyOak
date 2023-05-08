@@ -193,6 +193,54 @@ testing::AssertionResult parseConstraints(const TestLocation &loc,
 ////////////////////////////////////////////////////////////////////////////////
 // Templates
 ////////////////////////////////////////////////////////////////////////////////
+template<typename THardware, typename TRegisterFile>
+struct CoProcessorRegisterInterprtor
+{
+    bool tryRead(TRegisterFile &/*regs*/, uint8_t /*coProcId*/,
+                 CoProcRegister /*regId*/, uint32_t &/*value*/) const
+    {
+        return false;
+    }
+
+    bool tryWrite(TRegisterFile &/*regs*/, uint8_t /*coProcId*/,
+                         CoProcRegister /*regId*/, uint32_t /*value*/) const
+    {
+        return false;
+    }
+};
+
+template<typename THardware>
+struct CoProcessorRegisterInterprtor<THardware, ARMv2aCoreRegisterFile<THardware>>
+{
+    bool tryRead(ARMv2aCoreRegisterFile<THardware> &regs, uint8_t coProcId,
+                 CoProcRegister regId, uint32_t &value) const
+    {
+        bool isFound = false;
+
+        if (coProcId == 15)
+        {
+            value = regs.getCP15Register(regId);
+            isFound = true;
+        }
+
+        return isFound;
+    }
+
+    bool tryWrite(ARMv2aCoreRegisterFile<THardware> &regs, uint8_t coProcId,
+                  CoProcRegister regId, uint32_t value) const
+    {
+        bool isSet = false;
+
+        if (coProcId == 15)
+        {
+            regs.setCP15Register(regId, value);
+            isSet = true;
+        }
+
+        return isSet;
+    }
+};
+
 //! @brief The specification for an object which can apply and extract constraint
 //! values.
 //! @tparam TTargetTraits The data type of traits class describing the emulated
@@ -200,6 +248,39 @@ testing::AssertionResult parseConstraints(const TestLocation &loc,
 template<typename TTargetTraits>
 struct ConstraintInterpretor
 {
+private:
+    using CoProcRegInteretor = CoProcessorRegisterInterprtor<typename TTargetTraits::HardwareType,
+                                                             typename TTargetTraits::RegisterFileType>;
+
+    static bool writeCoreRegister(typename TTargetTraits::RegisterFileType &regs,
+                                  uint32_t index, uint32_t value)
+    {
+        bool isSet = false;
+
+        if (index < 16)
+        {
+            regs.setRn(Ag::forceFromScalar<GeneralRegister>(index), value);
+            isSet = true;
+        }
+
+        return isSet;
+    }
+
+    static bool readCoreRegister(typename TTargetTraits::RegisterFileType &regs,
+                                 uint32_t index, uint32_t &value)
+    {
+        bool isFound = false;
+
+        if (index < 16)
+        {
+            value = regs.getRn(Ag::forceFromScalar<GeneralRegister>(index));
+            isFound = true;
+        }
+
+        return isFound;
+    }
+
+public:
     //! @brief Attempts to set a constraint value on the target.
     //! @param[in] target The target to apply the constraint to.
     //! @param[in] constraint The constraint to apply.
@@ -207,8 +288,96 @@ struct ConstraintInterpretor
     //! @retval false The constraint is incompatible with the target.
     bool apply(ArmSystem<TTargetTraits> &target, const Constraint &constraint) const
     {
-        // The default implementation fails in all cases.
-        return false;
+        bool isSet = false;
+        uint32_t scratch;
+
+        switch (constraint.Element)
+        {
+        case SystemElement::CoreRegister:
+            isSet = writeCoreRegister(target.getRegisters(),
+                                      constraint.ElementIndex,
+                                      constraint.Value);
+            break;
+
+        case SystemElement::CoProcRegister:
+            isSet = CoProcRegInteretor().tryWrite(target.getRegisters(),
+                                                  static_cast<uint8_t>(constraint.ElementIndex >> 4) & 0x0F,
+                                                  Ag::Bin::extractEnum<CoProcRegister, 0, 4>(constraint.ElementIndex),
+                                                  constraint.Value);
+            break;
+
+        case SystemElement::PhysicalByte:
+            isSet = writeToPhysicalAddress(&target, constraint.ElementIndex,
+                                           &constraint.Value, 1) == 1;
+            break;
+
+        case SystemElement::LogicalByte:
+            isSet = writeToLogicalAddress(&target, constraint.ElementIndex,
+                                           &constraint.Value, 1) == 1;
+            break;
+
+        case SystemElement::PhysicalHalfWord:
+            isSet = writeToPhysicalAddress(&target, constraint.ElementIndex,
+                                           &constraint.Value, 2) == 2;
+            break;
+
+        case SystemElement::LogicalHalfWord:
+            isSet = writeToLogicalAddress(&target, constraint.ElementIndex,
+                                          &constraint.Value, 2) == 2;
+            break;
+
+        case SystemElement::PhysicalWord:
+            isSet = writeToPhysicalAddress(&target, constraint.ElementIndex,
+                                           &constraint.Value, 4) == 4;
+            break;
+
+        case SystemElement::LogicalWord:
+            isSet = writeToLogicalAddress(&target, constraint.ElementIndex,
+                                          &constraint.Value, 4) == 4;
+            break;
+
+        case SystemElement::SystemRegister:
+            isSet = true;
+
+            switch (Ag::fromScalar<SystemRegister>(constraint.ElementIndex))
+            {
+            case SystemRegister::PC:
+                target.getRegisters().setPC(constraint.Value);
+                break;
+
+            case SystemRegister::CPSR:
+                target.getRegisters().setPSR(constraint.Value);
+                break;
+
+            case SystemRegister::Status:
+                scratch = target.getRegisters().getPSR();
+                scratch &= ~PsrMask::Status;
+                scratch |= constraint.Value << PsrShift::Status;
+                target.getRegisters().setPSR(scratch);
+                break;
+
+            case SystemRegister::ProcessorMode:
+                scratch = target.getRegisters().getPSR();
+                scratch &= ~PsrMask26::ModeBits;
+                scratch |= constraint.Value & PsrMask26::ModeBits;
+                target.getRegisters().setPSR(scratch);
+                break;
+
+            case SystemRegister::IrqStatus:
+            case SystemRegister::IrqMask:
+            case SystemRegister::SPSR:
+            default:
+                isSet = false;
+                break;
+            }
+            break;
+
+        default:
+            isSet = false;
+            break;
+        }
+
+        return isSet;
     }
 
     //! @brief Attempts to get the value of a constraint from the target.
@@ -220,8 +389,89 @@ struct ConstraintInterpretor
     bool extract(ArmSystem<TTargetTraits> &target, const Constraint &constraint,
                  uint32_t &value) const
     {
-        // The default implementation fails in all cases.
-        return false;
+        bool isFound = false;
+        value = 0;
+
+        switch (constraint.Element)
+        {
+        case SystemElement::CoreRegister:
+            isFound = readCoreRegister(target.getRegisters(),
+                                       constraint.ElementIndex, value);
+            break;
+
+        case SystemElement::CoProcRegister:
+            isFound = CoProcRegInteretor().tryRead(target.getRegisters(),
+                                                   static_cast<uint8_t>(constraint.ElementIndex >> 4) & 0x0F,
+                                                   Ag::Bin::extractEnum<CoProcRegister, 0, 4>(constraint.ElementIndex),
+                                                   value);
+            break;
+
+        case SystemElement::PhysicalByte:
+            isFound = readFromPhysicalAddress(&target, constraint.ElementIndex,
+                                              &value, 1) == 1;
+            break;
+
+        case SystemElement::LogicalByte:
+            isFound = readFromLogicalAddress(&target, constraint.ElementIndex,
+                                             &value, 1) == 1;
+            break;
+
+        case SystemElement::PhysicalHalfWord:
+            isFound = readFromPhysicalAddress(&target, constraint.ElementIndex,
+                                              &value, 2) == 2;
+            break;
+
+        case SystemElement::LogicalHalfWord:
+            isFound = readFromLogicalAddress(&target, constraint.ElementIndex,
+                                             &value, 2) == 2;
+            break;
+
+        case SystemElement::PhysicalWord:
+            isFound = readFromPhysicalAddress(&target, constraint.ElementIndex,
+                                              &value, 4) == 4;
+            break;
+
+        case SystemElement::LogicalWord:
+            isFound = readFromLogicalAddress(&target, constraint.ElementIndex,
+                                             &value, 4) == 4;
+            break;
+
+        case SystemElement::SystemRegister:
+            isFound = true;
+
+            switch (Ag::fromScalar<SystemRegister>(constraint.ElementIndex))
+            {
+            case SystemRegister::PC:
+                value = target.getRegisters().getPC();
+                break;
+
+            case SystemRegister::CPSR:
+                value = target.getRegisters().getPSR();
+                break;
+
+            case SystemRegister::Status:
+                value = target.getRegisters().getPSR() >> PsrShift::Status;
+                break;
+
+            case SystemRegister::ProcessorMode:
+                value = Ag::toScalar(target.getRegisters().getMode());
+                break;
+
+            case SystemRegister::IrqStatus:
+            case SystemRegister::IrqMask:
+            case SystemRegister::SPSR:
+            default:
+                isFound = false;
+                break;
+            }
+            break;
+
+        default:
+            isFound = false;
+            break;
+        }
+
+        return isFound;
     }
 };
 

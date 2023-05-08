@@ -240,7 +240,7 @@ bool Options::validate(Ag::String &error) const
     if (_model == SystemModel::TestBed)
     {
         // TODO: Expand the selection as support for new processors is added.
-        if (_processor != ProcessorModel::ARM2)
+        if ((_processor != ProcessorModel::ARM2) && (_processor != ProcessorModel::ARM3))
         {
             error = Ag::String::format(Ag::LocaleInfo::getDisplay(),
                                        "An {0} processor is not currently supported in a {1} system.",

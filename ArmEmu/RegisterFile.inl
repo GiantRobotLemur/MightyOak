@@ -146,6 +146,11 @@ public:
     //! @brief Interprets the current processor mode from the PSR.
     ProcessorMode getMode() const noexcept;
 
+    //! @brief Determines if the processor is operating in a non-user mode.
+    //! @retval true The processor is operating in a mode with elevated privileges.
+    //! @retval false The processor is operating in one user mode or another.
+    bool isInPrivilegedMode() const noexcept;
+
     //! @brief Reads a register value, if R15, the PC is read.
     //! @param[in] regId The identifier of the register to read.
     uint32_t getRn(GeneralRegister regId) const noexcept;
@@ -204,6 +209,26 @@ public:
     //! flags if running in a 26-bit mode. Used during STM.
     //! @param[in] regId The identifier of the register to read.
     uint32_t getRx(GeneralRegister regId) const noexcept;
+
+    //! @brief Gets the value of a register within a co-processor known at
+    //! runtime.
+    //! @param[in] regId The identifier of the register to query.
+    //! @return The contents of the register.
+    //! @details The name of this member function should substitute the 'x'
+    //! for the specific co-processor in order that only valid co-processors
+    //! can be accessed. Equally, the return value may be wider than a
+    //! 32-bit word.
+    uint32_t getCPxRegister(CoProcRegister regId) const noexcept;
+
+    //! @brief Sets the value of a register within a co-processor known
+    //! at runtime.
+    //! @param[in] regId The identifier of the register to set.
+    //! @param[in] value The value to write to the register.
+    //! @note The name of this member function should substitute the 'x'
+    //! for the specific co-processor in order that only valid co-processors
+    //! can be accessed. Equally, the register value passed may be wider than
+    //! a 32-bit word.
+    void setCPxRegister(CoProcRegister regId, uint32_t value) noexcept;
 
     // Operations
     //! @brief Updates the processor state in response to the reset signal

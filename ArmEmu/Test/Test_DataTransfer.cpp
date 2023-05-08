@@ -557,6 +557,64 @@ const CoreTestParams basicDataTransfer26Bit[] = {
     //                                "STMDB R0!,{R1-R3}" },
 };
 
+const CoreTestParams armV2aDataTransfer[] = {
+    // SWP Word/Byte
+    { TLOC, "SWP_Word", "R0=0xABBAABBA,R1=0xCAFEBABE,R2=0x8100,LWORD[8100]=0xDEADBEEF",
+                        "R0=0xDEADBEEF,R1=0xCAFEBABE,R2=0x8100,LWORD[8100]=0xCAFEBABE",
+                        "SWP R0,R1,[R2]" },
+
+    { TLOC, "SWP_WordAtPC", "R0=0xABBAABBA,R1=0xE12FFF7F,LWORD[8008]=0xE1200070",
+                            "R0=0xE1200070,R1=0xE12FFF7F,LWORD[8008]=0xE12FFF7F",
+                            "SWP R0,R1,[PC]" },
+    { TLOC, "SWP_WordFromPC",   "R0=0xABBAABBA,R2=0x8100,LWORD[8100]=0xDEADBEEF,Status=V",
+                                "R0=0xDEADBEEF,R2=0x8100,LWORD[8100]=0x10008008,Status=V",
+                                "SWP R0,PC,[R2]" },
+    { TLOC, "SWP_WordToPC", "R1=0xCAFEBABE,R2=0x8100,LWORD[8100]=0x10000020,Status=C",
+                            "R1=0xCAFEBABE,R2=0x8100,PC=0x2C,LWORD[8100]=0xCAFEBABE,Status=C",
+                            "SWP PC,R1,[R2]" },
+
+    { TLOC, "SWP_WordUnaligned1",   "R0=0xABBAABBA,R1=0xCAFEBABE,R2=0x8101,LWORD[8100]=0xDEADBEEF",
+                                    "R0=0xEFDEADBE,R1=0xCAFEBABE,R2=0x8101,LWORD[8100]=0xCAFEBABE",
+                                    "SWP R0,R1,[R2]" },
+    { TLOC, "SWP_WordUnaligned2",   "R0=0xABBAABBA,R1=0xCAFEBABE,R2=0x8102,LWORD[8100]=0xDEADBEEF",
+                                    "R0=0xBEEFDEAD,R1=0xCAFEBABE,R2=0x8102,LWORD[8100]=0xCAFEBABE",
+                                    "SWP R0,R1,[R2]" },
+    { TLOC, "SWP_WordUnaligned3",   "R0=0xABBAABBA,R1=0xCAFEBABE,R2=0x8103,LWORD[8100]=0xDEADBEEF",
+                                    "R0=0xADBEEFDE,R1=0xCAFEBABE,R2=0x8103,LWORD[8100]=0xCAFEBABE",
+                                    "SWP R0,R1,[R2]" },
+
+    { TLOC, "SWP_WordAddressException", "R0=0xABBAABBA,R1=0xCAFEBABE,R2=0x4000000,LWORD[8100]=0xDEADBEEF",
+                                        "R0=0xABBAABBA,R14=0x8008,PC=0x20,CPSR=0x8000003,LWORD[8100]=0xDEADBEEF",
+                                        "SWP R0,R1,[R2]" },
+
+    { TLOC, "SWP_WordDataAbort",    "R0=0xABBAABBA,R1=0xCAFEBABE,R2=0x10000,LWORD[8100]=0xDEADBEEF",
+                                    "R0=0xABBAABBA,R14=0x8008,PC=0x1C,CPSR=0x8000003",
+                                    "SWP R0,R1,[R2]" },
+
+
+    { TLOC, "SWP_Byte", "R0=0xABBAABBA,R1=0xCAFEBABE,R2=0x8100,LWORD[8100]=0xDEADBEEF",
+                        "R0=0xEF,R1=0xCAFEBABE,R2=0x8100,LWORD[8100]=0xDEADBEBE",
+                        "SWPB R0,R1,[R2]" },
+
+    { TLOC, "SWP_ByteUnaligned1",   "R0=0xABBAABBA,R1=0xCAFEBABE,R2=0x8101,LWORD[8100]=0xDEADBEEF",
+                                    "R0=0xBE,R1=0xCAFEBABE,R2=0x8101,LWORD[8100]=0xDEADBAEF",
+                                    "SWPB R0,R1,[R2]" },
+    { TLOC, "SWP_ByteUnaligned2",   "R0=0xABBAABBA,R1=0xCAFEBABE,R2=0x8102,LWORD[8100]=0xDEADBEEF",
+                                    "R0=0xAD,R1=0xCAFEBABE,R2=0x8102,LWORD[8100]=0xDEFEBEEF",
+                                    "SWPB R0,R1,[R2]" },
+    { TLOC, "SWP_ByteUnaligned3",   "R0=0xABBAABBA,R1=0xCAFEBABE,R2=0x8103,LWORD[8100]=0xDEADBEEF",
+                                    "R0=0xDE,R1=0xCAFEBABE,R2=0x8103,LWORD[8100]=0xCAADBEEF",
+                                    "SWPB R0,R1,[R2]" },
+
+    { TLOC, "SWP_ByteAddressException", "R0=0xABBAABBA,R1=0xCAFEBABE,R2=0x4000000,LWORD[8100]=0xDEADBEEF",
+                                        "R0=0xABBAABBA,R14=0x8008,PC=0x20,CPSR=0x8000003,LWORD[8100]=0xDEADBEEF",
+                                        "SWPB R0,R1,[R2]" },
+
+    { TLOC, "SWP_ByteDataAbort",    "R0=0xABBAABBA,R1=0xCAFEBABE,R2=0x10000,LWORD[8100]=0xDEADBEEF",
+                                    "R0=0xABBAABBA,R14=0x8008,PC=0x1C,CPSR=0x8000003",
+                                    "SWPB R0,R1,[R2]" },
+};
+
 } // Anonymous namespace
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -571,6 +629,14 @@ void registerDataTransferExecTests()
                                              std::size(basicDataTransfer));
     RegisterExecTests<ArmV2TestSystemTraits>("ARMv2_DataTransfer", basicDataTransfer26Bit,
                                              std::size(basicDataTransfer26Bit));
+
+    // Repeat the test for the ARMv2a architecture.
+    RegisterExecTests<ArmV2aTestSystemTraits>("ARMv2a_DataTransfer", basicDataTransfer,
+                                              std::size(basicDataTransfer));
+    RegisterExecTests<ArmV2aTestSystemTraits>("ARMv2a_DataTransfer", basicDataTransfer26Bit,
+                                              std::size(basicDataTransfer26Bit));
+    RegisterExecTests<ArmV2aTestSystemTraits>("ARMv2a_DataTransfer", armV2aDataTransfer,
+                                              std::size(armV2aDataTransfer));
 }
 
 }} // namespace Mo::Arm

@@ -55,6 +55,7 @@ public:
 
 // Explicitly instantiate the whole class to ensure it at least compiles.
 template class Mo::Arm::ARMv2CoreRegisterFile<::BasicHardware>;
+template class Mo::Arm::ARMv2aCoreRegisterFile<::BasicHardware>;
 
 struct ARMv2RegisterTraits
 {
@@ -62,11 +63,15 @@ struct ARMv2RegisterTraits
     using RegisterFile = ARMv2CoreRegisterFile<::BasicHardware>;
 };
 
-using RegisterFile26Implementations = testing::Types<ARMv2RegisterTraits>;
+struct ARMv2aRegisterTraits
+{
+    using Hardware = ::BasicHardware;
+    using RegisterFile = ARMv2aCoreRegisterFile<::BasicHardware>;
+};
 
-TYPED_TEST_SUITE(RegisterFile26, RegisterFile26Implementations);
+TYPED_TEST_SUITE_P(RegisterFile26);
 
-TYPED_TEST(RegisterFile26, Reset)
+TYPED_TEST_P(RegisterFile26, Reset)
 {
     typename TypeParam::Hardware platform;
     typename TypeParam::RegisterFile specimen(platform);
@@ -83,10 +88,11 @@ TYPED_TEST(RegisterFile26, Reset)
     EXPECT_TRUE(isEqualHex(specimen.getPSR() & PsrMask26::IrqDisableBits, PsrMask26::IrqDisableBits));
     EXPECT_EQ(specimen.getMode(), ProcessorMode::Svc26);
     EXPECT_TRUE(isEqualHex(platform.IrqMask, 0x03));
+    EXPECT_TRUE(specimen.isInPrivilegedMode());
     EXPECT_TRUE(platform.IsPrivilagedMode);
 }
 
-TYPED_TEST(RegisterFile26, ResetNoModeChange)
+TYPED_TEST_P(RegisterFile26, ResetNoModeChange)
 {
     typename TypeParam::Hardware platform;
     typename TypeParam::RegisterFile specimen(platform);
@@ -103,10 +109,11 @@ TYPED_TEST(RegisterFile26, ResetNoModeChange)
     EXPECT_TRUE(isEqualHex(specimen.getPSR() & PsrMask26::IrqDisableBits, PsrMask26::IrqDisableBits));
     EXPECT_EQ(specimen.getMode(), ProcessorMode::Svc26);
     EXPECT_TRUE(isEqualHex(platform.IrqMask, 0x03));
+    EXPECT_TRUE(specimen.isInPrivilegedMode());
     EXPECT_TRUE(platform.IsPrivilagedMode);
 }
 
-TYPED_TEST(RegisterFile26, UndefinedInstruction)
+TYPED_TEST_P(RegisterFile26, UndefinedInstruction)
 {
     typename TypeParam::Hardware platform;
     typename TypeParam::RegisterFile specimen(platform);
@@ -123,10 +130,11 @@ TYPED_TEST(RegisterFile26, UndefinedInstruction)
     EXPECT_EQ(specimen.getPSR() & PsrMask26::IrqDisableBits, PsrMask26::IrqDisableBit);
     EXPECT_EQ(specimen.getMode(), ProcessorMode::Svc26);
     EXPECT_EQ(platform.IrqMask, IrqState::IrqPending);
+    EXPECT_TRUE(specimen.isInPrivilegedMode());
     EXPECT_TRUE(platform.IsPrivilagedMode);
 }
 
-TYPED_TEST(RegisterFile26, UndefinedInstructionNoModeChange)
+TYPED_TEST_P(RegisterFile26, UndefinedInstructionNoModeChange)
 {
     typename TypeParam::Hardware platform;
     typename TypeParam::RegisterFile specimen(platform);
@@ -143,10 +151,11 @@ TYPED_TEST(RegisterFile26, UndefinedInstructionNoModeChange)
     EXPECT_EQ(specimen.getPSR() & PsrMask26::IrqDisableBits, PsrMask26::IrqDisableBit);
     EXPECT_EQ(specimen.getMode(), ProcessorMode::Svc26);
     EXPECT_EQ(platform.IrqMask, IrqState::IrqPending);
+    EXPECT_TRUE(specimen.isInPrivilegedMode());
     EXPECT_TRUE(platform.IsPrivilagedMode);
 }
 
-TYPED_TEST(RegisterFile26, SoftwareInterrupt)
+TYPED_TEST_P(RegisterFile26, SoftwareInterrupt)
 {
     typename TypeParam::Hardware platform;
     typename TypeParam::RegisterFile specimen(platform);
@@ -163,10 +172,11 @@ TYPED_TEST(RegisterFile26, SoftwareInterrupt)
     EXPECT_EQ(specimen.getPSR() & PsrMask26::IrqDisableBits, PsrMask26::IrqDisableBit);
     EXPECT_EQ(specimen.getMode(), ProcessorMode::Svc26);
     EXPECT_EQ(platform.IrqMask, IrqState::IrqPending);
+    EXPECT_TRUE(specimen.isInPrivilegedMode());
     EXPECT_TRUE(platform.IsPrivilagedMode);
 }
 
-TYPED_TEST(RegisterFile26, SoftwareInterruptNoModeChange)
+TYPED_TEST_P(RegisterFile26, SoftwareInterruptNoModeChange)
 {
     typename TypeParam::Hardware platform;
     typename TypeParam::RegisterFile specimen(platform);
@@ -183,10 +193,11 @@ TYPED_TEST(RegisterFile26, SoftwareInterruptNoModeChange)
     EXPECT_EQ(specimen.getPSR() & PsrMask26::IrqDisableBits, PsrMask26::IrqDisableBit);
     EXPECT_EQ(specimen.getMode(), ProcessorMode::Svc26);
     EXPECT_EQ(platform.IrqMask, IrqState::IrqPending);
+    EXPECT_TRUE(specimen.isInPrivilegedMode());
     EXPECT_TRUE(platform.IsPrivilagedMode);
 }
 
-TYPED_TEST(RegisterFile26, PreFetchAbort)
+TYPED_TEST_P(RegisterFile26, PreFetchAbort)
 {
     typename TypeParam::Hardware platform;
     typename TypeParam::RegisterFile specimen(platform);
@@ -203,10 +214,11 @@ TYPED_TEST(RegisterFile26, PreFetchAbort)
     EXPECT_EQ(specimen.getPSR() & PsrMask26::IrqDisableBits, PsrMask26::IrqDisableBit);
     EXPECT_EQ(specimen.getMode(), ProcessorMode::Svc26);
     EXPECT_EQ(platform.IrqMask, IrqState::IrqPending);
+    EXPECT_TRUE(specimen.isInPrivilegedMode());
     EXPECT_TRUE(platform.IsPrivilagedMode);
 }
 
-TYPED_TEST(RegisterFile26, PreFetchAbortNoModeChange)
+TYPED_TEST_P(RegisterFile26, PreFetchAbortNoModeChange)
 {
     typename TypeParam::Hardware platform;
     typename TypeParam::RegisterFile specimen(platform);
@@ -223,10 +235,11 @@ TYPED_TEST(RegisterFile26, PreFetchAbortNoModeChange)
     EXPECT_EQ(specimen.getPSR() & PsrMask26::IrqDisableBits, PsrMask26::IrqDisableBit);
     EXPECT_EQ(specimen.getMode(), ProcessorMode::Svc26);
     EXPECT_EQ(platform.IrqMask, IrqState::IrqPending);
+    EXPECT_TRUE(specimen.isInPrivilegedMode());
     EXPECT_TRUE(platform.IsPrivilagedMode);
 }
 
-TYPED_TEST(RegisterFile26, DataAbort)
+TYPED_TEST_P(RegisterFile26, DataAbort)
 {
     typename TypeParam::Hardware platform;
     typename TypeParam::RegisterFile specimen(platform);
@@ -243,10 +256,11 @@ TYPED_TEST(RegisterFile26, DataAbort)
     EXPECT_EQ(specimen.getPSR() & PsrMask26::IrqDisableBits, PsrMask26::IrqDisableBit);
     EXPECT_EQ(specimen.getMode(), ProcessorMode::Svc26);
     EXPECT_EQ(platform.IrqMask, IrqState::IrqPending);
+    EXPECT_TRUE(specimen.isInPrivilegedMode());
     EXPECT_TRUE(platform.IsPrivilagedMode);
 }
 
-TYPED_TEST(RegisterFile26, DataAbortNoModeChange)
+TYPED_TEST_P(RegisterFile26, DataAbortNoModeChange)
 {
     typename TypeParam::Hardware platform;
     typename TypeParam::RegisterFile specimen(platform);
@@ -263,10 +277,11 @@ TYPED_TEST(RegisterFile26, DataAbortNoModeChange)
     EXPECT_EQ(specimen.getPSR() & PsrMask26::IrqDisableBits, PsrMask26::IrqDisableBit);
     EXPECT_EQ(specimen.getMode(), ProcessorMode::Svc26);
     EXPECT_EQ(platform.IrqMask, IrqState::IrqPending);
+    EXPECT_TRUE(specimen.isInPrivilegedMode());
     EXPECT_TRUE(platform.IsPrivilagedMode);
 }
 
-TYPED_TEST(RegisterFile26, AddressException)
+TYPED_TEST_P(RegisterFile26, AddressException)
 {
     typename TypeParam::Hardware platform;
     typename TypeParam::RegisterFile specimen(platform);
@@ -283,10 +298,11 @@ TYPED_TEST(RegisterFile26, AddressException)
     EXPECT_EQ(specimen.getPSR() & PsrMask26::IrqDisableBits, PsrMask26::IrqDisableBit);
     EXPECT_EQ(specimen.getMode(), ProcessorMode::Svc26);
     EXPECT_EQ(platform.IrqMask, IrqState::IrqPending);
+    EXPECT_TRUE(specimen.isInPrivilegedMode());
     EXPECT_TRUE(platform.IsPrivilagedMode);
 }
 
-TYPED_TEST(RegisterFile26, AddressExceptionNoModeChange)
+TYPED_TEST_P(RegisterFile26, AddressExceptionNoModeChange)
 {
     typename TypeParam::Hardware platform;
     typename TypeParam::RegisterFile specimen(platform);
@@ -303,10 +319,11 @@ TYPED_TEST(RegisterFile26, AddressExceptionNoModeChange)
     EXPECT_EQ(specimen.getPSR() & PsrMask26::IrqDisableBits, PsrMask26::IrqDisableBit);
     EXPECT_EQ(specimen.getMode(), ProcessorMode::Svc26);
     EXPECT_EQ(platform.IrqMask, IrqState::IrqPending);
+    EXPECT_TRUE(specimen.isInPrivilegedMode());
     EXPECT_TRUE(platform.IsPrivilagedMode);
 }
 
-TYPED_TEST(RegisterFile26, HandleInterrupt)
+TYPED_TEST_P(RegisterFile26, HandleInterrupt)
 {
     typename TypeParam::Hardware platform;
     typename TypeParam::RegisterFile specimen(platform);
@@ -323,10 +340,11 @@ TYPED_TEST(RegisterFile26, HandleInterrupt)
     EXPECT_EQ(specimen.getPSR() & PsrMask26::IrqDisableBits, PsrMask26::IrqDisableBit);
     EXPECT_EQ(specimen.getMode(), ProcessorMode::Irq26);
     EXPECT_EQ(platform.IrqMask, IrqState::IrqPending);
+    EXPECT_TRUE(specimen.isInPrivilegedMode());
     EXPECT_TRUE(platform.IsPrivilagedMode);
 }
 
-TYPED_TEST(RegisterFile26, HandleInterruptNoModeChange)
+TYPED_TEST_P(RegisterFile26, HandleInterruptNoModeChange)
 {
     typename TypeParam::Hardware platform;
     typename TypeParam::RegisterFile specimen(platform);
@@ -343,10 +361,11 @@ TYPED_TEST(RegisterFile26, HandleInterruptNoModeChange)
     EXPECT_EQ(specimen.getPSR() & PsrMask26::IrqDisableBits, PsrMask26::IrqDisableBit);
     EXPECT_EQ(specimen.getMode(), ProcessorMode::Irq26);
     EXPECT_EQ(platform.IrqMask, IrqState::IrqPending);
+    EXPECT_TRUE(specimen.isInPrivilegedMode());
     EXPECT_TRUE(platform.IsPrivilagedMode);
 }
 
-TYPED_TEST(RegisterFile26, HandleFastInterrupt)
+TYPED_TEST_P(RegisterFile26, HandleFastInterrupt)
 {
     typename TypeParam::Hardware platform;
     typename TypeParam::RegisterFile specimen(platform);
@@ -363,10 +382,11 @@ TYPED_TEST(RegisterFile26, HandleFastInterrupt)
     EXPECT_EQ(specimen.getPSR() & PsrMask26::IrqDisableBits, PsrMask26::IrqDisableBits);
     EXPECT_EQ(specimen.getMode(), ProcessorMode::FastIrq26);
     EXPECT_EQ(platform.IrqMask, IrqState::GuestIrqsMask);
+    EXPECT_TRUE(specimen.isInPrivilegedMode());
     EXPECT_TRUE(platform.IsPrivilagedMode);
 }
 
-TYPED_TEST(RegisterFile26, HandleFastInterruptNoModeChange)
+TYPED_TEST_P(RegisterFile26, HandleFastInterruptNoModeChange)
 {
     typename TypeParam::Hardware platform;
     typename TypeParam::RegisterFile specimen(platform);
@@ -383,10 +403,11 @@ TYPED_TEST(RegisterFile26, HandleFastInterruptNoModeChange)
     EXPECT_EQ(specimen.getPSR() & PsrMask26::IrqDisableBits, PsrMask26::IrqDisableBits);
     EXPECT_EQ(specimen.getMode(), ProcessorMode::FastIrq26);
     EXPECT_EQ(platform.IrqMask, IrqState::GuestIrqsMask);
+    EXPECT_TRUE(specimen.isInPrivilegedMode());
     EXPECT_TRUE(platform.IsPrivilagedMode);
 }
 
-TYPED_TEST(RegisterFile26, GetPSR)
+TYPED_TEST_P(RegisterFile26, GetPSR)
 {
     typename TypeParam::Hardware platform;
     typename TypeParam::RegisterFile specimen(platform);
@@ -397,7 +418,7 @@ TYPED_TEST(RegisterFile26, GetPSR)
     EXPECT_EQ(specimen.getPSR(), 0x0C000003u);
 }
 
-TYPED_TEST(RegisterFile26, SetPSR)
+TYPED_TEST_P(RegisterFile26, SetPSR)
 {
     typename TypeParam::Hardware platform;
     typename TypeParam::RegisterFile specimen(platform);
@@ -411,21 +432,24 @@ TYPED_TEST(RegisterFile26, SetPSR)
     EXPECT_EQ(specimen.getPSR(), 0x34000001u);
     EXPECT_EQ(specimen.getMode(), ProcessorMode::FastIrq26);
     EXPECT_EQ(platform.IrqMask, IrqState::FastIrqPending);
+    EXPECT_TRUE(specimen.isInPrivilegedMode());
     EXPECT_TRUE(platform.IsPrivilagedMode);
 
     // Set User26 mode, Negative, IRQs enabled.
     EXPECT_EQ(specimen.setPSR(0x80000000), ExecResult::ModeChange);
     EXPECT_EQ(specimen.getMode(), ProcessorMode::User26);
     EXPECT_EQ(platform.IrqMask, 0u);
+    EXPECT_FALSE(specimen.isInPrivilegedMode());
     EXPECT_FALSE(platform.IsPrivilagedMode);
 
     // Set User26 mode, Zero.
     EXPECT_EQ(specimen.setPSR(0x40000000), 0u);
     EXPECT_EQ(platform.IrqMask, 0u);
+    EXPECT_FALSE(specimen.isInPrivilegedMode());
     EXPECT_FALSE(platform.IsPrivilagedMode);
 }
 
-TYPED_TEST(RegisterFile26, SetStatusFlags)
+TYPED_TEST_P(RegisterFile26, SetStatusFlags)
 {
     typename TypeParam::Hardware platform;
     typename TypeParam::RegisterFile specimen(platform);
@@ -445,7 +469,7 @@ TYPED_TEST(RegisterFile26, SetStatusFlags)
               baseState | PsrMask::Carry | PsrMask::Zero);
 }
 
-TYPED_TEST(RegisterFile26, UpdatePSR)
+TYPED_TEST_P(RegisterFile26, UpdatePSR)
 {
     typename TypeParam::Hardware platform;
     typename TypeParam::RegisterFile specimen(platform);
@@ -463,6 +487,7 @@ TYPED_TEST(RegisterFile26, UpdatePSR)
     // Verify updated state.
     EXPECT_EQ(specimen.getMode(), ProcessorMode::Svc26);
     EXPECT_EQ(specimen.getPSR(), 0x10000003u);
+    EXPECT_TRUE(specimen.isInPrivilegedMode());
 
     // Switch to user mode.
     EXPECT_EQ(specimen.updatePSR(Ag::toScalar(ProcessorMode::User26)),
@@ -471,6 +496,7 @@ TYPED_TEST(RegisterFile26, UpdatePSR)
     // Verify new state.
     EXPECT_EQ(specimen.getMode(), ProcessorMode::User26);
     EXPECT_EQ(specimen.getPSR(), 0u);
+    EXPECT_FALSE(specimen.isInPrivilegedMode());
 
     // Update privileged and status bits (no mode change allowed).
     EXPECT_EQ(specimen.updatePSR(PsrMask::Overflow |
@@ -479,9 +505,10 @@ TYPED_TEST(RegisterFile26, UpdatePSR)
     // Verify status flag set, but mode not changed.
     EXPECT_EQ(specimen.getPSR(),
               PsrMask::Overflow | Ag::toScalar(ProcessorMode::User26));
+    EXPECT_FALSE(specimen.isInPrivilegedMode());
 }
 
-TYPED_TEST(RegisterFile26, GetAndSetPC)
+TYPED_TEST_P(RegisterFile26, GetAndSetPC)
 {
     typename TypeParam::Hardware platform;
     typename TypeParam::RegisterFile specimen(platform);
@@ -501,7 +528,7 @@ TYPED_TEST(RegisterFile26, GetAndSetPC)
     EXPECT_EQ(specimen.getPC(), 0x8000u);
 }
 
-TYPED_TEST(RegisterFile26, GetRn)
+TYPED_TEST_P(RegisterFile26, GetRn)
 {
     typename TypeParam::Hardware platform;
     typename TypeParam::RegisterFile specimen(platform);
@@ -519,7 +546,7 @@ TYPED_TEST(RegisterFile26, GetRn)
     EXPECT_EQ(specimen.getRn(GeneralRegister::R15), 0x8000u);
 }
 
-TYPED_TEST(RegisterFile26, SetRn)
+TYPED_TEST_P(RegisterFile26, SetRn)
 {
     typename TypeParam::Hardware platform;
     typename TypeParam::RegisterFile specimen(platform);
@@ -544,7 +571,7 @@ TYPED_TEST(RegisterFile26, SetRn)
     EXPECT_EQ(specimen.getRn(GeneralRegister::R15), 0x1000u);
 }
 
-TYPED_TEST(RegisterFile26, GetUserRn)
+TYPED_TEST_P(RegisterFile26, GetUserRn)
 {
     typename TypeParam::Hardware platform;
     typename TypeParam::RegisterFile specimen(platform);
@@ -579,7 +606,7 @@ TYPED_TEST(RegisterFile26, GetUserRn)
     EXPECT_EQ(specimen.getUserRn(GeneralRegister::R14), 0xCAFEBABE);
 }
 
-TYPED_TEST(RegisterFile26, SetUserRn)
+TYPED_TEST_P(RegisterFile26, SetUserRn)
 {
     typename TypeParam::Hardware platform;
     typename TypeParam::RegisterFile specimen(platform);
@@ -616,7 +643,7 @@ TYPED_TEST(RegisterFile26, SetUserRn)
     EXPECT_EQ(specimen.getUserRn(GeneralRegister::R14), 0xCAFEBABE);
 }
 
-TYPED_TEST(RegisterFile26, GetRm)
+TYPED_TEST_P(RegisterFile26, GetRm)
 {
     typename TypeParam::Hardware platform;
     typename TypeParam::RegisterFile specimen(platform);
@@ -636,7 +663,7 @@ TYPED_TEST(RegisterFile26, GetRm)
               PsrMask::Overflow | PsrMask26::IrqDisableBits);
 }
 
-TYPED_TEST(RegisterFile26, GetRs)
+TYPED_TEST_P(RegisterFile26, GetRs)
 {
     typename TypeParam::Hardware platform;
     typename TypeParam::RegisterFile specimen(platform);
@@ -654,7 +681,7 @@ TYPED_TEST(RegisterFile26, GetRs)
     EXPECT_EQ(specimen.getRs(GeneralRegister::R15), 0x8004u);
 }
 
-TYPED_TEST(RegisterFile26, GetRd)
+TYPED_TEST_P(RegisterFile26, GetRd)
 {
     typename TypeParam::Hardware platform;
     typename TypeParam::RegisterFile specimen(platform);
@@ -674,7 +701,7 @@ TYPED_TEST(RegisterFile26, GetRd)
               PsrMask::Overflow | PsrMask26::IrqDisableBits);
 }
 
-//TYPED_TEST(RegisterFile26, SetRdNoStatusUpdatePrivilaged)
+//TYPED_TEST_P(RegisterFile26, SetRdNoStatusUpdatePrivilaged)
 //{
 //    typename TypeParam::Hardware platform;
 //    typename TypeParam::RegisterFile specimen(platform);
@@ -712,7 +739,7 @@ TYPED_TEST(RegisterFile26, GetRd)
 //              Ag::toScalar(ProcessorMode::Svc26));
 //}
 
-//TYPED_TEST(RegisterFile26, SetRdNoStatusUpdateNonPrivilaged)
+//TYPED_TEST_P(RegisterFile26, SetRdNoStatusUpdateNonPrivilaged)
 //{
 //    typename TypeParam::Hardware platform;
 //    typename TypeParam::RegisterFile specimen(platform);
@@ -748,7 +775,7 @@ TYPED_TEST(RegisterFile26, GetRd)
 //}
 
 
-TYPED_TEST(RegisterFile26, SetRdPsrUpdatePrivilaged)
+TYPED_TEST_P(RegisterFile26, SetRdPsrUpdatePrivileged)
 {
     typename TypeParam::Hardware platform;
     typename TypeParam::RegisterFile specimen(platform);
@@ -763,6 +790,7 @@ TYPED_TEST(RegisterFile26, SetRdPsrUpdatePrivilaged)
     EXPECT_EQ(specimen.getPSR(),
               PsrMask::Overflow | PsrMask26::IrqDisableBits |
               Ag::toScalar(ProcessorMode::Svc26));
+    EXPECT_TRUE(specimen.isInPrivilegedMode());
 
     // Set a non-R15 register with status flag update.
     EXPECT_EQ(specimen.setRdAndStatus(GeneralRegister::R2, 0xDEADBEEF, PsrMask::LowCarry), 0u);
@@ -773,6 +801,7 @@ TYPED_TEST(RegisterFile26, SetRdPsrUpdatePrivilaged)
     EXPECT_EQ(specimen.getPSR(),
               PsrMask::Carry | PsrMask26::IrqDisableBits |
               Ag::toScalar(ProcessorMode::Svc26));
+    EXPECT_TRUE(specimen.isInPrivilegedMode());
 
     // Set an R15 value, update status flags from value not status.
     EXPECT_EQ(specimen.setRdAndStatus(GeneralRegister::R15,
@@ -784,9 +813,10 @@ TYPED_TEST(RegisterFile26, SetRdPsrUpdatePrivilaged)
     EXPECT_EQ(specimen.getPC(), 0x1000u);
     EXPECT_EQ(specimen.getPSR(),
               PsrMask::Carry | Ag::toScalar(ProcessorMode::FastIrq26));
+    EXPECT_TRUE(specimen.isInPrivilegedMode());
 }
 
-TYPED_TEST(RegisterFile26, SetRdPsrUpdateNonPrivilaged)
+TYPED_TEST_P(RegisterFile26, SetRdPsrUpdateNonPrivileged)
 {
     typename TypeParam::Hardware platform;
     typename TypeParam::RegisterFile specimen(platform);
@@ -800,6 +830,7 @@ TYPED_TEST(RegisterFile26, SetRdPsrUpdateNonPrivilaged)
     EXPECT_EQ(specimen.getPC(), 0x8000u);
     EXPECT_EQ(specimen.getPSR(),
               PsrMask::Overflow | Ag::toScalar(ProcessorMode::User26));
+    EXPECT_FALSE(specimen.isInPrivilegedMode());
 
     // Set a non-R15 register.
     EXPECT_EQ(specimen.setRdAndStatus(GeneralRegister::R2, 0xDEADBEEF, PsrMask::LowCarry), 0u);
@@ -809,6 +840,7 @@ TYPED_TEST(RegisterFile26, SetRdPsrUpdateNonPrivilaged)
     EXPECT_EQ(specimen.getPC(), 0x8000u);
     EXPECT_EQ(specimen.getPSR(),
               PsrMask::Carry | Ag::toScalar(ProcessorMode::User26));
+    EXPECT_FALSE(specimen.isInPrivilegedMode());
 
     // Set an R15 value and update status from value not status.
     EXPECT_EQ(specimen.setRdAndStatus(GeneralRegister::R15,
@@ -820,9 +852,10 @@ TYPED_TEST(RegisterFile26, SetRdPsrUpdateNonPrivilaged)
     EXPECT_EQ(specimen.getPC(), 0x1000u);
     EXPECT_EQ(specimen.getPSR(),
               PsrMask::Negative | Ag::toScalar(ProcessorMode::User26));
+    EXPECT_FALSE(specimen.isInPrivilegedMode());
 }
 
-TYPED_TEST(RegisterFile26, GetRx)
+TYPED_TEST_P(RegisterFile26, GetRx)
 {
     typename TypeParam::Hardware platform;
     typename TypeParam::RegisterFile specimen(platform);
@@ -842,7 +875,81 @@ TYPED_TEST(RegisterFile26, GetRx)
               PsrMask::Overflow | PsrMask26::IrqDisableBits);
 }
 
+REGISTER_TYPED_TEST_SUITE_P(RegisterFile26,
+                            Reset, ResetNoModeChange,
+                            UndefinedInstruction,
+                            UndefinedInstructionNoModeChange,
+                            SoftwareInterrupt, SoftwareInterruptNoModeChange,
+                            PreFetchAbort, PreFetchAbortNoModeChange,
+                            DataAbort, DataAbortNoModeChange,
+                            AddressException, AddressExceptionNoModeChange,
+                            HandleInterrupt, HandleInterruptNoModeChange,
+                            HandleFastInterrupt, HandleFastInterruptNoModeChange,
+                            GetPSR, SetPSR, SetStatusFlags,
+                            UpdatePSR, GetAndSetPC, GetRn, SetRn,
+                            GetUserRn, SetUserRn, GetRm, GetRs, GetRd,
+                            SetRdPsrUpdatePrivileged,
+                            SetRdPsrUpdateNonPrivileged,
+                            GetRx);
+
+INSTANTIATE_TYPED_TEST_SUITE_P(ARMv2, RegisterFile26, ARMv2RegisterTraits);
+INSTANTIATE_TYPED_TEST_SUITE_P(ARMv2a, RegisterFile26, ARMv2aRegisterTraits);
+
 // TODO: Perform some more checks on banked register switching.
+
+GTEST_TEST(ARMv2a_RegisterFile, AccessCP15)
+{
+    ARMv2aRegisterTraits::Hardware platform;
+    ARMv2aRegisterTraits::RegisterFile specimen(platform);
+
+    // Set the processor to a known state.
+    specimen.raiseReset();
+
+    EXPECT_TRUE(isEqualHex(specimen.getCP15Register(CoProcRegister::CR0),
+                           ARMv2aRegisterTraits::RegisterFile::IdRegisterValue));
+    EXPECT_TRUE(isEqualHex(specimen.getCP15Register(CoProcRegister::CR1), 0));
+    EXPECT_TRUE(isEqualHex(specimen.getCP15Register(CoProcRegister::CR2), 0));
+    EXPECT_TRUE(isEqualHex(specimen.getCP15Register(CoProcRegister::CR3), 0));
+    EXPECT_TRUE(isEqualHex(specimen.getCP15Register(CoProcRegister::CR4), 0));
+    EXPECT_TRUE(isEqualHex(specimen.getCP15Register(CoProcRegister::CR5), 0));
+    EXPECT_TRUE(isEqualHex(specimen.getCP15Register(CoProcRegister::CR6), 0));
+
+    // Verify CP15.CR0 is read-only.
+    specimen.setCP15Register(CoProcRegister::CR0, 0xCAFEBABE);
+    EXPECT_TRUE(isEqualHex(specimen.getCP15Register(CoProcRegister::CR0),
+                           ARMv2aRegisterTraits::RegisterFile::IdRegisterValue));
+
+    // Verify CP15.CR1 is write-only.
+    specimen.setCP15Register(CoProcRegister::CR1, 0xDEADBEEF);
+    EXPECT_TRUE(isEqualHex(specimen.getCP15Register(CoProcRegister::CR1), 0));
+
+    // Verify in CP15.CR2 only bits 0-2 are writeable.
+    specimen.setCP15Register(CoProcRegister::CR2, 0xFFFFFFFF);
+    EXPECT_TRUE(isEqualHex(specimen.getCP15Register(CoProcRegister::CR2), 7));
+
+    specimen.setCP15Register(CoProcRegister::CR2, 0xCAFEBABE);
+    EXPECT_TRUE(isEqualHex(specimen.getCP15Register(CoProcRegister::CR2), 6));
+
+    // Verify CP15.CR3-CR5 are read/write.
+    specimen.setCP15Register(CoProcRegister::CR3, 0xDEADBEEF);
+    specimen.setCP15Register(CoProcRegister::CR4, 0xCAFEBABE);
+    specimen.setCP15Register(CoProcRegister::CR5, 0x42A5ABBA);
+    EXPECT_TRUE(isEqualHex(specimen.getCP15Register(CoProcRegister::CR3), 0xDEADBEEF));
+    EXPECT_TRUE(isEqualHex(specimen.getCP15Register(CoProcRegister::CR4), 0xCAFEBABE));
+    EXPECT_TRUE(isEqualHex(specimen.getCP15Register(CoProcRegister::CR5), 0x42A5ABBA));
+
+    // Reset the processor and verify the co-processor register states.
+    specimen.raiseReset();
+
+    EXPECT_TRUE(isEqualHex(specimen.getCP15Register(CoProcRegister::CR0),
+                           ARMv2aRegisterTraits::RegisterFile::IdRegisterValue));
+    EXPECT_TRUE(isEqualHex(specimen.getCP15Register(CoProcRegister::CR1), 0));
+    EXPECT_TRUE(isEqualHex(specimen.getCP15Register(CoProcRegister::CR2), 0));
+    EXPECT_TRUE(isEqualHex(specimen.getCP15Register(CoProcRegister::CR3), 0));
+    EXPECT_TRUE(isEqualHex(specimen.getCP15Register(CoProcRegister::CR4), 0));
+    EXPECT_TRUE(isEqualHex(specimen.getCP15Register(CoProcRegister::CR5), 0));
+    EXPECT_TRUE(isEqualHex(specimen.getCP15Register(CoProcRegister::CR6), 0));
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 

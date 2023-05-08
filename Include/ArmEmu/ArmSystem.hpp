@@ -166,18 +166,14 @@ const ProcessorModeEnumInfo &getProcessorModeType();
 
 uint32_t readFromPhysicalAddress(IArmSystem *sys, uint32_t physicalAddr,
                                  void *buffer, uint32_t length);
-void writeToPhysicalAddress(IArmSystem *sys, uint32_t physicalAddr,
-                            const void *buffer, uint32_t length,
-                            bool useReadMap = false);
+uint32_t writeToPhysicalAddress(IArmSystem *sys, uint32_t physicalAddr,
+                                const void *buffer, uint32_t length,
+                                bool useReadMap = false);
 uint32_t readFromLogicalAddress(IArmSystem *sys, uint32_t logicalAddr,
                                 void *buffer, uint32_t length);
-void writeToLogicalAddress(IArmSystem *sys, uint32_t logicalAddr,
-                           const void *buffer, uint32_t length,
-                           bool useReadMap = false);
-
-////////////////////////////////////////////////////////////////////////////////
-// Templates
-////////////////////////////////////////////////////////////////////////////////
+uint32_t writeToLogicalAddress(IArmSystem *sys, uint32_t logicalAddr,
+                               const void *buffer, uint32_t length,
+                               bool useReadMap = false);
 
 }} // namespace Mo::Arm
 
