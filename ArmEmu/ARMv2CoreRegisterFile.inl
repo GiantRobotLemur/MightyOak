@@ -31,10 +31,10 @@ namespace Arm {
 template<typename THardware>
 class ARMv2CoreRegisterFile // Implements GenericCoreRegisterFile
 {
-    // Internal Fields
-protected:
-    THardware &_hardware;
 private:
+    // Internal Fields
+    THardware &_hardware;
+
     uint32_t _coreRegisters[16];
     uint32_t _cpsr;                 // PSR portion of R15.
     uint32_t _userModeRegBank[7];   // R8-R14
@@ -240,6 +240,11 @@ public:
     constexpr ProcessorMode getMode() const noexcept
     {
         return Ag::forceFromScalar<ProcessorMode>(_cpsr & PsrMask26::ModeBits);
+    }
+
+    constexpr bool isInPrivilegedMode() const noexcept
+    {
+        return Ag::forceFromScalar<ProcessorMode>(_cpsr & PsrMask26::ModeBits) != ProcessorMode::User26;
     }
 
     uint32_t getRn(GeneralRegister regId) const noexcept
@@ -484,6 +489,89 @@ public:
         _coreRegisters[15] = 0x0000001C;
 
         return result | ExecResult::FlushPipeline;
+    }
+};
+
+//! @brief an implementation of the register file of an ARMv2a processor.
+//! @tparam An object representing the underlying hardware which supports the
+//! setPrivilegedMode(bool) and setIrqMask(uint8_t) member functions.
+template<typename THardware>
+class ARMv2aCoreRegisterFile : public ARMv2CoreRegisterFile<THardware>
+{
+private:
+    // Internal Fields
+    uint32_t _cp15Registers[6];
+
+public:
+    // Public Constants
+    // The contents of CP15.CR0.
+    // Bits 31-24: Designer code (0x41 = Acorn Computers Ltd.)
+    // Bits 23-16: Manufacturer code (0x56 = VLSI Technology Inc.)
+    // Bits 15-8: Part type (0x03 = VL86C020, i.e. ARM 3 processor)
+    // Bits 7-0: Revision number (0x00 = Original part)
+    static constexpr uint32_t IdRegisterValue = 0x41560300;
+
+    // Construction/Destruction
+    ARMv2aCoreRegisterFile(THardware &hw) :
+        ARMv2CoreRegisterFile(hw)
+    {
+        // Set the ID register to a fixed value.
+        _cp15Registers[0] = IdRegisterValue;
+
+        std::fill_n(_cp15Registers + 1,
+                    std::size(_cp15Registers) - 1, 0u);
+    }
+
+    ~ARMv2aCoreRegisterFile() = default;
+
+    // Operations
+    uint32_t getCP15Register(CoProcRegister regId) const noexcept
+    {
+        // NOTE: CP15 registers should only be accessible in a privileged
+        // processor mode, otherwise the Undefined Instruction exception
+        // should be raised.
+
+        // Only CR0-CR5 are defined on ARM 3 processors.
+        return (regId < CoProcRegister::CR6) ? _cp15Registers[Ag::toScalar(regId)] :
+                                               0;
+    }
+
+    void setCP15Register(CoProcRegister regId, uint32_t value) noexcept
+    {
+        // NOTE: CP15 registers should only be accessible in a privileged
+        // processor mode, otherwise the Undefined Instruction exception
+        // should be raised.
+
+        switch (regId)
+        {
+        case CoProcRegister::CR2: // [Read/Write] Cache Control
+            _cp15Registers[2] = value & 0x7; // Only bits 0-2 writeable.
+            break;
+
+        case CoProcRegister::CR3: // [Read/Write] Cacheable Areas
+        case CoProcRegister::CR4: // [Read/Write] Updatable Areas
+        case CoProcRegister::CR5: // [Read/Write] Disruptive Areas
+            _cp15Registers[Ag::toScalar(regId)] = value;
+            break;
+
+        case CoProcRegister::CR0: // [Read-only] ID Register
+        case CoProcRegister::CR1: // [Write-only] Flush cache, value ignored.
+        default: // CR6-CR15 not supported, values ignored.
+            break;
+        }
+    }
+
+    // Overrides
+    uint32_t raiseReset() noexcept
+    {
+        // Reset the writeable CP15 register values.
+        // NOTE ARM Family Data manual page 3-47 suggests the values
+        // of registers CR3-CR5 are 'undefined at power-up'. We are assuming
+        // that means every time the reset signal is asserted.
+        std::fill_n(_cp15Registers + 1,
+                    std::size(_cp15Registers) - 1, 0u);
+
+        return ARMv2CoreRegisterFile::raiseReset();
     }
 };
 

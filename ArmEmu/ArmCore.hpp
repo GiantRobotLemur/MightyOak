@@ -53,6 +53,27 @@ enum class GeneralRegister : uint8_t
     Max,
 };
 
+//! @brief Represents the identifiers of generic co-processor registers.
+enum class CoProcRegister : uint8_t
+{
+    CR0,
+    CR1,
+    CR2,
+    CR3,
+    CR4,
+    CR5,
+    CR6,
+    CR7,
+    CR8,
+    CR9,
+    CR10,
+    CR11,
+    CR12,
+    CR13,
+    CR14,
+    CR15
+};
+
 //! @brief Defines the bit field returned by functions which emulate the execution
 //! of ARM instructions.
 struct ExecResult

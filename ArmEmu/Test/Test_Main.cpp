@@ -20,6 +20,7 @@ namespace Arm {
 
 void registerAluExecTests();
 void registerDataTransferExecTests();
+void registerCoProcessorExecTests();
 
 }} // namespace Mo::Arm
 
@@ -30,6 +31,7 @@ int main(int argc, char **argv)
     // Register additional test points.
     Mo::Arm::registerAluExecTests();
     Mo::Arm::registerDataTransferExecTests();
+    Mo::Arm::registerCoProcessorExecTests();
 
     int result = RUN_ALL_TESTS();
 

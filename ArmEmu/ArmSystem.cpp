@@ -196,9 +196,10 @@ uint32_t readFromPhysicalAddress(IArmSystem *sys, uint32_t physicalAddr,
 //! @param[in] length The count of bytes to be written.
 //! @param[in] useReadMap True to look-up the address to write in the read
 //! mapping, useful when writing to ROM.
+//! @returns The count of bytes successfully written.
 //! @note Writes to memory mapped I/O should be at 4-byte aligned addresses,
 //! even when quantities smaller than 4 bytes are to be written.
-void writeToPhysicalAddress(IArmSystem *sys, uint32_t physicalAddr,
+uint32_t writeToPhysicalAddress(IArmSystem *sys, uint32_t physicalAddr,
                             const void *buffer, uint32_t length,
                             bool useReadMap /*= false*/)
 {
@@ -278,6 +279,8 @@ void writeToPhysicalAddress(IArmSystem *sys, uint32_t physicalAddr,
             break;
         }
     }
+
+    return bytesWritten;
 }
 
 //! @brief Attempts to read an array of bytes from a set of logical addresses
@@ -381,9 +384,10 @@ uint32_t readFromLogicalAddress(IArmSystem *sys, uint32_t logicalAddr,
 //! @param[in] length The count of bytes to be written.
 //! @param[in] useReadMap True to look-up the address to write in the read
 //! mapping, useful when writing to ROM.
+//! @returns The count of bytes successfully written.
 //! @note Writes to memory mapped I/O should be at 4-byte aligned addresses,
 //! even when quantities smaller than 4 bytes are to be written.
-void writeToLogicalAddress(IArmSystem *sys, uint32_t logicalAddr,
+uint32_t writeToLogicalAddress(IArmSystem *sys, uint32_t logicalAddr,
                            const void *buffer, uint32_t length,
                            bool useReadMap /*= false*/)
 {
@@ -466,6 +470,8 @@ void writeToLogicalAddress(IArmSystem *sys, uint32_t logicalAddr,
             break;
         }
     }
+
+    return bytesWritten;
 }
 
 }} // namespace Mo::Arm

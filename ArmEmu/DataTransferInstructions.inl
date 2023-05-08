@@ -615,7 +615,7 @@ uint32_t execStoreMultiple(THardware &hardware, TRegisterFile &regs,
 template<typename THardware, typename TRegisterFile>
 uint32_t execSwap(THardware &hardware, TRegisterFile &regs, uint32_t instruction)
 {
-    uint32_t addr = regs.getRd(Ag::Bin::extractEnum<GeneralRegister, 16, 4>(instruction));
+    uint32_t addr = regs.getRm(Ag::Bin::extractEnum<GeneralRegister, 16, 4>(instruction));
 
     if constexpr (TRegisterFile::HasCombinedPcPsr)
     {
@@ -631,14 +631,14 @@ uint32_t execSwap(THardware &hardware, TRegisterFile &regs, uint32_t instruction
     bool isOK = false;
 
     // Perform the exchange.
-    uint32_t value = regs.getRd(Ag::Bin::extractEnum<GeneralRegister,0, 4>(instruction));
+    uint32_t value = regs.getRm(Ag::Bin::extractEnum<GeneralRegister,0, 4>(instruction));
 
     if (instruction & 0x400000)
     {
         // Swap byte.
         uint8_t byteValue;
 
-        isOK = hardware.exchange(addr, static_cast<uint8_t>(value), byteValue);
+        isOK = hardware.exchange(addr, static_cast<uint8_t>(value >> ((addr & 3) * 8)), byteValue);
         value = byteValue;
     }
     else

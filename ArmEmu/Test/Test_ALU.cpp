@@ -266,6 +266,10 @@ void registerAluExecTests()
     // Register test points against basic ARMv2 implementation.
     RegisterExecTests<ArmV2TestSystemTraits>("ARMv2_ALU", basicAlu, std::size(basicAlu));
     RegisterExecTests<ArmV2TestSystemTraits>("ARMv2_ALU", basic26BitAlu, std::size(basic26BitAlu));
+
+    // Repeat tests for the ARM 3 core.
+    RegisterExecTests<ArmV2aTestSystemTraits>("ARMv2a_ALU", basicAlu, std::size(basicAlu));
+    RegisterExecTests<ArmV2aTestSystemTraits>("ARMv2a_ALU", basic26BitAlu, std::size(basic26BitAlu));
 }
 
 }} // namespace Mo::Arm

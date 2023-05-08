@@ -271,6 +271,20 @@ GTEST_TEST(ArmSystemBuilder, CanCreateArmV2TestSystem)
     ASSERT_TRUE(emulatedSystem);
 }
 
+GTEST_TEST(ArmSystemBuilder, CanCreateArmV2aTestSystem)
+{
+    Options opts;
+    opts.setHardwareArchitecture(SystemModel::TestBed);
+    opts.setProcessorVariant(ProcessorModel::ARM3);
+    opts.setSystemRom(SystemROMPreset::Custom);
+
+    ArmSystemBuilder specimen(opts);
+
+    IArmSystemUPtr emulatedSystem = specimen.createSystem();
+
+    ASSERT_TRUE(emulatedSystem);
+}
+
 } // Anonymous namespace
 
 }} // namespace Mo::Arm

@@ -12,6 +12,8 @@ add_ag_library(ArmEmu   FOLDER      ARM
                                     AluInstructions.inl
                                     AluOperations.h
                                     DataTransferInstructions.inl
+                                    InstructionDecoder.inl
+                                    ARMv2InstructionDecoder.inl
                                     InstructionPipeline.inl
                                     ExecutionUnit.inl
                                     SystemConfigurations.inl
@@ -50,6 +52,8 @@ source_group(Emulation FILES
              AluInstructions.inl
              AluOperations.h
              DataTransferInstructions.inl
+             InstructionDecoder.inl
+             ARMv2InstructionDecoder.inl
              InstructionPipeline.inl
              ExecutionUnit.inl
              SystemConfigurations.inl
@@ -85,6 +89,7 @@ add_ag_test_app(ArmEmu_Tests    TEST_LIB ArmEmu
                                          Test/Test_AluOperations.cpp
                                          Test/Test_ALU.cpp
                                          Test/Test_DataTransfer.cpp
+                                         Test/Test_CoProcessor.cpp
                                          Test/Test_Options.cpp
                                          Test/Test_ArmSystemBuilder.cpp
                                          Test/Test_Main.cpp)
