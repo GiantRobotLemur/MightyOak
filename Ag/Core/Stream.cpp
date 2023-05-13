@@ -259,6 +259,7 @@ struct FileTraits
                 // Truncate the file to zero length.
                 if (ftruncate(fd, 0) < 0)
                 {
+                    int errorCode = errno;
                     std::string fnName("ftruncate('");
                     appendAgString(fnName, path.toString(Fs::PathUsage::Kernel));
                     fnName.append("')");
