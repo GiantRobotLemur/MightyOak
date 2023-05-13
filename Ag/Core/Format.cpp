@@ -24,6 +24,7 @@
 #include "Ag/Core/ScalarParser.hpp"
 #include "Ag/Core/Utils.hpp"
 #include "Ag/Core/Variant.hpp"
+#include "Ag/Core/VariantTypes.hpp"
 #include "CoreInternal.hpp"
 
 #ifdef _WIN32
@@ -429,6 +430,18 @@ class FormatException : public Exception
 public:
     //! @brief Constructs an exception indicating an error in format specification.
     //! @param[in] formatToken The value insertion token which was invalid.
+    FormatException(size_t paramIndex, const std::string_view &tokenError)
+    {
+        std::string detail;
+        detail.assign("While processing for insertion token {");
+        appendValue(FormatInfo::getNeutral(), detail, paramIndex);
+        detail.append("}.");
+
+        initialise("FormatException", tokenError, detail, 0);
+    }
+
+    //! @brief Constructs an exception indicating an error in format specification.
+    //! @param[in] formatToken The value insertion token which was invalid.
     FormatException(const std::string_view &formatToken)
     {
         std::string detail;
@@ -452,7 +465,6 @@ public:
                    "A string format specification contained had an invalid "
                    "value insertion token.", detail, 0);
     }
-
 
     //! @brief Constructs an exception indicating an attempt to access a
     //! format value which is beyond the end of the set specified.
@@ -712,6 +724,128 @@ int realToFractionDigits(double value, int fractDigits, char *digitBuffer,
 #endif
 }
 
+//! @brief Calculates the real value best used to format a file size.
+//! @param[in] format The format requested.
+//! @param[in] byteCount The byte count to scale.
+//! @param[out] scaledValue The scaled byte count.
+//! @return The scale order of magnitude, 0 = 1, 1 = 1024, 2 = 1MB, 3 = 1GB, etc.
+uint8_t fileSizeToReal(const FormatInfo &format, uint64_t byteCount, double &scaledValue)
+{
+    if (byteCount == 0)
+    {
+        scaledValue = 0.0;
+        return 0;
+    }
+
+    // The maximum scale we can use for a size_t type.
+    static constexpr uint8_t MaxMagnitude = (sizeof(uint64_t) * 8) / 10;
+
+    int16_t requiredWholeDigits = 4;
+
+    if (format.getMinimumWholeDigits() > 0)
+    {
+        requiredWholeDigits = format.getMinimumWholeDigits();
+    }
+
+    uint8_t magnitude = 0;
+    uint8_t preferredMagnitude = 0;
+    scaledValue = static_cast<double>(byteCount);
+
+    while (magnitude < MaxMagnitude)
+    {
+        size_t divisor = static_cast<size_t>(1) << (magnitude * 10);
+        double realValue = byteCount / static_cast<double>(divisor);
+
+        int16_t wholeDigitCount = static_cast<int16_t>(std::floor(std::log10(realValue)) + 1.0);
+
+        if (wholeDigitCount <= requiredWholeDigits)
+        {
+            preferredMagnitude = magnitude;
+            scaledValue = realValue;
+            break;
+        }
+        else
+        {
+            ++magnitude;
+        }
+    }
+
+    return preferredMagnitude;
+}
+
+//! @brief Calculates the real value best used to format a file size.
+//! @param[in] format The format requested.
+//! @param[in] byteCount The byte count to scale.
+//! @param[out] scaledValue The scaled byte count.
+//! @return The scale order of magnitude, 0 = 1, 1 = 1KB, 2 = 1MB, 3 = 1GB, etc.
+uint8_t fileSizeToReal(const FormatInfo &format, double byteCount, double &scaledValue)
+{
+    if (byteCount == 0.0)
+    {
+        scaledValue = 0.0;
+        return 0;
+    }
+
+    // The maximum scale we can use for a size_t type.
+    static constexpr uint8_t MaxMagnitude = 8; // Yotta bytes 2^80
+    int16_t requiredWholeDigits = 4;
+
+    if (format.getMinimumWholeDigits() > 0)
+    {
+        requiredWholeDigits = format.getMinimumWholeDigits();
+    }
+
+    double baseCount = std::abs(byteCount);
+
+    uint8_t magnitude = 0;
+    uint8_t preferredMagnitude = 0;
+    scaledValue = baseCount;
+
+    while (magnitude < MaxMagnitude)
+    {
+        double divisor = std::pow(2.0, 10.0 * magnitude);
+        double realValue = baseCount / divisor;
+
+        int16_t wholeDigitCount = static_cast<int16_t>(std::floor(std::log10(realValue)) + 1.0);
+
+        if (wholeDigitCount <= requiredWholeDigits)
+        {
+            // Preserve the sign in the returned size.
+            preferredMagnitude = magnitude;
+            scaledValue = byteCount / divisor;
+            break;
+        }
+        else
+        {
+            ++magnitude;
+        }
+    }
+
+    return preferredMagnitude;
+}
+
+//! @brief Appends the appropriate units to a scaled file size.
+//! @param[in] buffer The UTF-8 buffer to append to.
+//! @param[in] magnitude The magnitude of the value scale, 0 for bytes,
+//! 1 for KB, 2 for GB, etc.
+//! @param[in] isOne True if the value formatted was +/- 1 byte in order
+//! to format the unit as 'byte' or 'bytes'.
+void appendFileSizeUnit(std::string &buffer, uint8_t magnitude, bool isOne)
+{
+    // Append the units.
+    switch (magnitude)
+    {
+    case 0: buffer.append(isOne ? "byte" : "bytes"); break;
+    case 1: buffer.append("KB"); break;
+    case 2: buffer.append("MB"); break;
+    case 3: buffer.append("GB"); break;
+    case 4: buffer.append("TB"); break;
+    case 5: buffer.append("PB"); break;
+    case 6: buffer.append("EB"); break;
+    case 7: buffer.append("ZB"); break;
+    case 8: buffer.append("YB"); break;
+    }
+}
 
 //! @brief Attempts to parse an insertion token embedded within a format
 //! specification string.
@@ -964,6 +1098,41 @@ void formatValue(std::string &buffer, const InsertionToken &token,
         }
 
         value.appendToString(stringOptions, buffer);
+    }
+    else if ((token.TypeCode == 'K') ||
+             (token.TypeCode == 'k'))
+    {
+        // Format a string.
+        FormatInfo sizeOptions(options);
+
+        if (token.Precision >= 0)
+        {
+            sizeOptions.setRequiredFractionDigits(static_cast<int16_t>(token.Precision));
+        }
+
+        Variant scalarType;
+
+        if (value.getType() == VariantTypes::Double)
+        {
+            appendRealFileSize(sizeOptions, buffer,
+                               value.getRef<DoubleVariantType, double>());
+        }
+        else if (value.getType() == VariantTypes::Float)
+        {
+            float originalValue = value.getRef<FloatVariantType, float>();
+
+            appendRealFileSize(sizeOptions, buffer, originalValue);
+        }
+        else if (value.tryConvert(VariantTypes::Uint64, scalarType))
+        {
+            appendFileSize(sizeOptions, buffer,
+                           value.getRef<Uint64VariantType, uint64_t>());
+        }
+        else
+        {
+            throw FormatException(token.ValueIndex,
+                                  "Only scalar values can be formatted as a file size.");
+        }
     }
     else
     {
@@ -1511,12 +1680,6 @@ void appendValue(const FormatInfo &options, std::string &buffer, double value)
 
         if (options.getRequiredSignificantFigures() > 0)
         {
-            //int realToSignificantDigits(double value, int sigFigs, char *digitBuffer,
-            //                            size_t bufferSize, int *decPtIndex, int *sign)
-
-            //int realToFractionDigits(double value, int fractDigits, char *digitBuffer,
-            //                         size_t bufferSize, int *decPtIndex, int *sign)
-
             errorCode = realToSignificantDigits(value, options.getRequiredSignificantFigures(),
                                                 digitBuffer, std::size(digitBuffer),
                                                 &decPtIndex, &sign);
@@ -1663,6 +1826,72 @@ void appendValue(const FormatInfo &options, std::string &buffer, double value)
             characters.formatString(options, buffer);
         }
     }
+}
+
+//! @brief Appends an unsigned 64-bit integer representing a file size
+//! value to a UTF-8 encoded STL string. The value will be automatically
+//! scaled and units applied.
+//! @param[in] options The options used to determine how the value is formatted.
+//! @param[out] buffer The buffer to append the value to.
+//! @param[in] value The file size to format.
+void appendFileSize(const FormatInfo &options, std::string &buffer, uint64_t value)
+{
+    double scaledSize;
+    uint8_t magnitude = fileSizeToReal(options, value, scaledSize);
+
+    // Format the size as a real value.
+    FormatInfo valueOptions = options;
+
+    if (magnitude == 0)
+    {
+        // Force no decimal digits when the value is in bytes.
+        valueOptions.setRequiredFractionDigits(0);
+    }
+    else if (valueOptions.getRequiredFractionDigits() < 0)
+    {
+        // Default to no decimal places.
+        valueOptions.setRequiredFractionDigits(0);
+    }
+
+    // Prevent zero padding of whole digits.
+    valueOptions.setMinimumWholeDigits(1);
+
+    appendValue(valueOptions, buffer, scaledSize);
+    buffer.push_back(' ');
+    appendFileSizeUnit(buffer, magnitude, value == 1);
+}
+
+//! @brief Appends a signed real value representing a file size
+//! value to a UTF-8 encoded STL string. The value will be automatically
+//! scaled and units applied.
+//! @param[in] options The options used to determine how the value is formatted.
+//! @param[out] buffer The buffer to append the value to.
+//! @param[in] value The file size to format.
+void appendRealFileSize(const FormatInfo &options, std::string &buffer, double value)
+{
+    double scaledSize;
+    uint8_t magnitude = fileSizeToReal(options, value, scaledSize);
+
+    // Format the size as a real value.
+    FormatInfo valueOptions = options;
+
+    if (magnitude == 0)
+    {
+        // Force no decimal digits when the value is in bytes.
+        valueOptions.setRequiredFractionDigits(0);
+    }
+    else if (valueOptions.getRequiredFractionDigits() < 0)
+    {
+        // Default to no decimal places.
+        valueOptions.setRequiredFractionDigits(0);
+    }
+
+    // Prevent zero padding of whole digits.
+    valueOptions.setMinimumWholeDigits(1);
+
+    appendValue(valueOptions, buffer, scaledSize);
+    buffer.push_back(' ');
+    appendFileSizeUnit(buffer, magnitude, std::abs(value) == 1.0);
 }
 
 //! @brief Appends formatted values to an STL string using the default display settings.

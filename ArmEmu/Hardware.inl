@@ -109,6 +109,10 @@ class GenericHardware
     uint8_t getIrqStatus() const noexcept;
 
     // Operations
+    //! @brief Signals the effect of a system reset on the hardware, returning
+    //! it to a known power-on state.
+    void reset();
+
     //! @brief Updates the bits of the bits of the interrupt mask field.
     //! @param[in] mask The new pattern of bits to apply to the mask.
     //! @param[in] significantBits The bits describing which digits of mask
@@ -265,7 +269,6 @@ private:
     uint8_t _irqStatus;
     uint8_t _irqMask;
     bool _isPriviledged;
-
 
 public:
     // Construction/Destruction

@@ -113,6 +113,8 @@ void appendValue(const FormatInfo &options, std::string &buffer, uint32_t value)
 void appendValue(const FormatInfo &options, std::string &buffer, int64_t value);
 void appendValue(const FormatInfo &options, std::string &buffer, uint64_t value);
 void appendValue(const FormatInfo &options, std::string &buffer, double value);
+void appendFileSize(const FormatInfo &options, std::string &buffer, uint64_t value);
+void appendRealFileSize(const FormatInfo &options, std::string &buffer, double value);
 void appendFormat(const std::string_view &spec, std::string &buffer,
                   const std::initializer_list<Variant> &params);
 void appendFormat(const FormatInfo &options, const std::string_view &spec,

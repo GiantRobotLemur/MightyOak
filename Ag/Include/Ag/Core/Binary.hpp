@@ -16,10 +16,16 @@
 #include <cstdint>
 
 #include <type_traits>
+#include <vector>
 
 #include "Configuration.hpp"
 
 namespace Ag {
+
+////////////////////////////////////////////////////////////////////////////////
+// Data Type Declarations
+////////////////////////////////////////////////////////////////////////////////
+using ByteBlock = std::vector<uint8_t>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Function Declarations
@@ -124,7 +130,8 @@ template<typename TOutput, uint8_t TLsb, uint8_t TCount, typename TInput>
 constexpr TOutput extractBits(TInput bitfield) noexcept
 {
     constexpr uint8_t InputBits = sizeof(TInput) * 8;
-    static_assert((TLsb + TCount) <= InputBits);
+    static_assert((TLsb + TCount) <= InputBits,
+                  "The bits to extract are beyond the range of the input field.");
 
     if constexpr (InputBits == (TLsb + TCount))
     {
@@ -147,6 +154,70 @@ static_assert(extractBits<uint8_t, 12, 4, uint32_t>(0x5ABCD) == 10, "extractBits
 // Verify just shift.
 static_assert(extractBits<uint8_t, 28, 4, uint32_t>(0x60000000) == 6, "extractBits() failed.");
 static_assert(extractBits<uint8_t, 24, 8, uint32_t>(0xDEADBEEF) == 0xDE, "extractBits() failed.");
+
+//! @brief Extracts a scalar value from a bitfield.
+//! @tparam TOutput The data type of the scalar value being extracted.
+//! @tparam TInput The data type of the input value to extract from.
+//! @tparam TLsb The 0-based index of the least significant bit of the value
+//! to extract.
+//! @tparam TNewLsb The 0-based index of the least significant bit of the
+//! value as it is shifted into the new field.
+//! @tparam TCount The count of consecutive bits to extract.
+//! @param bitfield The bitfield to extract bits from.
+//! @return The extracted bits as the required enumeration type.
+template<typename TOutput, uint8_t TLsb, uint8_t TNewLsb, uint8_t TCount, typename TInput>
+constexpr TOutput extractAndShiftBits(TInput bitfield) noexcept
+{
+    constexpr uint8_t InputBits = sizeof(TInput) * 8;
+    static_assert((TLsb + TCount) <= InputBits,
+                  "The bits to extract are beyond the range of the input field.");
+
+    constexpr uint8_t OutputBits = sizeof(TOutput) * 8;
+    static_assert((TNewLsb + TCount) <= OutputBits,
+                  "The bits to set are beyond the range of the output field.");
+
+    constexpr int TotalShift = static_cast<int>(TNewLsb) - static_cast<int>(TLsb);
+
+    if constexpr (TotalShift < 0)
+    {
+        // We need to shift the result right.
+        constexpr uint8_t RightShift = TLsb - TNewLsb;
+        constexpr TOutput OutputMask = ((static_cast<TOutput>(1) << TCount) - 1) << TNewLsb;
+
+        return static_cast<TOutput>(bitfield >> RightShift) & OutputMask;
+    }
+    else if constexpr (TotalShift > 0)
+    {
+        // We need to shift left.
+        constexpr uint8_t LeftShift = TNewLsb - TLsb;
+        constexpr TInput InputMask = ((static_cast<TInput>(1) << TCount) - 1) << TLsb;
+
+        return static_cast<TOutput>(bitfield & InputMask) << LeftShift;
+    }
+    else if constexpr (sizeof(TOutput) < sizeof(TInput))
+    {
+        // We don't need to shift, but the mask would be a smaller
+        // field in the output type.
+        constexpr TOutput OutputMask = ((static_cast<TOutput>(1) << TCount) - 1) << TLsb;
+
+        return static_cast<TOutput>(bitfield) & OutputMask;
+    }
+    else
+    {
+        // We don't need to shift, but the mask would be a smaller
+        // field in the input type.
+        constexpr TInput InputMask = ((static_cast<TInput>(1) << TCount) - 1) << TLsb;
+
+        return static_cast<TOutput>(bitfield & InputMask);
+    }
+}
+
+// Verify left shift.
+static_assert(extractAndShiftBits<uint16_t, 2, 4, 6, uint8_t>(0xAD) == 0x2B0);
+
+// Verify right shift.
+static_assert(extractAndShiftBits<uint8_t, 4, 2, 6, uint16_t>(0xCAFE) == 0xBC);
+
 
 //! @brief Extracts an enumeration value from a bitfield.
 //! @tparam TEnum The data type of the enumeration being extracted.
@@ -192,7 +263,6 @@ constexpr TEnum extractEnum(TInput bitfield) noexcept
 //              "extractBits() failed.");
 //static_assert(extractEnum<GeneralRegister, 8, 8, uint16_t>(0x0EEF) == GeneralRegister::R14,
 //              "extractBits() failed.");
-
 
 } // namespace Bin
 } // namespace Ag

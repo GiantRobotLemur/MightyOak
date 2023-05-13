@@ -7,6 +7,8 @@ add_ag_library(ArmEmu   FOLDER      ARM
                                     IrqSink.hpp
                                     Hardware.inl
                                     TestBedHardware.inl
+                                    MemcHardware.cpp
+                                    MemcHardware.hpp
                                     RegisterFile.inl
                                     ARMv2CoreRegisterFile.inl
                                     AluInstructions.inl
@@ -47,6 +49,8 @@ source_group(Tools FILES
 source_group(Emulation FILES
              Hardware.inl
              TestBedHardware.inl
+             MemcHardware.cpp
+             MemcHardware.hpp
              RegisterFile.inl
              ARMv2CoreRegisterFile.inl
              AluInstructions.inl
@@ -86,6 +90,7 @@ add_ag_test_app(ArmEmu_Tests    TEST_LIB ArmEmu
                                          Test/Test_Core.cpp
                                          Test/Test_RegisterFile.cpp
                                          Test/Test_Hardware.cpp
+                                         Test/Test_MemcHardware.cpp
                                          Test/Test_AluOperations.cpp
                                          Test/Test_ALU.cpp
                                          Test/Test_DataTransfer.cpp

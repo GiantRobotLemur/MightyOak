@@ -15,6 +15,7 @@
 // Dependent Header Files
 ////////////////////////////////////////////////////////////////////////////////
 #include "ArmEmu/ArmSystem.hpp"
+#include "ArmEmu/EmuOptions.hpp"
 #include "SystemConfigurations.inl"
 
 namespace Mo {
@@ -43,30 +44,37 @@ private:
 public:
     // Construction/Destruction
     //! @brief Constructs an emulator for a system which has no additional
-    //! hardware over and above what the Hardware typs supplies.
-    ArmSystem() :
+    //! hardware over and above what the hardware types supplies.
+    //! @param[in] options An object describing the preferred configuration of
+    //! the emulated system.
+    ArmSystem(const Options &options) :
+        _hardware(options),
         _registers(_hardware),
         _execUnit(_hardware, _registers)
     {
-        // Set the instruction pipeline to a known start-up state.
-        _registers.raiseReset();
+        // Set the hardware to the power-on state.
+        reset();
+
     }
 
     //! @brief Constructs an emulator for a system which as additional host
     //! mapped blocks of RAM, ROM or memory mapped I/O.
+    //! @param[in] options An object describing the preferred configuration of
+    //! the emulated system.
     //! @param[in] read The additional mappings of regions of memory which can
     //! be read over and above standard devices, ROM and RAM.
     //! @param[in] write The additional mappings of regions of memory which can
     //! be written over and above standard devices, ROM and RAM.
-    ArmSystem(const AddressMap &read, const AddressMap &write) :
-        _hardware(read, write),
+    ArmSystem(const Options &options, const AddressMap &read,
+              const AddressMap &write) :
+        _hardware(options, read, write),
         _registers(_hardware),
         _execUnit(_hardware, _registers),
         _addrDecoderReadMap(read),
         _addrDecoderWriteMap(write)
     {
-        // Set the instruction pipeline to a known start-up state.
-        _registers.raiseReset();
+        // Set the hardware and processor to the power-on state.
+        reset();
     }
 
     virtual ~ArmSystem() = default;
@@ -76,6 +84,16 @@ public:
     const Hardware &getHardare() const { return _hardware; }
     RegisterFile &getRegisters() { return _registers; }
     const RegisterFile &getRegisters() const { return _registers; }
+
+    // Operations
+    void reset()
+    {
+        // Set the hardware to the power-on state.
+        _hardware.reset();
+
+        // Set the instruction pipeline to a known start-up state.
+        _registers.raiseReset();
+    }
 
     // Overrides
     virtual ProcessorMode getMode() const override
