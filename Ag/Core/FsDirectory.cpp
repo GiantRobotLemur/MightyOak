@@ -960,6 +960,23 @@ EntryVector Directory::getEntries(string_cref_t pattern, uint32_t queryFlags) co
     return entries;
 }
 
+
+const char *FileNotFoundException::Domain = "FileNotFoundException";
+
+//! @brief An exception documenting a failed attempt to access a file.
+//! @param[in] path The path to the file upon which access failed.
+FileNotFoundException::FileNotFoundException(const Path &path)
+{
+    std::string buffer;
+    buffer.assign("The file '");
+    appendAgString(buffer, path.toString(PathUsage::Display));
+    buffer.append("' could not be found.");
+
+    initialise(Domain,
+               "The application attempted to access a non-existent file.",
+               buffer, 0);
+}
+
 }} // namespace Ag::Fs
 ////////////////////////////////////////////////////////////////////////////////
 

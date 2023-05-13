@@ -136,16 +136,23 @@ IArmSystemUPtr ArmSystemBuilder::createSystem() const
             if (_baseOptions.getProcessorVariant() == ProcessorModel::ARM2)
             {
                 // A test system with an ARM 2 processor.
-                sys = new ArmSystem<ArmV2TestSystemTraits>(_readMap, _writeMap);
+                sys = new ArmSystem<ArmV2TestSystemTraits>(_baseOptions,
+                                                           _readMap, _writeMap);
             }
             else if (_baseOptions.getProcessorVariant() == ProcessorModel::ARM3)
             {
                 // A test system with an ARM 3 processor.
-                sys = new ArmSystem<ArmV2aTestSystemTraits>(_readMap, _writeMap);
+                sys = new ArmSystem<ArmV2aTestSystemTraits>(_baseOptions,
+                                                            _readMap, _writeMap);
             }
             else
             {
                 error = makePlatformProcessorError(_baseOptions);
+            }
+
+            if (sys != nullptr)
+            {
+                // TODO: Load system ROM preset.
             }
             break;
 

@@ -17,6 +17,7 @@
 #include <vector>
 
 #include "ArmEmu/AddressMap.hpp"
+#include "ArmEmu/EmuOptions.hpp"
 #include "Hardware.inl"
 
 namespace Mo {
@@ -73,7 +74,13 @@ public:
         initialise();
     }
 
-    TestBedHardware(const AddressMap &readMap, const AddressMap &writeMap) :
+    TestBedHardware(const Options &/*opts*/)
+    {
+        initialise();
+    }
+
+    TestBedHardware(const Options &/*opts*/, const AddressMap &readMap,
+                    const AddressMap &writeMap) :
         BasicIrqManagerHardware(readMap, writeMap),
         _readAddrDecoder(readMap),
         _writeAddrDecoder(writeMap)
@@ -88,6 +95,11 @@ public:
     const HostBuffer &getRam() const { return _ram; }
 
     // Operations
+    void reset()
+    {
+        // Nothing to do?
+    }
+
     template<typename T>
     bool write(uint32_t logicalAddr, T value)
     {

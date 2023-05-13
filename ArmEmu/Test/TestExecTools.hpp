@@ -55,9 +55,10 @@ public:
 
     void TestBody() override
     {
+        Options opts;
         ConstraintCollection initialState;
         ConstraintCollection expectedResultState;
-        ArmSystem<TSysTraits> specimen;
+        ArmSystem<TSysTraits> specimen(opts);
 
         ASSERT_TRUE(prepareTestSystem(&specimen, _testPoint.Code));
         ASSERT_TRUE(applyConstraints(specimen, _testPoint.Location,

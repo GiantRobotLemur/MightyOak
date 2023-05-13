@@ -104,6 +104,19 @@ private:
     std::shared_ptr<EntryPrivate> _dir;
 };
 
+//! @brief An exception thrown when the program fails to access a file.
+class FileNotFoundException : public Exception
+{
+public:
+    // Public Data
+    //! @brief The domain used to annotate exceptions of this type.
+    static const char *Domain;
+
+    // Construction
+    FileNotFoundException(const Path &path);
+    ~FileNotFoundException() = default;
+};
+
 }} // namespace Ag::Fs
 
 #endif // Header guard

@@ -187,6 +187,43 @@ bool canExecuteInstruction(uint32_t instruction, uint8_t statusFlags) noexcept
     return (bits & (1 << static_cast<uint8_t>(instruction >> 28))) != 0;
 }
 
+//! @brief Determines if access to a memory page passes a MEMC access check.
+//! @param[in] ppl The page protection level.
+//! @param[in] isPriviledged True if the processor is in a privileged mode.
+//! @param[in] isOsMode True if the MEMC is in OS mode.
+//! @param[in] isWrite True if the access is a write, false for a read.
+//! @return True if the page can be accessed, false if the abort signal should be raised.
+bool canAccessMemcPage(uint8_t ppl, bool isPriviledged, bool isOsMode, bool isWrite)
+{
+    if (isPriviledged)
+    {
+        // Anything can be read or written in a privileged mode.
+        return true;
+    }
+    else if (isOsMode)
+    {
+        if (isWrite)
+        {
+            return ppl < 2;
+        }
+        else
+        {
+            return true;
+        }
+    }
+    else // User mode.
+    {
+        if (isWrite)
+        {
+            return ppl == 0;
+        }
+        else
+        {
+            return ppl < 2;
+        }
+    }
+}
+
 }} // namespace Mo::Arm
 ////////////////////////////////////////////////////////////////////////////////
 

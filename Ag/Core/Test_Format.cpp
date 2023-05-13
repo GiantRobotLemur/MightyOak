@@ -384,6 +384,58 @@ GTEST_TEST(Format, FormatRealG)
     // EXPECT_STREQ(buffer.c_str(), "108.1344");
 }
 
+GTEST_TEST(Format, FormatFileSize)
+{
+    FormatInfo specimen(LocaleInfo::getNeutral());
+    std::string buffer;
+
+    appendFileSize(specimen, buffer, 0);
+    EXPECT_STREQ(buffer.c_str(), "0 bytes");
+
+    // Verify single bytes and no fractional digits.
+    buffer.clear();
+    specimen.setRequiredFractionDigits(2);
+    appendFileSize(specimen, buffer, 1);
+    EXPECT_STREQ(buffer.c_str(), "1 byte");
+
+    buffer.clear();
+    specimen.setRequiredFractionDigits(-1);
+    appendFileSize(specimen, buffer, 1610612736);
+    EXPECT_STREQ(buffer.c_str(), "1536 MB");
+
+    buffer.clear();
+    specimen.setRequiredFractionDigits(1);
+    specimen.setMinimumWholeDigits(1);
+    appendFileSize(specimen, buffer, 1536000);
+    EXPECT_STREQ(buffer.c_str(), "1.5 MB");
+}
+
+GTEST_TEST(Format, FormatRealFileSize)
+{
+    FormatInfo specimen(LocaleInfo::getNeutral());
+    std::string buffer;
+
+    appendRealFileSize(specimen, buffer, 0.0);
+    EXPECT_STREQ(buffer.c_str(), "0 bytes");
+
+    // Verify single bytes and no fractional digits.
+    buffer.clear();
+    specimen.setRequiredFractionDigits(2);
+    appendRealFileSize(specimen, buffer, 1.0);
+    EXPECT_STREQ(buffer.c_str(), "1 byte");
+
+    buffer.clear();
+    specimen.setRequiredFractionDigits(-1);
+    appendRealFileSize(specimen, buffer, 1610612736);
+    EXPECT_STREQ(buffer.c_str(), "1536 MB");
+
+    buffer.clear();
+    specimen.setRequiredFractionDigits(1);
+    specimen.setMinimumWholeDigits(1);
+    appendRealFileSize(specimen, buffer, 1536000.0);
+    EXPECT_STREQ(buffer.c_str(), "1.5 MB");
+}
+
 GTEST_TEST(FormattedOutput, EmbedInt)
 {
     FormatInfo info(LocaleInfo::getNeutral());

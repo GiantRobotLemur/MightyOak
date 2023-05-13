@@ -20,10 +20,6 @@
 
 #include "ArmEmu.hpp"
 
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
-
 namespace Mo {
 namespace Arm {
 
@@ -104,10 +100,41 @@ struct ExecResult
 ////////////////////////////////////////////////////////////////////////////////
 void initialiseConditionMatrix(uint16_t(&conditionMatrix)[16]) noexcept;
 bool canExecuteInstruction(uint32_t instruction, uint8_t statusFlags) noexcept;
+bool canAccessMemcPage(uint8_t ppl, bool isPriviledged, bool isOsMode, bool isWrite);
 
 ////////////////////////////////////////////////////////////////////////////////
 // Templates
 ////////////////////////////////////////////////////////////////////////////////
+//! @brief Replicates a value across all lines of the emulated data bus.
+//! @tparam The data type of the value to be replicated.
+//! @param[in] value The value to replicate.
+//! @return The data base contents.
+template<typename T> constexpr uint32_t replicate(T value) noexcept
+{
+    return static_cast<uint32_t>(value);
+}
+
+//! @brief A specialization which replicates a 16-bit value twice across a
+//! 32-bit data bus.
+//! @param[in] value The 16-bit value to replicate.
+//! @return The 32-bit data bus contents.
+template<> constexpr uint32_t replicate(uint16_t value) noexcept
+{
+    return static_cast<uint32_t>(value) |
+        (static_cast<uint32_t>(value) << 16);
+}
+
+//! @brief A specialization which replicates an 8-bit value four times
+//! across a 32-bit data bus.
+//! @param[in] value The 8-bit value to replicate.
+//! @return The 32-bit data bus contents.
+template<> constexpr uint32_t replicate(uint8_t value) noexcept
+{
+    return static_cast<uint32_t>(value) |
+           (static_cast<uint32_t>(value) << 8) |
+           (static_cast<uint32_t>(value) << 16) |
+           (static_cast<uint32_t>(value) << 24);
+}
 
 }} // namespace Mo::Arm
 
