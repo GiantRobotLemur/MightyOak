@@ -122,7 +122,7 @@ struct FileTraits
         {
             handleAccess = GENERIC_READ;
         }
-        
+
         if (access & FileAccess::Write)
         {
             handleAccess = GENERIC_WRITE;
@@ -169,7 +169,7 @@ struct FileTraits
             return ::CloseHandle(fd) != FALSE;
         }
 
-        return TRUE;
+        return true;
     }
 };
 #else // if POSIX
@@ -192,20 +192,10 @@ struct FileTraits
         return fd >= 0;
     }
 
-    static bool close(FileDescriptor fd)
-    {
-        if (fd != BadFile)
-        {
-            return ::CloseHandle(fd) != FALSE;
-        }
-
-        return TRUE;
-    }
-
     static size_t read(FileDescriptor fd, void *buffer,
                        size_t byteCount, ErrorCode &errorCode)
     {
-        auto bytesRead = read(fd, buffer, byteCount);
+        auto bytesRead = ::read(fd, buffer, byteCount);
 
         if (bytesRead < 0)
         {
@@ -222,7 +212,7 @@ struct FileTraits
     static size_t write(FileDescriptor fd, const void *buffer,
                         size_t byteCount, ErrorCode &errorCode)
     {
-        auto bytesWritten = write(fd, buffer, byteCount);
+        auto bytesWritten = ::write(fd, buffer, byteCount);
 
         if (bytesWritten < 0)
         {
@@ -262,17 +252,24 @@ struct FileTraits
 
         if (access & Create)
         {
-            fd = open64(pathText.getUtf8Bytes(), flags | O_EXCL | O_CREAT, mode);
+            fd = ::open64(pathText.getUtf8Bytes(), flags | O_EXCL | O_CREAT, mode);
 
             if ((fd >= 0) && (access & FileAccess::CreateAlways))
             {
                 // Truncate the file to zero length.
-                ftruncate(fd, 0);
+                if (ftruncate(fd, 0) < 0)
+                {
+                    std::string fnName("ftruncate('");
+                    appendAgString(fnName, path.toString(Fs::PathUsage::Kernel));
+                    fnName.append("')");
+
+                    throw RuntimeLibraryException(fnName.c_str(), errorCode);
+                }
             }
         }
         else
         {
-            fd = open64(pathText.getUtf8Bytes(), flags, mode);
+            fd = ::open64(pathText.getUtf8Bytes(), flags, mode);
         }
 
         int errorCode = errno;
@@ -283,7 +280,7 @@ struct FileTraits
             appendAgString(fnName, path.toString(Fs::PathUsage::Kernel));
             fnName.append("')");
 
-            throw RuntimeLibraryException(fnName, errorCode);
+            throw RuntimeLibraryException(fnName.c_str(), errorCode);
         }
 
         return fd;
@@ -293,14 +290,11 @@ struct FileTraits
     {
         if (fd < 0)
         {
-            throw ArgumentException("fd");
+            return true;
         }
-
-        int result = close(fd);
-
-        if (result < 0)
+        else
         {
-            throw RuntimeLibraryException("close()", errno);
+            return ::close(fd) >= 0;
         }
     }
 };
