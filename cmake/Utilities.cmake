@@ -272,7 +272,6 @@ function(add_static_data target headerName)
     # the data files are edited.
     set(buildTimeScript "${CMAKE_CURRENT_BINARY_DIR}/${headerBaseName}.cmake")
 
-    message(STATUS "inputFiles: ${inputFiles}")
     if (data_BINARY)
         configure_file("${UtilsDir}/GenerateData.cmake.in" "${buildTimeScript}" @ONLY)
     else()

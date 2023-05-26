@@ -15,7 +15,9 @@
 // Dependent Header Files
 ////////////////////////////////////////////////////////////////////////////////
 #include "ArmEmu/ArmSystem.hpp"
+#include "ArmEmu/GuestEventQueue.hpp"
 #include "ArmEmu/EmuOptions.hpp"
+#include "ArmEmu/SystemContext.hpp"
 #include "SystemConfigurations.inl"
 
 namespace Mo {
@@ -36,11 +38,37 @@ private:
     using ExecutionUnit = typename TSysTraits::ExecutionUnitType;
 
     // Internal Fields
+    GuestEventQueue _eventQueue;
+    SystemContext _interop;
     Hardware _hardware;
     RegisterFile _registers;
     ExecutionUnit _execUnit;
     AddressMap _addrDecoderReadMap;
     AddressMap _addrDecoderWriteMap;
+
+    // Internal Functions
+
+    //! @brief Performs shared initialisation tasks from the constructor.
+    void initialise()
+    {
+        // Connect all devices together and to inter-op services.
+        ConnectionContext connection(&_interop, _addrDecoderReadMap, _addrDecoderWriteMap);
+
+        for (uint8_t i = 0; i < 2; ++i)
+        {
+            AddressMap &map = (i == 0) ? _addrDecoderReadMap : _addrDecoderWriteMap;
+
+            for (auto &mapping : map.getMappings())
+            {
+                IMMIOBlockPtr mmio = dynamic_cast<IMMIOBlockPtr>(mapping.Region);
+
+                if (mmio != nullptr)
+                {
+                    mmio->connect(connection);
+                }
+            }
+        }
+    }
 public:
     // Construction/Destruction
     //! @brief Constructs an emulator for a system which has no additional
@@ -48,13 +76,17 @@ public:
     //! @param[in] options An object describing the preferred configuration of
     //! the emulated system.
     ArmSystem(const Options &options) :
+        _eventQueue(reinterpret_cast<uintptr_t>(static_cast<IArmSystem *>(this))),
+        _interop(options, _eventQueue),
         _hardware(options),
         _registers(_hardware),
-        _execUnit(_hardware, _registers)
+        _execUnit(_hardware, _registers, _interop)
     {
+        // Perform shared initialisation.
+        initialise();
+
         // Set the hardware to the power-on state.
         reset();
-
     }
 
     //! @brief Constructs an emulator for a system which as additional host
@@ -67,12 +99,17 @@ public:
     //! be written over and above standard devices, ROM and RAM.
     ArmSystem(const Options &options, const AddressMap &read,
               const AddressMap &write) :
+        _eventQueue(reinterpret_cast<uintptr_t>(static_cast<IArmSystem *>(this))),
+        _interop(options, _eventQueue),
         _hardware(options, read, write),
         _registers(_hardware),
-        _execUnit(_hardware, _registers),
+        _execUnit(_hardware, _registers, _interop),
         _addrDecoderReadMap(read),
         _addrDecoderWriteMap(write)
     {
+        // Perform shared initialisation.
+        initialise();
+
         // Set the hardware and processor to the power-on state.
         reset();
     }
@@ -184,6 +221,11 @@ public:
     virtual ExecutionMetrics runSingleStep() override
     {
         return _execUnit.runPipeline(true);
+    }
+
+    virtual bool tryGetNextMessage(GuestEvent &next) override
+    {
+        return _eventQueue.tryDeque(next);
     }
 };
 

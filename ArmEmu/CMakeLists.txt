@@ -25,14 +25,22 @@ add_ag_library(ArmEmu   FOLDER      ARM
                                     ${MO_INCLUDE_DIR}/ArmEmu/EmuOptions.hpp
                                     AddressMap.cpp
                                     ${MO_INCLUDE_DIR}/ArmEmu/AddressMap.hpp
+                                    IOC.cpp
+                                    ${MO_INCLUDE_DIR}/ArmEmu/IOC.hpp
+                                    VIDC10.cpp
+                                    ${MO_INCLUDE_DIR}/ArmEmu/VIDC10.hpp
                                     ArmSystemBuilder.cpp
                                     ${MO_INCLUDE_DIR}/ArmEmu/ArmSystemBuilder.hpp
                                     ExecutionMetrics.cpp
                                     ${MO_INCLUDE_DIR}/ArmEmu/ExecutionMetrics.hpp
+                                    GuestEventQueue.cpp
+                                    ${MO_INCLUDE_DIR}/ArmEmu/GuestEventQueue.hpp
+                                    SystemContext.cpp
+                                    ${MO_INCLUDE_DIR}/ArmEmu/SystemContext.hpp
                                     ArmSystem.cpp
                                     ${MO_INCLUDE_DIR}/ArmEmu/ArmSystem.hpp
                         HEADERS     ${MO_INCLUDE_DIR}/ArmEmu.hpp
-                        PUBLIC_LIBS AgCore)
+                        PUBLIC_LIBS AgCore ReaderWriterQueue)
 
 if(DEFINED CMAKE_ASM_MASM_COMPILER AND "${USE_ASM}")
     target_sources(ArmEmu PRIVATE AluOperations_Win32_x64.asm)
@@ -71,10 +79,18 @@ source_group(Interface FILES
              ${MO_INCLUDE_DIR}/ArmEmu.hpp
              AddressMap.cpp
              ${MO_INCLUDE_DIR}/ArmEmu/AddressMap.hpp
+             IOC.cpp
+             ${MO_INCLUDE_DIR}/ArmEmu/IOC.hpp
+             VIDC10.cpp
+             ${MO_INCLUDE_DIR}/ArmEmu/VIDC10.hpp
              ArmSystemBuilder.cpp
              ${MO_INCLUDE_DIR}/ArmEmu/ArmSystemBuilder.hpp
              ExecutionMetrics.cpp
              ${MO_INCLUDE_DIR}/ArmEmu/ExecutionMetrics.hpp
+             GuestEventQueue.cpp
+             ${MO_INCLUDE_DIR}/ArmEmu/GuestEventQueue.hpp
+             SystemContext.cpp
+             ${MO_INCLUDE_DIR}/ArmEmu/SystemContext.hpp
              ArmSystem.cpp
              ${MO_INCLUDE_DIR}/ArmEmu/ArmSystem.hpp)
 
@@ -96,6 +112,7 @@ add_ag_test_app(ArmEmu_Tests    TEST_LIB ArmEmu
                                          Test/Test_DataTransfer.cpp
                                          Test/Test_CoProcessor.cpp
                                          Test/Test_Options.cpp
+                                         Test/Test_GuestEventQueue.cpp
                                          Test/Test_ArmSystemBuilder.cpp
                                          Test/Test_Main.cpp)
 

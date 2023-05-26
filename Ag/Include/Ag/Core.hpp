@@ -34,6 +34,7 @@
 #include "Core/VariantTypes.hpp"
 #include "Core/Variant.hpp"
 #include "Core/String.hpp"
+#include "Core/Version.hpp"
 #include "Core/ScalarParser.hpp"
 #include "Core/VariantTypes.hpp"
 #include "Core/CommandLineSchema.hpp"
@@ -43,7 +44,6 @@
 #include "Core/FsDirectory.hpp"
 #include "Core/Uri.hpp"
 #include "Core/App.hpp"
-
 
 #endif // Header guard
 ////////////////////////////////////////////////////////////////////////////////

@@ -522,6 +522,8 @@ MemcHardware::MemcHardware(const Options &options,
                            const AddressMap &readMap,
                            const AddressMap &writeMap) :
     BasicIrqManagerHardware(readMap, writeMap),
+    _ioc(*this),
+    _vidc(*this),
     _readAddrDecoder(readMap),
     _writeAddrDecoder(writeMap),
     _pageOffsetMask(0),
@@ -533,6 +535,18 @@ MemcHardware::MemcHardware(const Options &options,
 {
     // Generate random fuzz to use when memory can be accessed, but isn't mapped.
     std::generate_n(_fuzz, std::size(_fuzz), GenerateFuzz());
+
+    // Add IOC and VIDC to the address map.
+    if ((_readAddrDecoder.tryInsert(0x3200000, &_ioc) == false) ||
+        (_writeAddrDecoder.tryInsert(0x3200000, &_ioc) == false))
+    {
+        throw Ag::OperationException("An I/O device conflicts with IOC at address 0x3200000.");
+    }
+
+    if (_writeAddrDecoder.tryInsert(0x3400000, &_vidc) == false)
+    {
+        throw Ag::OperationException("An I/O device conflicts with VIDC10 at address 0x3400000.");
+    }
 
     // The largest size supported is 16 MB.
     uint32_t ramSize = 16384 * 1024;

@@ -14,6 +14,22 @@
 ////////////////////////////////////////////////////////////////////////////////
 // Dependent Header Files
 ////////////////////////////////////////////////////////////////////////////////
+// Needed in order to use wWinMain().
+#ifdef _WIN32
+////////////////////////////////////////////////////////////////////////////////
+// Macro Definitions
+////////////////////////////////////////////////////////////////////////////////
+// Define macros to minimise the definitions introduced by including windows.h.
+#define WIN32_MEAN_AND_LEAN
+#define UNICODE
+#define NOMINMAX    // Macros min(a,b) and max(a,b)
+
+#include <Windows.h>
+#endif
+
+////////////////////////////////////////////////////////////////////////////////
+// Dependent Header Files
+////////////////////////////////////////////////////////////////////////////////
 #include <memory>
 #include <thread>
 
@@ -76,15 +92,11 @@ protected:
     virtual void reportError(utf8_cptr_t errorText);
 
 private:
-    // Internal Types
-
     // Internal Functions
     int innerExec(CommandLineInfo &info);
     static bool guardedInitialise(App *instance, const Cli::ProgramArguments *args);
     static int guardedRun(App *instance);
     static void guardedShutdown(App *instance);
-
-    // Internal Fields
 };
 
 } // namespace Ag

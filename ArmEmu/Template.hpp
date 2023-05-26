@@ -1,4 +1,4 @@
-//! @file [Ag/]ArmEmu/name_here.hpp
+//! @file ArmEmu/name_here.hpp
 //! @brief The declaration of 
 //! @author GiantRobotLemur@na-se.co.uk
 //! @date xxxx-yyyy

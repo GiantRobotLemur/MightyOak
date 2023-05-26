@@ -474,6 +474,44 @@ uint32_t writeToLogicalAddress(IArmSystem *sys, uint32_t logicalAddr,
     return bytesWritten;
 }
 
+//! @brief Attempts to find a memory mapped device within an emulated system by
+//! its name.
+//! @param[in] sys A pointer to the system to find the device within.
+//! @param[in] name The name of the device to find.
+//! @param[out] device Receives a pointer to the device, if a matching one
+//! was found.
+//! @retval true A matching device was found and its pointer returned.
+//! @retval false The system did not contain a device with the specified name.
+bool tryFindDeviceByName(IArmSystem *sys, const std::string_view &name,
+                         IMMIOBlockPtr &device)
+{
+    if ((sys != nullptr) && (name.empty() == false))
+    {
+        Ag::String key(name);
+
+        // Use linear search as this function should not be called in
+        // time-critical situations.
+        for (uint8_t i = 0; i < 2; ++i)
+        {
+            const AddressMap &map = (i == 0) ? sys->getReadAddresses() :
+                                               sys->getWriteAddresses();
+
+            for (const auto &mapping : map.getMappings())
+            {
+                device = dynamic_cast<IMMIOBlockPtr>(mapping.Region);
+
+                if ((device != nullptr) && (device->getName() == key))
+                {
+                    return true;
+                }
+            }
+        }
+    }
+
+    device = nullptr;
+    return false;
+}
+
 }} // namespace Mo::Arm
 ////////////////////////////////////////////////////////////////////////////////
 
