@@ -19,6 +19,8 @@
 
 #include "ArmEmu/EmuOptions.hpp"
 #include "ArmEmu/AddressMap.hpp"
+#include "ArmEmu/IOC.hpp"
+#include "ArmEmu/VIDC10.hpp"
 
 #include "ArmCore.hpp"
 #include "Hardware.inl"
@@ -85,6 +87,8 @@ private:
     static constexpr size_t FuzzSize = 256;
 
     // Internal Fields
+    IOC _ioc;
+    VIDC10 _vidc;
     AddressMap _readAddrDecoder;
     AddressMap _writeAddrDecoder;
     std::vector<uint8_t> _ram;

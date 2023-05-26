@@ -23,7 +23,7 @@ endif()
 
 project(MightyOak
         VERSION 0.1.0.0
-        DESCRIPTION "An Acorn Archimedies and RiscPC emulator supported by a cross platform runtime (Ag)."
+        DESCRIPTION "An Acorn Archimedes and RiscPC emulator supported by a custom cross platform runtime (Ag)."
         HOMEPAGE_URL "https://github.com/GiantRobotLemur/MightyOak"
         LANGUAGES ${PROJ_LANGUAGES})
 
@@ -31,6 +31,21 @@ project(MightyOak
 include(CheckLanguage)
 find_package(GTest 1.10 REQUIRED)
 find_package(Doxygen 1.8 OPTIONAL_COMPONENTS dot)
+find_package(SDL2 REQUIRED)
+find_package(OpenGL REQUIRED) # For GLU
+find_package(GLM REQUIRED)
+
+if (${SDL2_FOUND})
+    message(STATUS "Found SDL library ${SDL2_VERSION}.")
+endif()
+
+if (${OPENGL_GLU_FOUND})
+    message(STATUS "Found GLU library.")
+endif()
+
+if (${GLM_FOUND})
+    message(STATUS "Found GLM library ${GLM_VERSION}.")
+endif()
 
 # Limit configurations
 get_property(isMultiConfig GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
@@ -58,13 +73,25 @@ set(AG_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Ag/Include")
 set(MO_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Include")
 include_directories("${AG_INCLUDE_DIR}" "${MO_INCLUDE_DIR}")
 
+
+# A third party header-only library for a synchronised queue.
+add_subdirectory("Ag/Include/ReaderWriterQueue")
+
 # Underlying runtime components.
 add_subdirectory(Ag/SymbolPackager)
 add_subdirectory(Ag/Core)
+add_subdirectory(Ag/SdlTools)
+add_subdirectory(Ag/GLAPI)
+add_subdirectory(Ag/ObjectGL)
+#add_subdirectory(Ag/Geometry)
+#add_subdirectory(Ag/Gfx)
 
 # ARM Emulator Modules
 add_subdirectory(AsmTools)
 add_subdirectory(ArmEmu)
+#add_subdirectory(EmuPlatform)
+add_subdirectory(EmuUI)
+add_subdirectory(EmulatorApp)
 
 # Generate Documentation from code.
 if (DEFINED DOXYGEN_FOUND)

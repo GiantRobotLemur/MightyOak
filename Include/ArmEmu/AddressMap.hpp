@@ -37,6 +37,9 @@ enum class RegionType : uint8_t
 ////////////////////////////////////////////////////////////////////////////////
 // Class Declarations
 ////////////////////////////////////////////////////////////////////////////////
+class SystemContext;
+using SystemContextPtr = SystemContext *;
+
 //! @brief An interface to a range of addresses in the guest address map which
 //! interface with the host system.
 struct IAddressRegion
@@ -91,6 +94,29 @@ struct IHostBlock : public IAddressRegion
 //! guest address space.
 using IHostBlockPtr = IHostBlock *;
 
+class AddressMap;
+
+//! @brief A class used to connect emulated devices to the host system.
+class ConnectionContext
+{
+public:
+    // Construction/Destruction
+    ConnectionContext(SystemContextPtr interopContext,
+                      const AddressMap &readMap,
+                      const AddressMap &writeMap);
+    ~ConnectionContext() = default;
+
+    // Accessors
+    bool tryFindDevice(Ag::string_cref_t name, IAddressRegionPtr &device) const;
+    SystemContextPtr getInteropContext() const;
+
+    // Operations
+private:
+    // Internal Fields
+    std::unordered_map<Ag::String, IAddressRegionPtr> _devicesByName;
+    SystemContextPtr _interopContext;
+};
+
 //! @brief An interface to a range of physical addresses on the emulated system
 //! which interface with an emulated hardware device.
 struct IMMIOBlock : public IAddressRegion
@@ -106,6 +132,12 @@ struct IMMIOBlock : public IAddressRegion
     //! word to write.
     //! @param[in] value The value to write to memory.
     virtual void write(uint32_t offset, uint32_t value) = 0;
+
+    //! @brief Connects the device to the wider emulated system before it is
+    //! started.
+    //! @param[in] context An object which provides useful information and
+    //! services before the emulator starts.
+    virtual void connect(const ConnectionContext &context) = 0;
 };
 
 //! @brief An alias for a pointer to a region of guest memory which triggers

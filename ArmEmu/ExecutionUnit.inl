@@ -44,6 +44,7 @@ private:
     // Internal Fields
     Hardware &_hardware;
     RegisterFile &_regs;
+    SystemContext &_context;
     PrimaryPipeline _pipeline;
 
 public:
@@ -55,9 +56,13 @@ public:
     //! @param[in] regs The object used to read and write the state of the
     //! emulated processor, possibly via an emulation layer (e.g. 26-bit on
     //! 32-bit).
-    SingleModeExecutionUnit(Hardware &hw, RegisterFile &regs) :
+    //! @param[in] context A pointer to an object which performs system time
+    //! keeping and other communication services.
+    SingleModeExecutionUnit(Hardware &hw, RegisterFile &regs,
+                            SystemContext &context) :
         _hardware(hw),
         _regs(regs),
+        _context(context),
         _pipeline(_hardware, _regs)
     {
     }
@@ -71,9 +76,16 @@ public:
     ExecutionMetrics runPipeline(bool singleStep)
     {
         ExecutionMetrics metrics;
+        uint64_t startTicks = _context.getCPUClockTicks();
 
         // Ensure the pipeline only runs once in single-step mode.
-        bool runPipeline = (singleStep == false);
+        bool runPipeline = true;
+
+        if (singleStep)
+        {
+            runPipeline = false;
+            metrics.ExecResult = ExecutionMetrics::Result::SingleStep;
+        }
 
         _pipeline.flushPipeline();
 
@@ -97,6 +109,10 @@ public:
                 {
                     // Exit the pipeline without processing anything.
                     runPipeline = false;
+
+                    metrics.ExecResult =
+                        (pendingIrqs & IrqState::DebugPending) ? ExecutionMetrics::Result::DebugIrq :
+                                                                 ExecutionMetrics::Result::HostIrq;
                 }
                 else if (pendingIrqs & IrqState::FastIrqPending)
                 {
@@ -115,8 +131,8 @@ public:
                 result = _pipeline.executeNext();
 
                 // Update metrics.
-                metrics.CycleCount += result & ExecResult::CycleCountMask;
                 ++metrics.InstructionCount;
+                _context.incrementCPUClock(result & ExecResult::CycleCountMask);
             } // if (pendingIrqs == 0)
 
             // TODO if (result & ExecResult::ModeChange) in a multi-pipeline
@@ -125,6 +141,7 @@ public:
 
         // Capture the end time and therefore the duration of the run.
         metrics.ElapsedTime = Ag::HighResMonotonicTimer::getDuration(startTime);
+        metrics.CycleCount = _context.getCPUClockTicks() - startTicks;
 
         return metrics;
     }

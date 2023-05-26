@@ -23,7 +23,8 @@ namespace Arm {
 ExecutionMetrics::ExecutionMetrics() :
     CycleCount(0),
     InstructionCount(0),
-    ElapsedTime(0)
+    ElapsedTime(0),
+    ExecResult(Result::Unset)
 {
 }
 

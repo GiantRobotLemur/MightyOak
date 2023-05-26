@@ -25,13 +25,11 @@ namespace Ag {
 // Class Declarations
 ////////////////////////////////////////////////////////////////////////////////
 //! @brief A sorted set implemented as a linear collection.
+template<typename TValue, typename TComparer = std::less<TValue>>
 class LinearSortedSet
 {
 public:
     // Public Types
-    using TValue = int;
-    using TComparer = std::less<int>;
-
     using Collection = std::vector<TValue>;
     using iterator = typename Collection::iterator;
     using const_iterator = typename Collection::const_iterator;
@@ -501,12 +499,12 @@ public:
 
 //! @brief An RAII object which defers re-indexing a LinearSortedSet until the
 //! exit from a lexical scope.
-//template<typename TValue, typename TComparer = std::less<TValue>>
+template<typename TValue, typename TComparer = std::less<TValue>>
 class LinearSortedSetIndexer
 {
 public:
     // Public Types
-    using Set = LinearSortedSet; // <TValue, TComparer>;
+    using Set = LinearSortedSet<TValue, TComparer>;
 private:
     Set &_set;
     bool _all;

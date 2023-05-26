@@ -17,6 +17,7 @@
 #include <initializer_list>
 #include <memory>
 #include <string>
+#include <unordered_set>
 
 #include "Configuration.hpp"
 #include "String.hpp"
@@ -228,12 +229,16 @@ template<> struct less<Ag::String>
     }
 };
 
-}
+} // namespace std.
+
+namespace Ag {
+
+//! @brief An alias for a hash set of strings.
+using StringSet = std::unordered_set<String>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Function Declarations
 ////////////////////////////////////////////////////////////////////////////////
-namespace Ag {
 String getRuntimeLibraryErrorMessage(int errorCode);
 std::string &appendAgString(std::string &destination, string_cref_t &str);
 

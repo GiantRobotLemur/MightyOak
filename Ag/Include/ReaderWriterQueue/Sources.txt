@@ -1,0 +1,2 @@
+Sources: https://github.com/cameron314/readerwriterqueue
+Article: https://moodycamel.com/blog/2013/a-fast-lock-free-queue-for-c++

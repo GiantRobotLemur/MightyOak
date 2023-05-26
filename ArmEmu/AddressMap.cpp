@@ -17,6 +17,7 @@
 
 #include "ArmEmu/AddressMap.hpp"
 #include "ArmEmu/ArmSystem.hpp"
+#include "ArmEmu/GuestEventQueue.hpp"
 
 namespace Mo {
 namespace Arm {
@@ -89,6 +90,83 @@ It branchless_lower_bound(It begin, It end, const T &value)
 }
 
 } // Anonymous namespace
+
+////////////////////////////////////////////////////////////////////////////////
+// ConnectionContext Member Definitions
+////////////////////////////////////////////////////////////////////////////////
+//! @brief Constructs an object used to connect emulated I/O devices to the
+//! host system and each other.
+//! @param[in] interopContext The context object which provides inter-operation
+//! services for emulated hardware devices.
+//! @param[in] readMap The address map listing readable regions of memory which
+//! map to I/O devices of host memory.
+//! @param[in] writeMap The address map listing writeable regions of memory which
+//! map to I/O devices of host memory.
+ConnectionContext::ConnectionContext(SystemContextPtr interopContext,
+                                     const AddressMap &readMap,
+                                     const AddressMap &writeMap) :
+    _interopContext(interopContext)
+{
+    // Index the Memory Mapped I/O regions as devices which can be looked up
+    // by name.
+    for (uint8_t i = 0; i < 2; ++i)
+    {
+        const AddressMap &map = (i == 0) ? readMap : writeMap;
+
+        for (const auto &mapping : map.getMappings())
+        {
+            IAddressRegionPtr region = mapping.Region;
+
+            if (region->getType() == RegionType::MMIO)
+            {
+                Ag::string_cref_t deviceName = region->getName();
+                auto insertResult = _devicesByName.try_emplace(deviceName, region);
+
+                // Ensure that if the name was already in the map, it referred
+                // to the same device.
+                if ((insertResult.second == false) &&
+                    (insertResult.first->second != region))
+                {
+                    std::string message("The memory mapped device name '");
+                    Ag::appendAgString(message, deviceName);
+                    message.append("' refers to multiple devices in the same address map.");
+
+                    throw Ag::OperationException(std::string_view(message));
+                }
+            }
+        }
+    }
+}
+
+//! @brief Attempts to find a Memory Mapped I/O device mapped into the guest
+//! system address space by its name.
+//! @param[in] name The device name to search for.
+//! @param[out] device Receives a pointer to the matching device if one
+//! was found.
+//! @retval true A matching device was found and its pointer returned.
+//! @retval false name device was found with a matching name.
+bool ConnectionContext::tryFindDevice(Ag::string_cref_t name,
+                                      IAddressRegionPtr &device) const
+{
+    auto pos = _devicesByName.find(name);
+    bool hasMatch = false;
+    device = nullptr;
+
+    if (pos != _devicesByName.end())
+    {
+        hasMatch = true;
+        device = pos->second;
+    }
+
+    return hasMatch;
+}
+
+//! @brief Gets a pointer to and object which provides services to I/O devices
+//! while the emulated system is running.
+SystemContextPtr ConnectionContext::getInteropContext() const
+{
+    return _interopContext;
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // AddressMap Member Definitions

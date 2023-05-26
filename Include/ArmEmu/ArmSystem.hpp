@@ -21,10 +21,6 @@
 #include "ArmEmu/AddressMap.hpp"
 #include "ArmEmu/ExecutionMetrics.hpp"
 
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
-
 namespace Mo {
 namespace Arm {
 
@@ -112,6 +108,8 @@ enum class MemoryAccess : uint8_t
 ////////////////////////////////////////////////////////////////////////////////
 // Class Declarations
 ////////////////////////////////////////////////////////////////////////////////
+struct GuestEvent;
+
 //! @brief An abstract interface to a component which emulates a 32-bit ARM
 //! processor core and associated devices.
 class IArmSystem
@@ -121,17 +119,56 @@ public:
     virtual ~IArmSystem() = default;
 
     // Accessors
+    //! @brief Gets the current processor mode.
     virtual ProcessorMode getMode() const = 0;
+
+    //! @brief Gets the current value of a core register.
+    //! @param[in] id The identifier of the register to query.
+    //! @return The contents of the register.
     virtual uint32_t getCoreRegister(CoreRegister id) const = 0;
+
+    //! @brief Sets the value of a core register.
+    //! @param[in] id The identifier of the register to overwrite.
     virtual void setCoreRegister(CoreRegister id, uint32_t value) = 0;
+
+    //! @brief Gets the static map of all element in the physical address map
+    //! which can be read.
     virtual const AddressMap &getReadAddresses() const = 0;
+
+    //! @brief Gets the static map of all element in the physical address map
+    //! which can be written to.
     virtual const AddressMap &getWriteAddresses() const = 0;
+
+    //! @brief Converts a logical address into the equivalent physical
+    //! address given the current address translation state.
+    //! @param[in] logicalAddr The logical address to convert.
+    //! @param[out] physAddr Receives the equivalent physical address if
+    //! there is one.
+    //! @retval true An address mapping existed and was returned.
+    //! @retval false There was no physical address which mapped to the
+    //! specified logical address.
     virtual bool logicalToPhysicalAddress(uint32_t logicalAddr,
                                           uint32_t &physAddr) const = 0;
 
     // Operations
+    //! @brief Runs the processor until a host or debug interrupt occurs.
+    //! @return Metrics summarising how many instructions were executed and
+    //! how many simulated processor cycles they took.
     virtual ExecutionMetrics run() = 0;
+
+    //! @brief Runs the processor for a single instruction.
+    //! @return Metrics summarising how many instructions were executed
+    //! (theoretically 1) and how many simulated processor cycles they took.
     virtual ExecutionMetrics runSingleStep() = 0;
+
+    //! @brief Attempts to extract a message from the system's external
+    //! event queue.
+    //! @param[out] next Receives the next message if one is available.
+    //! @retval true A message was retrieved.
+    //! @retval false No messages were available.
+    //! @note This and only this member function can be called from a separate
+    //! thread from that which the processor is running in.
+    virtual bool tryGetNextMessage(GuestEvent &next) = 0;
 };
 
 //! @brief A custom deleter for IArmSystem implementations.
@@ -174,6 +211,8 @@ uint32_t readFromLogicalAddress(IArmSystem *sys, uint32_t logicalAddr,
 uint32_t writeToLogicalAddress(IArmSystem *sys, uint32_t logicalAddr,
                                const void *buffer, uint32_t length,
                                bool useReadMap = false);
+bool tryFindDeviceByName(IArmSystem *sys, const std::string_view &name,
+                         IMMIOBlockPtr &device);
 
 }} // namespace Mo::Arm
 

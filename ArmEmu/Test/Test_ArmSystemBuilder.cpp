@@ -96,7 +96,7 @@ public:
         }
     }
 
-    void write(uint32_t offset, uint32_t value)
+    void write(uint32_t offset, uint32_t value) override
     {
         switch (offset >> 2)
         {
@@ -108,6 +108,10 @@ public:
             _dataRegister = static_cast<uint8_t>(value);
             break;
         }
+    }
+
+    void connect(const ConnectionContext &/*context*/) override
+    {
     }
 };
 
