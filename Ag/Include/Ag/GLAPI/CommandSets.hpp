@@ -38,7 +38,7 @@ public:
 
 protected:
     // Internal Functions
-    void beforeCommand(const char *commandName, const void *entryPoint) const;
+    void beforeCommand(const char *commandName, bool isNonNull) const;
     void afterCommand(const char *commandName) const;
 private:
     // Internal Fields

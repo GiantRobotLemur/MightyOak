@@ -144,6 +144,25 @@ bool DisplayFormat::tryGetProperty(DisplayPropertyID id, uint32_t &value) const
     }
 }
 
+//! @brief Attempts to get a boolean property.
+//! @param[in] id The identifier of the property to get.
+//! @param[out] value Receives the boolean value of the property.
+//! @retval true The property was defined and its value returned.
+//! @retval false The property was not defined.
+bool DisplayFormat::tryGetFlagProperty(DisplayPropertyID id, bool &value) const
+{
+    bool hasValue = false;
+    uint32_t rawValue = 0;
+
+    if (tryGetProperty(id, rawValue))
+    {
+        hasValue = true;
+        value = (rawValue != 0);
+    }
+
+    return hasValue;
+}
+
 //! @brief Sets the value of a specific property.
 //! @param[in] id The identifier of the property to set.
 //! @param[in] value The new value of the property.

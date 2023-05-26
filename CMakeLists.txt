@@ -33,7 +33,7 @@ find_package(GTest 1.10 REQUIRED)
 find_package(Doxygen 1.8 OPTIONAL_COMPONENTS dot)
 find_package(SDL2 REQUIRED)
 find_package(OpenGL REQUIRED) # For GLU
-find_package(GLM REQUIRED)
+find_package(glm REQUIRED)
 
 if (${SDL2_FOUND})
     message(STATUS "Found SDL library ${SDL2_VERSION}.")
@@ -43,8 +43,8 @@ if (${OPENGL_GLU_FOUND})
     message(STATUS "Found GLU library.")
 endif()
 
-if (${GLM_FOUND})
-    message(STATUS "Found GLM library ${GLM_VERSION}.")
+if (${glm_FOUND})
+    message(STATUS "Found GLM library ${glm_VERSION}.")
 endif()
 
 # Limit configurations
@@ -72,7 +72,6 @@ include("${CMAKE_CURRENT_LIST_DIR}/cmake/Utilities.cmake")
 set(AG_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Ag/Include")
 set(MO_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Include")
 include_directories("${AG_INCLUDE_DIR}" "${MO_INCLUDE_DIR}")
-
 
 # A third party header-only library for a synchronised queue.
 add_subdirectory("Ag/Include/ReaderWriterQueue")

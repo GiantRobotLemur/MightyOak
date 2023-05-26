@@ -25,24 +25,24 @@ namespace {
 // Local Functions
 ////////////////////////////////////////////////////////////////////////////////
 // Convert an enum class type to original type.
-template<typename T>
-typename std::underlying_type<T>::type toScalar(T value)
+template<typename T, typename TRaw = typename std::underlying_type<T>::type>
+TRaw toScalar(T value)
 {
-    return static_cast<std::underlying_type<T>::type>(value);
+    return static_cast<TRaw>(value);
 }
 
 // Converts a pointer to an enum class to a pointer to the original type.
-template<typename T>
-typename std::underlying_type<T>::type *toScalarPtr(T *value)
+template<typename T, typename TRaw = typename std::underlying_type<T>::type>
+TRaw *toScalarPtr(T *value)
 {
-    return reinterpret_cast<std::underlying_type<T>::type *>(value);
+    return reinterpret_cast<TRaw *>(value);
 }
 
 // Converts a read-only pointer to an enum class to a pointer to the original type.
-template<typename T>
-typename const std::underlying_type<T>::type *toScalarPtr(const T *value)
+template<typename T, typename TRaw = typename std::underlying_type<T>::type>
+const TRaw *toScalarPtr(const T *value)
 {
-    return reinterpret_cast<const std::underlying_type<T>::type *>(value);
+    return reinterpret_cast<const TRaw *>(value);
 }
 
 } // anonymous namespace
@@ -55,9 +55,9 @@ BaseAPI::BaseAPI() :
 {
 }
 
-void BaseAPI::beforeCommand(const char *commandName, const void *entryPoint) const
+void BaseAPI::beforeCommand(const char *commandName, bool isNonNull) const
 {
-    if (entryPoint == nullptr)
+    if (isNonNull == false)
     {
         // TODO: Throw NotSupportedException.
         std::string message;

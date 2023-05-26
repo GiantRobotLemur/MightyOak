@@ -14,7 +14,16 @@
 ////////////////////////////////////////////////////////////////////////////////
 // Dependent Header Files
 ////////////////////////////////////////////////////////////////////////////////
+#include <type_traits>
+
 #include "BaseTypes.hpp"
+
+#ifdef __GNUC__
+// Disable warnings about constants in the gl namespace shadowed by constants
+// in enum class namespaces (which can only be access by qualifying the name?).
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wshadow"
+#endif
 
 namespace gl {
 ////////////////////////////////////////////////////////////////////////////////
@@ -5925,5 +5934,9 @@ TOutput convertEnum(TInput value)
 }
 
 } // namespace gl
+
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
 
 #endif // ifndef __EFCB0C06_7A7A_46A0_B04E_C3925634D0FD_INCLUDED__

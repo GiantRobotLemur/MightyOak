@@ -16,7 +16,7 @@
 
 // Note that this implementation is fully modern C++11 (not compatible with old MSVC versions)
 // but we still include atomicops.h for its LightweightSemaphore implementation.
-#include "atomicops.h"
+#include "AtomicOps.h"
 
 #ifndef MOODYCAMEL_CACHE_LINE_SIZE
 #define MOODYCAMEL_CACHE_LINE_SIZE 64

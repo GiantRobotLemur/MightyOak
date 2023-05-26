@@ -88,24 +88,7 @@ public:
         return hasValue;
     }
 
-    //! @brief Attempts to get a boolean property.
-    //! @param[in] id The identifier of the property to get.
-    //! @param[out] value Receives the boolean value of the property.
-    //! @retval true The property was defined and its value returned.
-    //! @retval false The property was not defined.
-    template<> bool tryGetTypedProperty(DisplayPropertyID id, bool &value) const
-    {
-        bool hasValue = false;
-        uint32_t rawValue = 0;
-
-        if (tryGetProperty(id, rawValue))
-        {
-            hasValue = true;
-            value = (rawValue != 0);
-        }
-
-        return hasValue;
-    }
+    bool tryGetFlagProperty(DisplayPropertyID id, bool &value) const;
 
     //! @brief Gets a value for a strongly typed property.
     //! @tparam T The data type of the property to get.

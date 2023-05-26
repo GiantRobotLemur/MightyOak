@@ -283,11 +283,11 @@ void setSDLProperty(T id, SDL_GLattr attrib, const U &format)
 template<typename T, typename U>
 void setSDLFlag(T id, SDL_GLattr attrib, const U &format)
 {
-    uint32_t value;
+    bool value;
 
-    if (format.tryGetProperty(id, value))
+    if (format.tryGetFlagProperty(id, value))
     {
-        SDL_GL_SetAttribute(attrib, (value == 0) ? SDL_TRUE : SDL_FALSE);
+        SDL_GL_SetAttribute(attrib, value ? SDL_TRUE : SDL_FALSE);
     }
 }
 
