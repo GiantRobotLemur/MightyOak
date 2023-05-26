@@ -137,18 +137,18 @@ uint32_t getEventSource(const SDL_Event &currentEvent, EventClass &eventType)
     case SDL_FINGERDOWN:
     case SDL_FINGERUP:
     case SDL_FINGERMOTION:
-        currentEvent.tfinger.windowID;
+        source = static_cast<uint32_t>(currentEvent.tfinger.windowID);
         eventType = EventClass::Gesture;
         break;
 
     case SDL_DOLLARGESTURE:
     case SDL_DOLLARRECORD:
-        currentEvent.dgesture.touchId;
+        source = static_cast<uint32_t>(currentEvent.dgesture.touchId);
         eventType = EventClass::Gesture;
         break;
 
     case SDL_MULTIGESTURE:
-        currentEvent.mgesture.touchId;
+        source = static_cast<uint32_t>(currentEvent.mgesture.touchId);
         eventType = EventClass::Gesture;
         break;
 
