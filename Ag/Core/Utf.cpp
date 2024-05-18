@@ -1324,7 +1324,7 @@ size_t calculateConvertedLength(const std::wstring_view &wideText, Encoding targ
 #ifdef WCHAR_IS_32BIT
         case Utf8: length = utf8Length(reinterpret_cast<utf32_cptr_t>(wideText.data())); break;
         case Utf16: length = utf16Length(reinterpret_cast<utf32_cptr_t>(wideText.data())); break;
-        case Utf32: length = std::wcslen(wideText.c_str()); break;
+        case Utf32: length = std::wcslen(wideText.data()); break;
 #else
         case Utf8: length = utf8Length(reinterpret_cast<utf16_cptr_t>(wideText.data())); break;
         case Utf16: length = wideText.length(); break;

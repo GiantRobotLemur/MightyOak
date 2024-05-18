@@ -140,7 +140,7 @@ struct ArmV2MemcSystemTraits
 
     //! @brief The data type of the object which holds state of the processor
     //! in terms of register contents, this includes co-processor state.
-    using RegisterFileType = ARMv2CoreRegisterFile<typename HardwareType>;
+    using RegisterFileType = ARMv2CoreRegisterFile<MemcHardware>;
 
     struct PrimaryPipelineTraits
     {
@@ -151,11 +151,11 @@ struct ArmV2MemcSystemTraits
         static constexpr uint8_t InstructionSizePow2 = 2;
     };
 
-    using PrimaryPipelineType = InstructionPipeline<typename PrimaryPipelineTraits>;
+    using PrimaryPipelineType = InstructionPipeline<ArmV2MemcSystemTraits::PrimaryPipelineTraits>;
 
-    using ExecutionUnitType = SingleModeExecutionUnit<typename HardwareType,
-                                                      typename RegisterFileType,
-                                                      typename PrimaryPipelineType>;
+    using ExecutionUnitType = SingleModeExecutionUnit<ArmV2MemcSystemTraits::HardwareType,
+                                                      ArmV2MemcSystemTraits::RegisterFileType,
+                                                      ArmV2MemcSystemTraits::PrimaryPipelineType>;
 };
 
 //! @brief Defines the traits of a basic ARMv2a-based system with 
@@ -169,22 +169,23 @@ struct ArmV2aMemcSystemTraits
 
     //! @brief The data type of the object which holds state of the processor
     //! in terms of register contents, this includes co-processor state.
-    using RegisterFileType = ARMv2aCoreRegisterFile<typename HardwareType>;
+    using RegisterFileType = ARMv2aCoreRegisterFile<ArmV2aMemcSystemTraits::HardwareType>;
 
     struct PrimaryPipelineTraits
     {
         using HardwareType = ArmV2aMemcSystemTraits::HardwareType;
         using RegisterFileType = ArmV2aMemcSystemTraits::RegisterFileType;
-        using DecoderType = ARMv2aInstructionDecoder<HardwareType, RegisterFileType>;
+        using DecoderType = ARMv2aInstructionDecoder<ArmV2aMemcSystemTraits::HardwareType,
+                                                     ArmV2aMemcSystemTraits::RegisterFileType>;
         using InstructionWordType = uint32_t;
         static constexpr uint8_t InstructionSizePow2 = 2;
     };
 
-    using PrimaryPipelineType = InstructionPipeline<typename PrimaryPipelineTraits>;
+    using PrimaryPipelineType = InstructionPipeline<ArmV2aMemcSystemTraits::PrimaryPipelineTraits>;
 
-    using ExecutionUnitType = SingleModeExecutionUnit<typename HardwareType,
-                                                      typename RegisterFileType,
-                                                      typename PrimaryPipelineType>;
+    using ExecutionUnitType = SingleModeExecutionUnit<ArmV2aMemcSystemTraits::HardwareType,
+                                                      ArmV2aMemcSystemTraits::RegisterFileType,
+                                                      ArmV2aMemcSystemTraits::PrimaryPipelineType>;
 };
 
 }} // namespace Mo::Arm

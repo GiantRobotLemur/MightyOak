@@ -16,6 +16,16 @@
 #include <cstdint>
 
 #include <memory>
+#include <new>
+
+#ifndef __cpp_lib_hardware_interference_size
+    // Make up for the lack of definitions provided with gcc.
+namespace std {
+    // 64 bytes on x86-64 │ L1_CACHE_BYTES │ L1_CACHE_SHIFT │ __cacheline_aligned │ ...
+    constexpr std::size_t hardware_constructive_interference_size = 64;
+    constexpr std::size_t hardware_destructive_interference_size = 64;
+}
+#endif
 
 namespace Ag {
 
@@ -89,7 +99,7 @@ T *createAligned(TArgs... args)
 {
     void *block = mallocAligned(TAlignment, sizeof(T));
 
-    return new(block) T(std::forward(args));
+    return new(block) T(std::forward(args)...);
 }
 
 //! @brief Dynamically allocates an object on an aligned address boundary.

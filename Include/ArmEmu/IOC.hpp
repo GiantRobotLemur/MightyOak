@@ -103,9 +103,6 @@ private:
 #pragma warning( push )
 #pragma warning( disable : 4324 ) // Disable: Structure was padded due to alignment specifier
                                   // Caused by aligning structure members on cache lines.
-#pragma warning( disable : 4200 ) // Disable: Non-standard extension used: zero-sized array in struct/union
-                                  // Caused by Padding having zero length due to a queue
-                                  //   having a size which matches a cache line.
 #endif
 
 //! @brief A structure combining data structures which need to be
@@ -120,7 +117,6 @@ struct IocSynchronisedState
     alignas(std::hardware_destructive_interference_size) IocIrqState InterruptState;
     alignas(std::hardware_destructive_interference_size) SynchronisedByteQueue RxQueue;
     alignas(std::hardware_destructive_interference_size) SynchronisedByteQueue TxQueue;
-    uint8_t Padding[QueueSize - sizeof(SynchronisedByteQueue)];
 
     IocSynchronisedState() = default;
     ~IocSynchronisedState() = default;

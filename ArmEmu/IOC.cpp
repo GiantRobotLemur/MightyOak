@@ -218,7 +218,7 @@ bool IocIrqState::setControlPinInputState(uint8_t pin, bool state)
 
         // Only bits C[3:5] are connected to FIRQs.
         // Update the _firqStatus based on the new values of the control pins.
-        _firqStatus &= (_firqStatus & ~0x38) | _ctrlInput & 0x38;
+        _firqStatus &= (_firqStatus & ~0x38) | (_ctrlInput & 0x38);
     }
 
     return getFirqPinState();
@@ -279,9 +279,9 @@ bool IocIrqState::raiseIrq(uint8_t id)
 IOC::IOC(MemcHardware &parent) :
     _synchronisedData(IocSyncStateTraits::create()),
     _parent(parent),
+    _context(nullptr),
     _irqState(&_synchronisedData->InterruptState),
     _keyboard(nullptr),
-    _context(nullptr),
     _kartRxQueue(&_synchronisedData->RxQueue),
     _kartTxQueue(&_synchronisedData->TxQueue),
     _kartRxByte(0)

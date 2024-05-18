@@ -206,7 +206,7 @@ void AcornKeyboardController::mouseButtonUp(AcornKeyboardController::MouseButton
 }
 
 // Inherited from IKeyboardController.
-void AcornKeyboardController::mouseDelta(int32_t deltaX, int32_t deltaY)
+void AcornKeyboardController::mouseDelta(int32_t /* deltaX */, int32_t /* deltaY */)
 {
     // TODO: Queue traffic to send to the KART to report a mouse movement.
 }
