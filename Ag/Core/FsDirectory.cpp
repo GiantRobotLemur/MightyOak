@@ -1,7 +1,7 @@
 //! @file FsDirectory.cpp
 //! @brief The definition of various abstractions of file system elements.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2021-2023
+//! @date 2021-2024
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -187,7 +187,8 @@ public:
         {
             uint32_t error = ::GetLastError();
 
-            if (error != ERROR_FILE_NOT_FOUND)
+            if ((error != ERROR_FILE_NOT_FOUND) &&
+                (error != ERROR_PATH_NOT_FOUND))
             {
                 std::string fn;
                 appendFormat("GetFileAttributesEx('{0}')",

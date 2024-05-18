@@ -1,0 +1,48 @@
+﻿///////////////////////////////////////////////////////////////////////////////
+//! @file Version.hpp
+//! @brief A generated file specifying version information.
+//! @author GiantRobotLemur@na-se.co.uk
+//! @date 2024
+//! @copyright This file is part of the Mighty Oak project which is released
+//! under LGPL 3 license. See LICENSE file at the repository root or go to
+//! https://github.com/GiantRobotLemur/MightyOak for full license details.
+//! @date @PROJECT_BUILD_YEAR@
+//! @copyright @PROJECT_COPYRIGHT@
+///////////////////////////////////////////////////////////////////////////////
+
+#ifndef __MIGHTY_OAK_VERSION_HEADER__
+#define __MIGHTY_OAK_VERSION_HEADER__
+
+///////////////////////////////////////////////////////////////////////////////
+// Macro Definitions
+///////////////////////////////////////////////////////////////////////////////
+//! @brief The major version of the Mighty Oak product.
+//! @details This should be incremented for each major re-development of the
+//! product.
+#define MIGHTY_OAK_MAJOR_VERSION @PROJECT_VERSION_MAJOR@
+
+//! @brief The minor version of the Mighty Oak product.
+//! @details This should be incremented for each major development iteration,
+//! whether to develop or improve the product. For example, the initial
+//! development of the product was planned over a dozen or so iterations, each
+//! received its own minor version number until the value was reset to 0 when
+//! version 1.00.00.00 was published.
+#define MIGHTY_OAK_MINOR_VERSION @PROJECT_VERSION_MINOR@
+
+//! @brief The revision component of the Mighty Oak product version.
+//! @details This value should be incremented for each minor development
+//! iteration, such as a feature which forms part of a major iteration is
+//! complete or a week's worth of development is to be backed up.
+#define MIGHTY_OAK_REVISION @PROJECT_VERSION_PATCH@
+
+//! @brief The build component of the Mighty Oak product.
+//! @details This value should be incremented for each official build.
+//! Whenever one of the major, minor or revision components is incremented
+//! this value should be reset to 0.
+#define MIGHTY_OAK_BUILD @PROJECT_VERSION_TWEAK@
+
+//! @brief The build component of the Mighty Oak product expressed as text.
+#define MIGHTY_OAK_VERSION_TEXT "@PROJECT_VERSION@"
+
+#endif
+///////////////////////////////////////////////////////////////////////////////

@@ -1,8 +1,8 @@
-//! @file ExpressionNode.cpp
+//! @file AsmTools/ExpressionNode.cpp
 //! @brief The definition of a number of objects representing nested elements
 //! of expressions.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2021-2023
+//! @date 2021-2024
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -987,7 +987,8 @@ bool ExprToCompile::tryCompile(IExprUPtr &expr, Messages &log) const
 ////////////////////////////////////////////////////////////////////////////////
 // Global Function Definitions
 ////////////////////////////////////////////////////////////////////////////////
-bool compileExpressionNodes(ExprToCompile *exprNodes, IExprUPtr *exprs,
+bool compileExpressionNodes(const Location &baseLocation,
+                            ExprToCompile *exprNodes, IExprUPtr *exprs,
                             size_t count, Messages &log)
 {
     bool isOK = true;
@@ -995,7 +996,17 @@ bool compileExpressionNodes(ExprToCompile *exprNodes, IExprUPtr *exprs,
     // Compile all the expressions.
     for (size_t i = 0; isOK && (i < count); ++i)
     {
-        isOK &= exprNodes[i].tryCompile(exprs[i], log);
+        if (exprNodes[i].Expr)
+        {
+            isOK &= exprNodes[i].tryCompile(exprs[i], log);
+        }
+        else
+        {
+            log.appendError(baseLocation,
+                            Ag::String::format("{0} expression missing.",
+                                               { exprNodes[i].Name }));
+            isOK = false;
+        }
     }
 
     return isOK;

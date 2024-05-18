@@ -2,7 +2,7 @@
 //! @brief The definition of an object used to incrementally construct another
 //! object representing an emulated ARM-based system.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2023
+//! @date 2023-2024
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -57,11 +57,32 @@ ArmSystemBuilder::ArmSystemBuilder(const Options &baseOptions)
     reset(baseOptions);
 }
 
+//! @brief Adds a device which the emulated system being built will take
+//! ownership of.
+//! @param[in] device A pointer to the device implementation to transfer
+//! to the emulated system at creation.
+void ArmSystemBuilder::addDevice(IHardwareDeviceUPtr &&device)
+{
+    if (device)
+    {
+    // See if we already have ownership of the device.
+        auto pos = std::find(_devices.begin(), _devices.end(), device);
+
+        if (pos == _devices.end())
+        {
+            // The device is not currently in the list, add it.
+            _devices.emplace_back(std::move(device));
+        }
+    }
+}
+
 //! @brief Attempts to add a region into the physical memory map of the system
 //! being constructed.
 //! @param[in] region The object describing the memory region.
 //! @param[in] baseAddr The base address of the region, must be 4-byte aligned.
 //! @param[in] access The access the emulated system has to the mapped region.
+//! @details It is expected that the emulated system already has ownership of the
+//! device being mapped.
 void ArmSystemBuilder::addMapping(IAddressRegionPtr region, uint32_t baseAddr,
                                   MemoryAccess access)
 {
@@ -107,6 +128,23 @@ void ArmSystemBuilder::addMapping(IAddressRegionPtr region, uint32_t baseAddr,
     }
 }
 
+//! @brief Attempts to add a region into the physical memory map of the system
+//! being constructed and takes ownership of the underlying device.
+//! @param[in] region The object describing the memory region.
+//! @param[in] baseAddr The base address of the region, must be 4-byte aligned.
+//! @param[in] access The access the emulated system has to the mapped region.
+//! @details It is expected that the emulated system already has ownership of the
+//! device being mapped.
+void ArmSystemBuilder::addMapping(IAddressRegionUPtr &&region, uint32_t baseAddr,
+                                  MemoryAccess access)
+{
+    // Add the device to the memory map.
+    addMapping(region.get(), baseAddr, access);
+
+    // If no exception was thrown, take ownership of the device.
+    addDevice(std::move(region));
+}
+
 //! @brief Resets the state of the object back to an initial set of options.
 //! @param[in] baseOptions The initial options used to instantiate the correct
 //! IArmSystem implementation.
@@ -115,6 +153,7 @@ void ArmSystemBuilder::reset(const Options &baseOptions)
     _baseOptions = baseOptions;
     _readMap.clear();
     _writeMap.clear();
+    _devices.clear();
 }
 
 //! @brief Instantiates an appropriate implementation of IArmSystem based on
@@ -123,7 +162,7 @@ void ArmSystemBuilder::reset(const Options &baseOptions)
 //! to define the system is invalid.
 //! @throws Ag::NotSupportedException If an option was selected which isn't
 //! currently supported by the existing IArmSystem implementations.
-IArmSystemUPtr ArmSystemBuilder::createSystem() const
+IArmSystemUPtr ArmSystemBuilder::createSystem()
 {
     Ag::String error;
     IArmSystem *sys = nullptr;
@@ -137,12 +176,39 @@ IArmSystemUPtr ArmSystemBuilder::createSystem() const
             {
                 // A test system with an ARM 2 processor.
                 sys = new ArmSystem<ArmV2TestSystemTraits>(_baseOptions,
+                                                           std::move(_devices),
                                                            _readMap, _writeMap);
             }
             else if (_baseOptions.getProcessorVariant() == ProcessorModel::ARM3)
             {
                 // A test system with an ARM 3 processor.
                 sys = new ArmSystem<ArmV2aTestSystemTraits>(_baseOptions,
+                                                            std::move(_devices),
+                                                            _readMap, _writeMap);
+            }
+            else
+            {
+                error = makePlatformProcessorError(_baseOptions);
+            }
+
+            if (sys != nullptr)
+            {
+                // TODO: Load system ROM preset.
+            }
+            break;
+
+        case SystemModel::Archimedies:
+        case SystemModel::ASeries:
+            if (_baseOptions.getProcessorVariant() == ProcessorModel::ARM2)
+            {
+                sys = new ArmSystem<ArmV2MemcSystemTraits>(_baseOptions,
+                                                           std::move(_devices),
+                                                           _readMap, _writeMap);
+            }
+            else if (_baseOptions.getProcessorVariant() == ProcessorModel::ARM3)
+            {
+                sys = new ArmSystem<ArmV2aMemcSystemTraits>(_baseOptions,
+                                                            std::move(_devices),
                                                             _readMap, _writeMap);
             }
             else
@@ -175,6 +241,10 @@ IArmSystemUPtr ArmSystemBuilder::createSystem() const
     }
     else
     {
+        // Reset the object state.
+        _readMap.clear();
+        _writeMap.clear();
+
         return IArmSystemUPtr(sys);
     }
 }

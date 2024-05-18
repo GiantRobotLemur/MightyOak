@@ -1,0 +1,243 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>EditDisplayOptionsDialog</class>
+ <widget class="QDialog" name="EditDisplayOptionsDialog">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>306</width>
+    <height>471</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Memory View Options</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout_2">
+   <property name="sizeConstraint">
+    <enum>QLayout::SetFixedSize</enum>
+   </property>
+   <item>
+    <widget class="QGroupBox" name="_formatGroupBox">
+     <property name="title">
+      <string>Instruction Format</string>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout">
+      <item>
+       <widget class="QCheckBox" name="_offsetAddrFieldsCheckBox">
+        <property name="text">
+         <string>Show address fields as PC-relative offsets</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="_coreRegAliasCheckBox">
+        <property name="text">
+         <string>Show aliases of core registers (PC, Link, SP)</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="_decimalImmedsCheckBox">
+        <property name="text">
+         <string>Show immediate constants as decimal</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="_commentAsDecimalCheckBox">
+        <property name="text">
+         <string>Show comment fields as decimal</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="_basicStyleHexCheckBox">
+        <property name="text">
+         <string>Use BBC BASIC-style '&amp;&amp;' hexadecimal specifier</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="_disasmGroupBox">
+     <property name="title">
+      <string>Disassembly Options</string>
+     </property>
+     <layout class="QGridLayout" name="gridLayout">
+      <item row="0" column="0">
+       <widget class="QLabel" name="_processorVariantLabel">
+        <property name="text">
+         <string>Processor variant:</string>
+        </property>
+        <property name="buddy">
+         <cstring>_processorVariantList</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QComboBox" name="_processorVariantList">
+        <property name="minimumSize">
+         <size>
+          <width>1</width>
+          <height>0</height>
+         </size>
+        </property>
+        <property name="currentText">
+         <string/>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0" colspan="2">
+       <widget class="QCheckBox" name="_allowFPACheckBox">
+        <property name="text">
+         <string>Allow FPA instructions</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="QLabel" name="_stackModesLabel">
+        <property name="text">
+         <string>Use LDM/STM stack modes:</string>
+        </property>
+        <property name="buddy">
+         <cstring>_stackModesList</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QComboBox" name="_stackModesList">
+        <property name="minimumSize">
+         <size>
+          <width>1</width>
+          <height>0</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="_displayGroupBox">
+     <property name="title">
+      <string>Display Options</string>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_2">
+      <item row="0" column="0" colspan="2">
+       <widget class="QCheckBox" name="_showRawDataCheckBox">
+        <property name="text">
+         <string>Show raw data for disassembled instructions</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0" colspan="2">
+       <widget class="QCheckBox" name="_showCommentsCheckBox">
+        <property name="text">
+         <string>Show instruction comments</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0" colspan="2">
+       <widget class="QCheckBox" name="_wrapOnWordBreaksCheckBox">
+        <property name="text">
+         <string>Wrap string data at word breaks</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="0">
+       <widget class="QLabel" name="_repeatedDataTypeLabel">
+        <property name="text">
+         <string>Repetitive data type:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="1">
+       <widget class="QComboBox" name="_repeatedDataTypeList">
+        <property name="minimumSize">
+         <size>
+          <width>1</width>
+          <height>0</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <spacer name="verticalSpacer">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>38</width>
+       <height>1</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+   <item>
+    <widget class="QDialogButtonBox" name="buttonBox">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <property name="standardButtons">
+      <set>QDialogButtonBox::Apply|QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <tabstops>
+  <tabstop>_offsetAddrFieldsCheckBox</tabstop>
+  <tabstop>_coreRegAliasCheckBox</tabstop>
+  <tabstop>_decimalImmedsCheckBox</tabstop>
+  <tabstop>_commentAsDecimalCheckBox</tabstop>
+  <tabstop>_basicStyleHexCheckBox</tabstop>
+  <tabstop>_processorVariantList</tabstop>
+  <tabstop>_allowFPACheckBox</tabstop>
+  <tabstop>_stackModesList</tabstop>
+  <tabstop>_showRawDataCheckBox</tabstop>
+  <tabstop>_showCommentsCheckBox</tabstop>
+  <tabstop>_wrapOnWordBreaksCheckBox</tabstop>
+ </tabstops>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>buttonBox</sender>
+   <signal>accepted()</signal>
+   <receiver>EditDisplayOptionsDialog</receiver>
+   <slot>accept()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>248</x>
+     <y>254</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>157</x>
+     <y>274</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>buttonBox</sender>
+   <signal>rejected()</signal>
+   <receiver>EditDisplayOptionsDialog</receiver>
+   <slot>reject()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>316</x>
+     <y>260</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>286</x>
+     <y>274</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+</ui>

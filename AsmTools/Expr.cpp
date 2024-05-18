@@ -1,8 +1,8 @@
-//! @file Expr.cpp
+//! @file AsmTools/Expr.cpp
 //! @brief The definition of a set of classes representing expressions which
 //! can be evaluated to calculate concrete values.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2022-2023
+//! @date 2022-2024
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -820,7 +820,7 @@ bool SymbolExpr::tryEvaluate(const IEvalContext *context,
     }
     else
     {
-        error = Ag::String::format("Identifier was '{0}' not defined in the current context.",
+        error = Ag::String::format("Identifier '{0}' was not defined in the current context.",
                                    { _id });
         return false;
     }

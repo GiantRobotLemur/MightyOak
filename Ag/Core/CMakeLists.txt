@@ -7,6 +7,7 @@ add_ag_library(AgCore SOURCES   CoreInternal.hpp
                                 ByteOrder.cpp
                                 CodePoint.cpp
                                 Utf.cpp
+                                Memory.cpp
                                 InlineMemory.cpp
                                 StringPrivate.hpp
                                 StringPrivate.cpp
@@ -34,6 +35,7 @@ add_ag_library(AgCore SOURCES   CoreInternal.hpp
                                 Platform.hpp
                                 ${AG_INCLUDE_DIR}/Ag/Core/Configuration.hpp
                                 ${AG_INCLUDE_DIR}/Ag/Core/EnumInfo.hpp
+                                ${AG_INCLUDE_DIR}/Ag/Core/Math.hpp
                                 ${AG_INCLUDE_DIR}/Ag/Core/Utils.hpp
                                 ${AG_INCLUDE_DIR}/Ag/Core/CollectionTools.hpp
                                 ${AG_INCLUDE_DIR}/Ag/Core/LinearSortedSet.hpp
@@ -42,6 +44,7 @@ add_ag_library(AgCore SOURCES   CoreInternal.hpp
                                 ${AG_INCLUDE_DIR}/Ag/Core/ByteOrder.hpp
                                 ${AG_INCLUDE_DIR}/Ag/Core/CodePoint.hpp
                                 ${AG_INCLUDE_DIR}/Ag/Core/Utf.hpp
+                                ${AG_INCLUDE_DIR}/Ag/Core/Memory.hpp
                                 ${AG_INCLUDE_DIR}/Ag/Core/InlineMemory.hpp
                                 ${AG_INCLUDE_DIR}/Ag/Core/StackTrace.hpp
                                 ${AG_INCLUDE_DIR}/Ag/Core/Exception.hpp

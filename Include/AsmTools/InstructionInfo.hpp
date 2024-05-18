@@ -2,7 +2,7 @@
 //! @brief The declaration of data structures which describe any assembly
 //! language instruction.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2022-2023
+//! @date 2022-2024
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -373,6 +373,85 @@ enum class OperationClass : uint8_t
     Max,
 };
 
+//! @brief An object which represents a text rendering of an ARM instruction.
+class FormattedInstruction
+{
+public:
+    // Public Types
+    //! @brief A value which identifies the classification of a token in
+    //! a formatted instruction.
+    enum class TokenType : uint32_t
+    {
+        CoreMnemonic,
+        CoProcMnemonic,
+        FpaMnemonic,
+        DataDirectiveMnemonic,
+        Separator,
+        WritebackMarker,
+        ModifyPsrMaker,
+        CoreRegister,
+        BeginAddrOperand,
+        EndAddrOperand,
+        CoreRegList,
+        CoProcessorID,
+        CoProcessorRegister,
+        FpaRegister,
+        Shift,
+        ImmediateConstant,
+        Label,
+        DataValue,
+
+        Max,
+    };
+
+    //! @brief Describes a token in a formatted instruction.
+    struct Token
+    {
+        //! @brief The classification of the token within the formatted instruction.
+        TokenType Class;
+
+        //! @brief Token class-dependent data, such as the index of a register,
+        //! co-processor or instruction mnemonic.
+        uint32_t Data;
+
+        //! @brief The 0-based index of the first byte of the token in the
+        //! UTF-8 encoding of the instruction.
+        uint16_t Start;
+
+        //! @brief The count of UTF-8 encoded bytes which define the token within
+        //! the overall formatted instruction.
+        uint16_t Count;
+
+        Token();
+        Token(size_t start, size_t count,
+              TokenType tokenClass, uint32_t data);
+
+        // Accessors
+        bool isMnemonic() const;
+    };
+
+    //! @brief A collection of tokens defining a disassembled instruction.
+    using TokenCollection = std::vector<Token>;
+
+    // Construction/Destruction
+    FormattedInstruction() = default;
+    FormattedInstruction(Ag::string_cref_t source, TokenCollection &&tokens);
+    ~FormattedInstruction() = default;
+
+    // Accessors
+    bool isEmpty() const;
+    uint32_t getTokenCount() const;
+    const Token &getToken(uint32_t index) const;
+    std::string_view getTokenText(uint32_t index) const;
+    Ag::String getTokenString(uint32_t index) const;
+    const TokenCollection &getTokens() const;
+    Ag::string_cref_t getSourceText() const;
+private:
+    // Internal Fields
+    TokenCollection _tokens;
+    Ag::String _source;
+};
+
 ////////////////////////////////////////////////////////////////////////////////
 // Class Declarations
 ////////////////////////////////////////////////////////////////////////////////
@@ -603,7 +682,7 @@ class FormatterOptions
 public:
     // Public Types
     //! @brief Defines options to apply when formatting instructions.
-    enum Flags
+    enum Flags : uint32_t
     {
         //! @brief Indicates branch and PC-relative locations should be
         //! formatted as signed offsets from the current address as
@@ -634,6 +713,10 @@ public:
         //! instructions should be formatted as base-10 rather than
         //! base-16 values.
         UseDecimalComments      = 0x20,
+
+        //! @brief Indicates that hex values should be proceeded with '&'
+        //! in the style of BBC BASIC, rather than '0x'.
+        UseBasicStyleHex        = 0x40,
     };
 
     // Construction/Destruction
@@ -668,27 +751,31 @@ public:
     {
         //! @brief Used with ModelMask to encode the highest instruction set
         //! variant to understand is the original ARM2.
-        ARMv2       = 0x01,
+        ARMv2       = 0x00,
 
         //! @brief Used with ModelMask to encode the highest instruction set
         //! variant to understand is the original ARM3.
-        ARMv2a      = 0x02,
+        ARMv2a      = 0x01,
 
         //! @brief Used with ModelMask to encode the highest instruction set
         //! variant to understand is the ARMv3 architecture.
-        ARMv3       = 0x03,
+        ARMv3       = 0x02,
 
         //! @brief Used with ModelMask to encode the highest instruction set
         //! variant to understand is the ARMv4 architecture.
-        ARMv4       = 0x04,
+        ARMv4       = 0x03,
 
         //! @brief Used with ModelMask to encode the highest instruction set
         //! variant to understand is the ARMv5 architecture.
-        ARMv5       = 0x05,
+        ARMv5       = 0x04,
 
         //! @brief Used with ModelMask to encode the highest instruction set
         //! variant to understand is the ARMv6 architecture.
-        ARMv6       = 0x06,
+        ARMv6       = 0x05,
+
+        //! @brief Used with ModelMask to encode the highest instruction set
+        //! variant to understand is the ARMv6 architecture.
+        ARMv7       = 0x05,
 
         //! @brief To extract the highest allow instruction set architecture
         //! or that ARMv7 instructions should be interpreted.
@@ -774,8 +861,11 @@ public:
     bool disassemble(uint32_t instruction, uint32_t loadAddress, uint32_t flags = 0x3F);
     uint8_t disassemble(const uint32_t *instructions, uint8_t count,
                         uint32_t loadAddress, uint32_t flags = 0x3F);
+
     Ag::String toString(const FormatterOptions *options = nullptr) const;
     Ag::String toString(uint32_t loadAddr, uint32_t formatterOptionsFlags) const;
+    FormattedInstruction format(const FormatterOptions *options = nullptr) const;
+    FormattedInstruction format(uint32_t loadAddr, uint32_t formatterOptionsFlags) const;
 
     void clear();
     void reset(InstructionMnemonic mnemonic, OperationClass opClass,

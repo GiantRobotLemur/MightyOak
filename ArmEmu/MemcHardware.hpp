@@ -2,7 +2,7 @@
 //! @brief The declaration of an object which emulates the hardware of a
 //! MEMC-based system.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2023
+//! @date 2023-2024
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -60,20 +60,23 @@ struct MEMC
     static constexpr uint32_t HighRomStart      = 0x3800000;    // 56MB for 8 MB
 };
 
-//! @define Defines results of the MemcHardware address translation functions.
+//! @brief Defines results of the MemcHardware address translation functions.
 struct AddrMapResult
 {
     //! @brief The address does not map to a valid block.
-    static constexpr uint8_t NotMapped      = 0x00;
+    static constexpr uint8_t NotMapped          = 0x00;
 
     //! @brief The processor has high enough privileges to access the block.
-    static constexpr uint8_t AccessAllowed = 0x01;
+    static constexpr uint8_t AccessAllowed      = 0x01;
+
+    //! @brief The binary digits to shift to get a 1 to the HasMapping bit.
+    static constexpr uint8_t HasMappingShift    = 1;
 
     //! @brief The address maps to a host block.
-    static constexpr uint8_t HasMapping     = 0x02;
+    static constexpr uint8_t HasMapping         = static_cast<uint8_t>(1) << HasMappingShift;
 
     //! @brief The address is mapped and can be accessed.
-    static constexpr uint8_t Success        = 0x03;
+    static constexpr uint8_t Success            = HasMapping | AccessAllowed;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -103,6 +106,10 @@ private:
     bool _videoDMAEnabled;
     bool _soundDMAEnabled;
 
+    // Non-cache intensive.
+    GenericHostBlock _physicalRamBlock;
+    GenericHostBlock _lowRomBlock;
+    GenericHostBlock _highRomBlock;
 private:
     // Internal Functions
     void setPageSize(uint8_t pageSizePow2);
@@ -257,19 +264,14 @@ public:
         return isWritten;
     }
 
+    bool logicalToPhysicalAddress(uint32_t logicalAddr, PageMapping &mapping) const;
+
     bool writeWords(uint32_t logicalAddr, const uint32_t *values, uint8_t count);
     bool readWords(uint32_t logicalAddr, uint32_t *results, uint8_t count);
 
-    bool logicalToPhysicalAddress(uint32_t logicalAddr, uint32_t &physAddr) const;
+    AddressMap createMasterReadMap();
+    AddressMap createMasterWriteMap();
 };
-
-////////////////////////////////////////////////////////////////////////////////
-// Function Declarations
-////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////
-// Templates
-////////////////////////////////////////////////////////////////////////////////
 
 }} // namespace Mo::Arm
 

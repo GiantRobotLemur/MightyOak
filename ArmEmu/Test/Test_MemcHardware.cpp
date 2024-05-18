@@ -1,7 +1,7 @@
 //! @file Test_MemcHardware.cpp
 //! @brief The definition of unit tests for the MemcHardware class.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2023
+//! @date 2023-2024
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -24,12 +24,11 @@ namespace {
 class MemcHardwareTests : public ::testing::Test
 {
 protected:
-    Options _opts;
     AddressMap _readDevices, _writeDevices;
     MemcHardware specimen;
 
     MemcHardwareTests() :
-        specimen(_opts, _readDevices, _writeDevices)
+        specimen(Options(), _readDevices, _writeDevices)
     {
         specimen.reset();
     }

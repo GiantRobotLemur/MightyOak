@@ -2,7 +2,7 @@
 //! @brief The declaration of various traits types describing different
 //! configurations of system to emulate.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2023
+//! @date 2023-2024
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -22,19 +22,12 @@
 #include "ExecutionUnit.inl"
 
 #include "TestBedHardware.inl"
+#include "MemcHardware.hpp"
 #include "ARMv2CoreRegisterFile.inl"
 #include "ARMv2InstructionDecoder.inl"
 
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
-
 namespace Mo {
 namespace Arm {
-
-////////////////////////////////////////////////////////////////////////////////
-// Data Type Declarations
-////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////
 // Templates
@@ -133,6 +126,65 @@ struct ArmV2aTestSystemTraits
     using ExecutionUnitType = SingleModeExecutionUnit<typename ArmV2aTestSystemTraits::HardwareType,
                                                       typename ArmV2aTestSystemTraits::RegisterFileType,
                                                       typename ArmV2aTestSystemTraits::PrimaryPipelineType>;
+};
+
+
+//! @brief Defines the traits of an ARMv2-based system with
+//! MEMC/IOC/VIDC hardware.
+struct ArmV2MemcSystemTraits
+{
+    // Public Types
+    //! @brief The data type of the object which manages the physical address
+    //! map and major hardware resources.
+    using HardwareType = MemcHardware;
+
+    //! @brief The data type of the object which holds state of the processor
+    //! in terms of register contents, this includes co-processor state.
+    using RegisterFileType = ARMv2CoreRegisterFile<typename HardwareType>;
+
+    struct PrimaryPipelineTraits
+    {
+        using HardwareType = ArmV2MemcSystemTraits::HardwareType;
+        using RegisterFileType = ArmV2MemcSystemTraits::RegisterFileType;
+        using DecoderType = ARMv2InstructionDecoder<HardwareType, RegisterFileType>;
+        using InstructionWordType = uint32_t;
+        static constexpr uint8_t InstructionSizePow2 = 2;
+    };
+
+    using PrimaryPipelineType = InstructionPipeline<typename PrimaryPipelineTraits>;
+
+    using ExecutionUnitType = SingleModeExecutionUnit<typename HardwareType,
+                                                      typename RegisterFileType,
+                                                      typename PrimaryPipelineType>;
+};
+
+//! @brief Defines the traits of a basic ARMv2a-based system with 
+//! MEMC/IOC/VIDC hardware.
+struct ArmV2aMemcSystemTraits
+{
+    // Public Types
+    //! @brief The data type of the object which manages the physical address
+    //! map and major hardware resources.
+    using HardwareType = MemcHardware;
+
+    //! @brief The data type of the object which holds state of the processor
+    //! in terms of register contents, this includes co-processor state.
+    using RegisterFileType = ARMv2aCoreRegisterFile<typename HardwareType>;
+
+    struct PrimaryPipelineTraits
+    {
+        using HardwareType = ArmV2aMemcSystemTraits::HardwareType;
+        using RegisterFileType = ArmV2aMemcSystemTraits::RegisterFileType;
+        using DecoderType = ARMv2aInstructionDecoder<HardwareType, RegisterFileType>;
+        using InstructionWordType = uint32_t;
+        static constexpr uint8_t InstructionSizePow2 = 2;
+    };
+
+    using PrimaryPipelineType = InstructionPipeline<typename PrimaryPipelineTraits>;
+
+    using ExecutionUnitType = SingleModeExecutionUnit<typename HardwareType,
+                                                      typename RegisterFileType,
+                                                      typename PrimaryPipelineType>;
 };
 
 }} // namespace Mo::Arm

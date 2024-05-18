@@ -2,7 +2,7 @@
 //! @brief The declaration of a set of properties configuring the assembly
 //! process.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2021-2023
+//! @date 2021-2024
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -78,6 +78,24 @@ enum class AssemblyFlagsEnum : uint16_t
 
 using AssemblyFlags = std::underlying_type<AssemblyFlagsEnum>::type;
 
+//! @brief Expresses the data types expected in data directives.
+enum class DirectiveDataType : uint8_t
+{
+    Byte,
+    HalfWord,
+    Word,
+    LongWord,
+    NativeString,
+    Utf8String,
+    Utf16String,
+    Utf32String,
+    Real32,
+    Real64,
+    Real96,
+
+    Max,
+};
+
 ////////////////////////////////////////////////////////////////////////////////
 // Class Declarations
 ////////////////////////////////////////////////////////////////////////////////
@@ -117,11 +135,31 @@ private:
     AssemblyFlags _flags;
 };
 
+class DirectiveDataTypeSymbol : public Ag::EnumSymbol<DirectiveDataType>
+{
+public:
+    // Construction/Destruction
+    DirectiveDataTypeSymbol(DirectiveDataType id);
+    DirectiveDataTypeSymbol(DirectiveDataType id, const char *symbol,
+                            const char *displayName,
+                            const char *description,
+                            uint8_t unitSize);
+
+    // Accessors
+    uint8_t getUnitSize() const;
+private:
+    // Internal Fields
+    uint8_t _unitSize;
+};
+
+using DirectiveDataTypeInfo = Ag::EnumInfo<DirectiveDataType, DirectiveDataTypeSymbol>;
+
 ////////////////////////////////////////////////////////////////////////////////
 // Function Declarations
 ////////////////////////////////////////////////////////////////////////////////
 const Ag::EnumInfo<InstructionSet> &getInstructionSetType();
 const Ag::EnumInfo<ArchExtensionEnum> &getArchExtensionsType();
+const DirectiveDataTypeInfo &getDirectiveDataTypeInfo();
 
 }} // namespace Mo::Asm
 

@@ -1,0 +1,71 @@
+//! @file ArmDebugger/MemcIOAdapter.hpp
+//! @brief The declaration of an object which allows generic access to the I/O
+//! interfaces of a MEMC-based emulated system.
+//! @author GiantRobotLemur@na-se.co.uk
+//! @date 2024
+//! @copyright This file is part of the Mighty Oak project which is released
+//! under LGPL 3 license. See LICENSE file at the repository root or go to
+//! https://github.com/GiantRobotLemur/MightyOak for full license details.
+////////////////////////////////////////////////////////////////////////////////
+
+#ifndef __ARM_DEBUGGER_MEMC_IO_ADAPTER_HPP__
+#define __ARM_DEBUGGER_MEMC_IO_ADAPTER_HPP__
+
+////////////////////////////////////////////////////////////////////////////////
+// Dependent Header Files
+////////////////////////////////////////////////////////////////////////////////
+#include "ArmEmu/ArmSystem.hpp"
+#include "ArmEmu/EmuOptions.hpp"
+#include "ArmEmu/GuestEventQueue.hpp"
+#include "ArmEmu/IOC.hpp"
+#include "ArmEmu/VIDC10.hpp"
+
+#include "EmulatorIOAdapter.hpp"
+
+namespace Mo {
+
+////////////////////////////////////////////////////////////////////////////////
+// Data Type Declarations
+////////////////////////////////////////////////////////////////////////////////
+
+////////////////////////////////////////////////////////////////////////////////
+// Class Declarations
+////////////////////////////////////////////////////////////////////////////////
+//! @brief An object which allows generic access to the I/O interfaces of a
+//! MEMC-based emulated system.
+class MemcIOAdapter : public IEmulatorIOAdapter
+{
+public:
+    // Construction/Destruction
+    MemcIOAdapter() = delete;
+    MemcIOAdapter(Arm::IArmSystem *emulatedSystem, const Arm::Options &options);
+    virtual ~MemcIOAdapter() = default;
+
+    // Accessors
+
+    // Operations
+
+    // Overrides
+    virtual bool handleGuestEvent(const Arm::GuestEvent &args) override;
+private:
+    // Internal Types
+
+    // Internal Functions
+
+    // Internal Fields
+    Arm::IOC *_ioc;
+    Arm::VIDC10 *_vidc;
+};
+
+////////////////////////////////////////////////////////////////////////////////
+// Function Declarations
+////////////////////////////////////////////////////////////////////////////////
+
+////////////////////////////////////////////////////////////////////////////////
+// Templates
+////////////////////////////////////////////////////////////////////////////////
+
+} // namespace Mo
+
+#endif // Header guard
+////////////////////////////////////////////////////////////////////////////////

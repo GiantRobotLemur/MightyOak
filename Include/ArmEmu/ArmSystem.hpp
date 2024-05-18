@@ -1,7 +1,7 @@
 //! @file ArmEmu/ArmSystem.hpp
 //! @brief The declaration of an object representing an emulated ARM-based system.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2023
+//! @date 2023-2024
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -21,7 +21,10 @@
 #include "ArmEmu/AddressMap.hpp"
 #include "ArmEmu/ExecutionMetrics.hpp"
 
+//! @brief Contains all source code elements of the Mighty Oak application.
 namespace Mo {
+
+//! @brief Contains all source code elements specifically related to ARM hardware.
 namespace Arm {
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -82,9 +85,17 @@ enum class CoreRegister : uint8_t
     R15,
 
     SPSR,
+
+    //! @brief Gets the current value of the processor status register bits,
+    //! possibly extracted from R15 when running in 26-bit mode.
     CPSR,
+
+    //! @brief Give the address of the next instruction to execute, this
+    //! maybe different from the value indicated in R15 which is the next
+    //! instruction to fetch.
     PC,
 
+    //! @brief A value only used for bounds checking.
     Max,
 };
 
@@ -119,6 +130,9 @@ public:
     virtual ~IArmSystem() = default;
 
     // Accessors
+    //! @brief Determines if the emulated processor is currently executing.
+    virtual bool isRunning() const = 0;
+
     //! @brief Gets the current processor mode.
     virtual ProcessorMode getMode() const = 0;
 
@@ -142,13 +156,13 @@ public:
     //! @brief Converts a logical address into the equivalent physical
     //! address given the current address translation state.
     //! @param[in] logicalAddr The logical address to convert.
-    //! @param[out] physAddr Receives the equivalent physical address if
-    //! there is one.
+    //! @param[out] mapping Receives details of the page mapping of the
+    //! physical page containing the specified logical address.
     //! @retval true An address mapping existed and was returned.
     //! @retval false There was no physical address which mapped to the
     //! specified logical address.
     virtual bool logicalToPhysicalAddress(uint32_t logicalAddr,
-                                          uint32_t &physAddr) const = 0;
+                                          PageMapping &mapping) const = 0;
 
     // Operations
     //! @brief Runs the processor until a host or debug interrupt occurs.
@@ -160,6 +174,10 @@ public:
     //! @return Metrics summarising how many instructions were executed
     //! (theoretically 1) and how many simulated processor cycles they took.
     virtual ExecutionMetrics runSingleStep() = 0;
+
+    //! @brief Raises an external interrupt to force a call to run() to
+    //! return.
+    virtual void raiseHostInterrupt() = 0;
 
     //! @brief Attempts to extract a message from the system's external
     //! event queue.

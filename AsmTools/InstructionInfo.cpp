@@ -1,8 +1,8 @@
-//! @file InstructionInfo.cpp
+//! @file AsmTools/InstructionInfo.cpp
 //! @brief The definition of data structures which describe any assembly
 //! language instruction.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2022-2023
+//! @date 2022-2024
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -22,6 +22,15 @@
 
 namespace Mo {
 namespace Asm {
+
+namespace {
+////////////////////////////////////////////////////////////////////////////////
+// Local Data
+////////////////////////////////////////////////////////////////////////////////
+static FormatterOptions DefaultFormattingOptions(0x00000000,
+                                                 FormatterOptions::ShowOffsets);
+
+} // Anonymous namespace
 
 ////////////////////////////////////////////////////////////////////////////////
 // InstructionInfo Member Function Definitions
@@ -58,12 +67,12 @@ FormatterOptions::FormatterOptions(uint32_t address, uint32_t flags) :
 }
 
 //! @brief Gets bits representing formatting options described by the
-//! IFormatter::Flags enumeration type.
+//! FormatterOptions::Flags enumeration type.
 uint32_t FormatterOptions::getFlags() const { return _flags; }
 
 
 //! @brief Sets bits representing formatting options described by the
-//! IFormatter::Flags enumeration type.
+//! FormatterOptions::Flags enumeration type.
 //! @param[in] flags The new formatting flags.
 void FormatterOptions::setFlags(uint32_t flags) { _flags = flags; }
 
@@ -587,9 +596,8 @@ uint8_t InstructionInfo::disassemble(const uint32_t *instructions,
         _condition = params.Condition;
     }
 
-    return (_opClass == OperationClass::None) ? 0u : params.Decoded;
+    return params.Decoded;
 }
-
 
 //! @brief Outputs the instruction as text.
 //! @param[in] options An optional object which specifies how the instruction
@@ -597,16 +605,14 @@ uint8_t InstructionInfo::disassemble(const uint32_t *instructions,
 //! default options.
 Ag::String InstructionInfo::toString(const FormatterOptions *options /*= nullptr*/) const
 {
-    static FormatterOptions defaultOptions(0x0000, FormatterOptions::ShowOffsets);
-
     // Prepare the formatting parameters.
-    FormatParams params((options == nullptr) ? &defaultOptions : options,
-                        &_params, _opClass, _mnemonic, _condition);
+    FormatParams params((options == nullptr) ? &DefaultFormattingOptions : options,
+                        &_params, _opClass, _mnemonic, _condition, false);
 
     // Format the instruction elsewhere (because it takes a lot of code).
     if (formatInstruction(params))
     {
-        return Ag::String(params.Builder);
+        return params.Builder.toString();
     }
     else
     {
@@ -623,6 +629,43 @@ Ag::String InstructionInfo::toString(uint32_t loadAddr, uint32_t formatterOption
     FormatterOptions options(loadAddr, formatterOptionsFlags);
 
     return toString(&options);
+}
+
+//! @brief Outputs the instruction as formatted text.
+//! @param[in] options An optional object which specifies how the instruction
+//! should be formatted and which can resolve symbols. Nullptr to use the
+//! default options.
+//! @return An object giving the instruction text and details about the tokens
+//! within it.
+FormattedInstruction InstructionInfo::format(const FormatterOptions *options /*= nullptr*/) const
+{
+    // Prepare the formatting parameters.
+    FormatParams params((options == nullptr) ? &DefaultFormattingOptions : options,
+                        &_params, _opClass, _mnemonic, _condition, true);
+
+    // Format the instruction elsewhere (because it takes a lot of code).
+    if (formatInstruction(params))
+    {
+        return params.Builder.format();
+    }
+    else
+    {
+        return FormattedInstruction();
+    }
+}
+
+//! @brief Outputs the instruction as formatted text.
+//! @param[in] loadAddr The address at which the instruction is executed.
+//! @param[in] formatterOptionsFlags Formatting option flags as defined by
+//! the FormatterOptions::Flags enumeration type.
+//! @return An object giving the instruction text and details about the tokens
+//! within it.
+FormattedInstruction InstructionInfo::format(uint32_t loadAddr,
+                                             uint32_t formatterOptionsFlags) const
+{
+    FormatterOptions options(loadAddr, formatterOptionsFlags);
+
+    return format(&options);
 }
 
 //! @brief Resets the object to an empty state.

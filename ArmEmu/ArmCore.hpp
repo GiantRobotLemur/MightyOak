@@ -2,7 +2,7 @@
 //! @brief The declaration of functionality pervasive across all emulated
 //! ARM core configurations.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2022-2023
+//! @date 2022-2024
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -78,13 +78,13 @@ struct ExecResult
     //! execute, up to 255 allowed, good enough for a RISC processor.
     static constexpr uint32_t CycleCountMask = 0x00FF;
 
-    //! @brief Specifies that the instruction pipeline should be flushed due to
-    //! a direct write to the Program Counter.
-    static constexpr uint32_t FlushPipeline = 0x0100;
-
     //! @brief Specifies the number of digits to shift an ExecResult to
     //! extract the FlushPipeline bit.
     static constexpr uint8_t FlushShift = 8;
+
+    //! @brief Specifies that the instruction pipeline should be flushed due to
+    //! a direct write to the Program Counter.
+    static constexpr uint32_t FlushPipeline = 1u << FlushShift;
 
     //! @brief Specifies that the execution mode of the processor has been
     //! changed so a new execution pipeline might be selected.

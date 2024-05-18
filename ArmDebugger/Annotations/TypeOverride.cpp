@@ -1,0 +1,96 @@
+//! @file ArmDebugger/Annotations/TypeOverride.cpp
+//! @brief The definition of an annotation which specifies the data type of
+//! a run of addresses in emulated memory.
+//! @author GiantRobotLemur@na-se.co.uk
+//! @date 2024
+//! @copyright This file is part of the Mighty Oak project which is released
+//! under LGPL 3 license. See LICENSE file at the repository root or go to
+//! https://github.com/GiantRobotLemur/MightyOak for full license details.
+////////////////////////////////////////////////////////////////////////////////
+
+////////////////////////////////////////////////////////////////////////////////
+// Header File Includes
+////////////////////////////////////////////////////////////////////////////////
+#include "Tools.hpp"
+#include "TypeOverride.hpp"
+
+////////////////////////////////////////////////////////////////////////////////
+// Macro Definitions
+////////////////////////////////////////////////////////////////////////////////
+
+namespace Mo {
+
+namespace {
+////////////////////////////////////////////////////////////////////////////////
+// Local Data Types
+////////////////////////////////////////////////////////////////////////////////
+
+////////////////////////////////////////////////////////////////////////////////
+// Local Data
+////////////////////////////////////////////////////////////////////////////////
+
+////////////////////////////////////////////////////////////////////////////////
+// Local Functions
+////////////////////////////////////////////////////////////////////////////////
+uint32_t fixSizeByType(uint32_t length, Asm::DirectiveDataType dataType)
+{
+    const auto &typeInfo = Asm::getDirectiveDataTypeInfo();
+    size_t index;
+
+    if (typeInfo.tryFindSymbolIndex(dataType, index))
+    {
+        uint8_t valueSize = typeInfo.getSymbolByIndex(index).getUnitSize();
+
+        length = length % valueSize;
+    }
+
+    return length;
+}
+
+} // Anonymous namespace
+
+////////////////////////////////////////////////////////////////////////////////
+// TypeOverride Member Function Definitions
+////////////////////////////////////////////////////////////////////////////////
+TypeOverride::TypeOverride() :
+    Annotation(AnnotationType::DataType),
+    _dataType(Asm::DirectiveDataType::Byte)
+{
+}
+
+TypeOverride::TypeOverride(uint32_t startAddr, uint32_t length,
+                           Asm::DirectiveDataType dataType) :
+    Annotation(AnnotationType::DataType, startAddr,
+               fixSizeByType(length, dataType)),
+    _dataType(dataType)
+{
+}
+
+Asm::DirectiveDataType TypeOverride::getOverrideType() const
+{
+    return _dataType;
+}
+
+QJsonObject TypeOverride::write() const
+{
+    QJsonObject jsonObj = Annotation::write();
+    setJsonValue(jsonObj, "DataType", Asm::getDirectiveDataTypeInfo(), _dataType);
+
+    return jsonObj;
+}
+
+void TypeOverride::read(const QJsonObject &jsonObj)
+{
+    _dataType = Asm::DirectiveDataType::Byte;
+
+    tryGetJsonValue(jsonObj, "DataType",
+                    Asm::getDirectiveDataTypeInfo(), _dataType);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Global Function Definitions
+////////////////////////////////////////////////////////////////////////////////
+
+} // namespace Mo
+////////////////////////////////////////////////////////////////////////////////
+

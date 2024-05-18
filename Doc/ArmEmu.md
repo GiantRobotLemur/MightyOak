@@ -35,3 +35,18 @@ combined in various different ways without having to resort to virtual function
 calls, therefore making it possible to support lots of different processor
 configurations without a performance penalty. These will be used to expand
 the EmuPerfTest tool.
+
+# MEMC-Based System Emulation
+
+Recent changes have attempted to create an emulation of a MEMC/VIDC/IOC-based
+system. ARM2 and ARM3-based systems can be instantiated, although there
+is currently no support for the System Control Co-Processor implemented
+by the ARM3 (making it an ARM250).
+
+Development became bogged down developing the KART keyboard/mouse interface.
+Some work has been done to develop a basis system ROM which can initialise
+the interface. To more easily develop that system, an interactive debugger
+was created in Qt. This is usable, but partially complete.
+
+The dependency on Qt is optional. If it is not found, the debugger will not
+be configured as part of the project.

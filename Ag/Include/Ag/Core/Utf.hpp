@@ -2,7 +2,7 @@
 //! @brief The declaration of various objects and functions for converting
 //! between different encodings of Unicode characters.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2021-2023
+//! @date 2021-2024
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -15,7 +15,7 @@
 // Dependent Header Files
 ////////////////////////////////////////////////////////////////////////////////
 #include <string>
-#include <string_view>
+#include <vector>
 
 #include "Configuration.hpp"
 
@@ -197,10 +197,10 @@ size_t calculateConvertedLength(utf8_cptr_t utf8Text, Encoding targetEncoding);
 size_t calculateConvertedLength(utf16_cptr_t utf16Text, Encoding targetEncoding);
 size_t calculateConvertedLength(utf32_cptr_t utf32Text, Encoding targetEncoding);
 size_t calculateConvertedLength(wchar_cptr_t wideText, Encoding targetEncoding);
-size_t calculateConvertedLength(const std::string &utf8Text, Encoding targetEncoding);
-size_t calculateConvertedLength(const std::u16string &utf16Text, Encoding targetEncoding);
-size_t calculateConvertedLength(const std::u32string &utf32Text, Encoding targetEncoding);
-size_t calculateConvertedLength(const std::wstring &utf32Text, Encoding targetEncoding);
+size_t calculateConvertedLength(const std::string_view &utf8Text, Encoding targetEncoding);
+size_t calculateConvertedLength(const std::u16string_view&utf16Text, Encoding targetEncoding);
+size_t calculateConvertedLength(const std::u32string_view&utf32Text, Encoding targetEncoding);
+size_t calculateConvertedLength(const std::wstring_view&utf32Text, Encoding targetEncoding);
 size_t calculateLength(utf8_cptr_t utf8Text);
 size_t calculateLength(utf16_cptr_t utf16Text);
 size_t calculateLength(utf32_cptr_t utf32Text);
@@ -212,6 +212,8 @@ void appendToUtf16(std::u16string &destination, utf8_cptr_t utf8Bytes,
 void appendToUtf32(std::u32string &destination, utf8_cptr_t utf8Bytes,
                    size_t byteCount, size_t hintSize = 0);
 void appendToWide(std::wstring &destination, utf8_cptr_t utf8Bytes,
+                  size_t byteCount, size_t hintSize = 0);
+void appendToWide(std::vector<wchar_t>& destination, utf8_cptr_t utf8Bytes,
                   size_t byteCount, size_t hintSize = 0);
 void appendNative(std::wstring &destination, const char *nativeBytes);
 void appendNative(std::wstring &destination, const char *nativeBytes,

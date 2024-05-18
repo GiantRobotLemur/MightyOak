@@ -1,8 +1,8 @@
-//! @file Options.cpp
+//! @file AsmTools/Options.cpp
 //! @brief The definition of a set of properties configuring the assembly
 //! process.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2021-2023
+//! @date 2021-2024
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -118,6 +118,38 @@ void Options::addIncludePath(Ag::string_cref_t path)
     _includePaths.emplace_back(path);
 }
 
+
+////////////////////////////////////////////////////////////////////////////////
+// DirectiveDataTypeSymbol Member Definitions
+////////////////////////////////////////////////////////////////////////////////
+//! @brief Constructs a symbol object used as a search key.
+DirectiveDataTypeSymbol::DirectiveDataTypeSymbol(DirectiveDataType id) :
+    Ag::EnumSymbol<DirectiveDataType>(id),
+    _unitSize(0)
+{
+}
+
+//! @brief Constructs an object describing a member of the DirectiveDataType
+//! enumeration type.
+//! @param[in] id The binary value of the symbol.
+//! @param[in] symbol The internal symbol definition as text.
+//! @param[in] displayName The symbol as text to be displayed to the user.
+//! @param[in] description A description of the meaning of the symbol
+//! which can be displayed to the user.
+//! @param[in] unitSize The size of each individual value of the specified type.
+//! @note All strings should be static and UTF-8 encoded.
+DirectiveDataTypeSymbol::DirectiveDataTypeSymbol(DirectiveDataType id, const char *symbol,
+                        const char *displayName,
+                        const char *description,
+                        uint8_t unitSize) :
+    Ag::EnumSymbol<DirectiveDataType>(id, symbol, displayName, description),
+    _unitSize(unitSize)
+{
+}
+
+//! @brief Gets the count of bytes in each item of the specified data type.
+uint8_t DirectiveDataTypeSymbol::getUnitSize() const { return _unitSize; }
+
 ////////////////////////////////////////////////////////////////////////////////
 // Global Function Definitions
 ////////////////////////////////////////////////////////////////////////////////
@@ -151,6 +183,26 @@ const Ag::EnumInfo<ArchExtensionEnum> &getArchExtensionsType()
         { ArchExtensionEnum::ThumbV1, "ThumbV1", "Thumb V1", "Version 1 16-bit thumb instruction set used on ARM v3+." },
         { ArchExtensionEnum::ThumbV2, "ThumbV2", "Thumb V2", "Version 1 16-bit thumb instruction set used on ARM v5+." },
         { ArchExtensionEnum::BreakPt, "BreakPt", "Break Point", "The debug break point implemented by ARM v5+." },
+    });
+
+    return instance;
+}
+
+//! @brief Gets static metadata for the DirectiveDataType enumeration.
+const DirectiveDataTypeInfo &getDirectiveDataTypeInfo()
+{
+    static const DirectiveDataTypeInfo instance({
+        { DirectiveDataType::Byte, "Byte", "Byte", "An unsigned 8-bit scalar value.", 1 },
+        { DirectiveDataType::HalfWord, "HalfWord", "Half Word", "An unsigned 16-bit scalar value.", 2 },
+        { DirectiveDataType::Word, "Word", "Word", "An unsigned 32-bit scalar value.", 4 },
+        { DirectiveDataType::LongWord, "LongWord", "Long Word", "An unsigned 64-bit scalar value.", 8 },
+        { DirectiveDataType::NativeString, "NativeString", "String (Native Encoding)", "A single-byte encoded character string.", 1 },
+        { DirectiveDataType::Utf8String, "Utf8String", "String (UTF-8)", "A UTF-8 encoded Unicode string.", 1 },
+        { DirectiveDataType::Utf16String, "Utf16String", "String (UTF-16)", "A UTF-16 encoded Unicode string.", 2 },
+        { DirectiveDataType::Utf32String, "Utf32String", "String (UTF-32)", "A string of 32-bit Unicode code points.", 4 },
+        { DirectiveDataType::Real32, "Real32", "Real (32-bit Single Precision)", "A floating point scalar value with single precision.", 4 },
+        { DirectiveDataType::Real64, "Real64", "Real (64-bit Double Precision)", "A floating point scalar value with double precision.", 8 },
+        { DirectiveDataType::Real96, "Real96", "Real (96-bit Extended Precision)", "A floating point scalar value with extended precision.", 12 },
     });
 
     return instance;

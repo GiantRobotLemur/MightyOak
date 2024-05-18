@@ -2,7 +2,7 @@
 //! @brief The definition of stand-alone functions which are internal to the
 //! Core library.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2021-2023
+//! @date 2021-2024
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -206,6 +206,42 @@ bool tryOpenFile(const String &fileName, const utf8_cptr_t mode,
 #endif
 
     return isOK;
+}
+
+//! @brief Determines if output to the console is enabled.
+//! @retval true The stdout stream is open and can be written to.
+//! @retval false The stdout stream is not open.
+//! @details This only really matters for a Win32 GUI application, but exists
+//! for all platforms.
+bool isStdoutEnabled()
+{
+#ifdef _WIN32
+    return (::GetStdHandle(STD_OUTPUT_HANDLE) != 0);
+#else
+    return true;
+#endif
+}
+
+//! @brief Enables text output to the console.
+//! @details This only really matters for a Win32 GUI application, but exists
+//! for all platforms.
+void enableStdout()
+{
+#ifdef _WIN32
+    if (::AttachConsole(ATTACH_PARENT_PROCESS) || ::AllocConsole())
+    {
+#ifdef _MSC_VER
+        FILE *replacementStdOut = nullptr;
+        FILE *replacementStdErr = nullptr;
+
+        freopen_s(&replacementStdOut, "CONOUT$", "w", stdout);
+        freopen_s(&replacementStdErr, "CONOUT$", "w", stderr);
+#else
+        freopen("CONOUT$", "w", stdout);
+        freopen("CONOUT$", "w", stderr);
+#endif
+    }
+#endif
 }
 
 } // namespace Ag

@@ -7,6 +7,6 @@ add_gui_app(EmuApp NAME         "MightyOak"
                    SOURCES      Main.cpp
                                 CommandLineOptions.cpp
                                 CommandLineOptions.hpp
-                                App.cpp
-                                App.hpp
+                                EmulatorApp.cpp
+                                EmulatorApp.hpp
                    LIBS         AgCore EmuUI)

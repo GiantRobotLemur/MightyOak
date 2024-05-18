@@ -2,7 +2,7 @@
 //! @brief The definition of various objects and functions used to convert
 //! between the different encodings of Unicode characters.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2021-2023
+//! @date 2021-2024
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -278,7 +278,7 @@ size_t utf8Length(utf16_cptr_t utf16Text)
 //! @param[in] utf16Text The text to calculate the encoded length of.
 //! @return The count of UTF-8 bytes required to encode the string not including
 //! any terminating null character.
-size_t utf8Length(const std::u16string &utf16Text)
+size_t utf8Length(const std::u16string_view &utf16Text)
 {
     FromUtf16Converter inputConverter;
     bool hasError = false;
@@ -337,7 +337,7 @@ size_t utf8Length(utf32_cptr_t utf32Text)
 //! @param[in] utf32Text The text to calculate the encoded length of.
 //! @return The count of UTF-8 bytes required to encode the string not including
 //! any terminating null character.
-size_t utf8Length(const std::u32string &utf32Text)
+size_t utf8Length(const std::u32string_view &utf32Text)
 {
     size_t length = 0;
 
@@ -390,7 +390,7 @@ size_t utf16Length(utf8_cptr_t utf8Text)
 //! encoded using UTF-16 words.
 //! @param[in] utf8Text The string of characters to scan.
 //! @return The count of UTF-16 words required to encode the string.
-size_t utf16Length(const std::string &utf8Text)
+size_t utf16Length(const std::string_view &utf8Text)
 {
     FromUtf8Converter inputConverter;
     size_t length = 0;
@@ -422,7 +422,7 @@ size_t utf16Length(const std::string &utf8Text)
 //! encoded using UTF-16 words
 //! @param[in] utf32Text The string of characters to scan.
 //! @return The count of UTF-16 words required to encode the string.
-size_t utf16Length(const std::u32string &utf32Text)
+size_t utf16Length(const std::u32string_view &utf32Text)
 {
     size_t length = 0;
 
@@ -470,7 +470,7 @@ size_t utf32Length(utf8_cptr_t utf8Text)
 //! encoded using UTF-32 code points.
 //! @param[in] utf8Text The string of characters to scan.
 //! @return The count of code points required to encode the string.
-size_t utf32Length(const std::string &utf8Text)
+size_t utf32Length(const std::string_view &utf8Text)
 {
     FromUtf8Converter inputConverter;
     size_t length = 0;
@@ -497,7 +497,7 @@ size_t utf32Length(const std::string &utf8Text)
 //! encoded using UTF-32 code points.
 //! @param[in] utf16Text The string of characters to scan.
 //! @return The count of code points required to encode the string.
-size_t utf32Length(const std::u16string &utf16Text)
+size_t utf32Length(const std::u16string_view &utf16Text)
 {
     FromUtf16Converter inputConverter;
     size_t length = 0;
@@ -1214,7 +1214,7 @@ size_t calculateConvertedLength(wchar_cptr_t wideText, Encoding targetEncoding)
 //! @param[in] targetEncoding Indicates the encoding the characters should be
 //! converted to in order to calculate the length.
 //! @returns The length of the string in the target encoding.
-size_t calculateConvertedLength(const std::string &utf8Text, Encoding targetEncoding)
+size_t calculateConvertedLength(const std::string_view &utf8Text, Encoding targetEncoding)
 {
     size_t length = 0;
 
@@ -1247,7 +1247,7 @@ size_t calculateConvertedLength(const std::string &utf8Text, Encoding targetEnco
 //! @param[in] targetEncoding Indicates the encoding the characters should be
 //! converted to in order to calculate the length.
 //! @returns The length of the string in the target encoding.
-size_t calculateConvertedLength(const std::u16string &utf16Text, Encoding targetEncoding)
+size_t calculateConvertedLength(const std::u16string_view &utf16Text, Encoding targetEncoding)
 {
     size_t length = 0;
 
@@ -1280,7 +1280,7 @@ size_t calculateConvertedLength(const std::u16string &utf16Text, Encoding target
 //! @param[in] targetEncoding Indicates the encoding the characters should be
 //! converted to in order to calculate the length.
 //! @returns The length of the string in the target encoding.
-size_t calculateConvertedLength(const std::u32string &utf32Text, Encoding targetEncoding)
+size_t calculateConvertedLength(const std::u32string_view &utf32Text, Encoding targetEncoding)
 {
     size_t length = 0;
 
@@ -1313,7 +1313,7 @@ size_t calculateConvertedLength(const std::u32string &utf32Text, Encoding target
 //! @param[in] targetEncoding Indicates the encoding the characters should be
 //! converted to in order to calculate the length.
 //! @returns The length of the string in the target encoding.
-size_t calculateConvertedLength(const std::wstring &wideText, Encoding targetEncoding)
+size_t calculateConvertedLength(const std::wstring_view &wideText, Encoding targetEncoding)
 {
     size_t length = 0;
 
@@ -1322,13 +1322,13 @@ size_t calculateConvertedLength(const std::wstring &wideText, Encoding targetEnc
         switch (targetEncoding)
         {
 #ifdef WCHAR_IS_32BIT
-        case Utf8: length = utf8Length(reinterpret_cast<utf32_cptr_t>(wideText.c_str())); break;
-        case Utf16: length = utf16Length(reinterpret_cast<utf32_cptr_t>(wideText.c_str())); break;
+        case Utf8: length = utf8Length(reinterpret_cast<utf32_cptr_t>(wideText.data())); break;
+        case Utf16: length = utf16Length(reinterpret_cast<utf32_cptr_t>(wideText.data())); break;
         case Utf32: length = std::wcslen(wideText.c_str()); break;
 #else
-        case Utf8: length = utf8Length(reinterpret_cast<utf16_cptr_t>(wideText.c_str())); break;
+        case Utf8: length = utf8Length(reinterpret_cast<utf16_cptr_t>(wideText.data())); break;
         case Utf16: length = wideText.length(); break;
-        case Utf32: length = utf32Length(reinterpret_cast<utf16_cptr_t>(wideText.c_str())); break;
+        case Utf32: length = utf32Length(reinterpret_cast<utf16_cptr_t>(wideText.data())); break;
 #endif
         case Wide: length = wideText.length(); break;
         case Encoding_Max:
@@ -1554,16 +1554,9 @@ void appendToUtf32(std::u32string &destination, utf8_cptr_t utf8Bytes,
     }
 }
 
-//! @brief Converts a bounded array of UTF-8 encode bytes to wide characters
-//! and appends the results to an STL string.
-//! @param[out] destination The STL string to receive the converted characters.
-//! @param[in] utf8Bytes The UTF-8 encoded bytes to convert.
-//! @param[in] byteCount The count of elements in utf8Bytes.
-//! @param[in] hintSize The optional hint as to how many wide characters are
-//! likely to be produced from the conversion.
-//! @return An STL string containing the converted text.
-void appendToWide(std::wstring &destination, utf8_cptr_t utf8Bytes,
-                  size_t byteCount, size_t hintSize /* = 0 */)
+template<typename TBuffer>
+void appendToWideInternal(TBuffer& destination, utf8_cptr_t utf8Bytes,
+                          size_t byteCount, size_t hintSize)
 {
 #ifndef WCHAR_IS_32BIT
     ToUtf16Converter outputConverter;
@@ -1574,30 +1567,24 @@ void appendToWide(std::wstring &destination, utf8_cptr_t utf8Bytes,
     bool hasError = false;
     char32_t codePoint = U'\0';
 
-    if (hintSize > 0)
+    size_t reserveSize = (hintSize > 0) ? hintSize :
+        calculateConvertedLength(std::string_view(utf8Bytes, byteCount),
+            Encoding::Wide);
+
+    if (destination.capacity() < reserveSize)
     {
-        destination.reserve(hintSize + destination.size());
+        destination.reserve(reserveSize);
     }
-    else
-    {
-        destination.reserve(byteCount + destination.size());
-    }
+
     for (size_t index = 0; index < byteCount; ++index)
     {
-#ifdef WCHAR_IS_32BIT
         // Append the converted code points raw.
         if (inputConverter.tryConvert(bytes[index], codePoint, hasError))
         {
+#ifdef WCHAR_IS_32BIT
             destination.push_back(codePoint);
-        }
-        else if (hasError)
-        {
-            inputConverter.reset();
-        }
 #else
-        // Convert to code points and then UTF-16.
-        if (inputConverter.tryConvert(bytes[index], codePoint, hasError))
-        {
+            // Convert to code points and then UTF-16.
             outputConverter.setCodePoint(codePoint);
             char16_t utf16word = u'\0';
 
@@ -1605,13 +1592,41 @@ void appendToWide(std::wstring &destination, utf8_cptr_t utf8Bytes,
             {
                 destination.push_back(utf16word);
             }
+#endif
         }
         else if (hasError)
         {
             inputConverter.reset();
         }
-#endif
     }
+}
+
+//! @brief Converts a bounded array of UTF-8 encode bytes to wide characters
+//! and appends the results to an STL string.
+//! @param[out] destination The STL string to receive the converted characters.
+//! @param[in] utf8Bytes The UTF-8 encoded bytes to convert.
+//! @param[in] byteCount The count of elements in utf8Bytes.
+//! @param[in] hintSize The optional hint as to how many wide characters are
+//! likely to be produced from the conversion.
+void appendToWide(std::wstring &destination, utf8_cptr_t utf8Bytes,
+                  size_t byteCount, size_t hintSize /* = 0 */)
+{
+    appendToWideInternal(destination, utf8Bytes, byteCount, hintSize);
+}
+
+//! @brief Converts a bounded array of UTF-8 encode bytes to wide characters
+//! and appends the results to an STL string.
+//! @param[out] destination The STL wide character vector to receive the converted
+//! characters but no terminating null.
+//! @param[in] utf8Bytes The UTF-8 encoded bytes to convert.
+//! @param[in] byteCount The count of elements in utf8Bytes.
+//! @param[in] hintSize The optional hint as to how many wide characters are
+//! likely to be produced from the conversion.
+//! @note No terminating null character is appended.
+void appendToWide(std::vector<wchar_t>& destination, utf8_cptr_t utf8Bytes,
+                  size_t byteCount, size_t hintSize /* = 0 */)
+{
+    appendToWideInternal(destination, utf8Bytes, byteCount, hintSize);
 }
 
 //! @brief Converts a null-terminated array of characters in the native code

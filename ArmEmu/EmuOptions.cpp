@@ -2,7 +2,7 @@
 //! @brief The definition of an object defining the configuration of a system
 //! to emulate.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2023
+//! @date 2023-2024
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -20,6 +20,49 @@
 namespace Mo {
 namespace Arm {
 
+namespace {
+
+////////////////////////////////////////////////////////////////////////////////
+// Local Data
+////////////////////////////////////////////////////////////////////////////////
+//! @brief The path used to resolve paths to 'known' ROM images.
+static Ag::Fs::Path _romImageDirPath;
+
+} // Anonymous namespace
+
+////////////////////////////////////////////////////////////////////////////////
+// SystemROMPresetSymbol Member Definitions
+////////////////////////////////////////////////////////////////////////////////
+//! @brief Constructs a symbol description used as a look-up key.
+//! @param[in] id The symbol to look up.
+SystemROMPresetSymbol::SystemROMPresetSymbol(SystemROMPreset id) :
+    Ag::EnumSymbol<SystemROMPreset>(id)
+{
+}
+
+//! @brief Constructs a description of a symbol in the SystemROMPreset
+//! enumeration type.
+//! @param[in] id The symbol being described.
+//! @param[in] symbol The symbol as text.
+//! @param[in] displayName The text representing the value to display in a UI.
+//! @param[in] description Detailed description text to display in a UI.
+//! @param[in] romImageFilename The name of the file containing the image of
+//! the ROM being identified.
+SystemROMPresetSymbol::SystemROMPresetSymbol(SystemROMPreset id, Ag::utf8_cptr_t symbol,
+                      Ag::utf8_cptr_t displayName,
+                      Ag::utf8_cptr_t description,
+                      Ag::utf8_cptr_t romImageFilename) :
+    Ag::EnumSymbol<SystemROMPreset>(id, symbol, displayName, description),
+    _romImageFilename(romImageFilename)
+{
+}
+
+//! @brief Gets the name of the file containing the ROM image.
+const std::string_view &SystemROMPresetSymbol::getRomImageFilename() const
+{
+    return _romImageFilename;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // Options Member Definitions
 ////////////////////////////////////////////////////////////////////////////////
@@ -27,7 +70,7 @@ namespace Arm {
 //! machine with 2MB of RAM.
 Options::Options() :
     _model(SystemModel::ASeries),
-    _processor(ProcessorModel::ARM2),
+    _processor(ProcessorModel::ARM250),
     _processorSpeedMHz(12),
     _ramSizeKb(2048),
     _videoRamSizeKb(0),
@@ -37,7 +80,7 @@ Options::Options() :
     _floppyDriveCount(1),
     _joystickType(JoystickInterface::Digital),
     _joystickCount(2),
-    _systemRom(SystemROMPreset::RiscOS_3_11)
+    _systemRom(SystemROMPreset::Custom)
 {
 }
 
@@ -212,6 +255,53 @@ SystemROMPreset Options::getSystemRom() const
 void Options::setSystemRom(SystemROMPreset presetRom)
 {
     _systemRom = presetRom;
+}
+
+//! @brief Gets the path to the low ROM image to be loaded.
+Ag::Fs::Path Options::getRomPath() const
+{
+    if (_systemRom == SystemROMPreset::Custom)
+    {
+        return _customRomPath;
+    }
+    else
+    {
+        Ag::Fs::PathBuilder builder(_romImageDirPath);
+
+        if (builder.isEmpty())
+        {
+            // Select a default location relative to the program location.
+            builder.assignProgramDirectory();
+
+#ifndef _WIN32
+            // Under POSIX
+            // The app is in <sys base>/bin
+            // The ROM data is in <sys base>/shared/MightyOak/ROMs
+
+            builder.popElement();
+            builder.pushElement("shared");
+            builder.pushElement("MightyOak");
+#endif
+            // Under Windows, the app is in C:\Program Files\MightyOak
+            // The ROMs are under C:\Program Files\MightyOak\ROMs
+            builder.pushElement("ROMs");
+        }
+
+        const auto &sysRomType = getSystemROMPresetType();
+        size_t index;
+
+        if (sysRomType.tryFindSymbolIndex(_systemRom, index))
+        {
+            const auto &symbol = sysRomType.getSymbols()[index];
+
+            builder.pushElement(symbol.getRomImageFilename());
+        }
+
+        // Ensure the path has no relative elements.
+        builder.makeCanonical();
+
+        return Ag::Fs::Path(builder);
+    }
 }
 
 //! @brief Sets a custom ROM image to be installed in the memory map
@@ -516,6 +606,75 @@ bool Options::validate(Ag::String &error) const
     return true;
 }
 
+//! @brief Determines if a RAM size is valid on a MEMC-based system.
+//! @param[in] ramSizeKb The RAM size to test in kilobytes.
+//! @retval true If the specified size is valid.
+//! @retval false If the specified size is incompatible with a MEMC-based
+//! system.
+bool Options::isValidMemcRAMSize(uint32_t ramSizeKb)
+{
+    bool isOK = false;
+
+    switch (ramSizeKb)
+    {
+    case 512:
+    case 1024:
+    case 2048:
+    case 4096:
+    case 8192:
+    case 12288:
+    case 16384:
+        isOK = true;
+        break;
+    }
+
+    return isOK;
+}
+
+//! @brief Determines if a RAM size is valid on a RiscPC-based system.
+//! @param[in] ramSizeKb The RAM size to test in kilobytes.
+//! @retval true If the specified size is valid.
+//! @retval false If the specified size is incompatible with a RiscPC-based
+//! system.
+bool Options::isValidRiscPCRAMSize(uint32_t ramSizeKb)
+{
+    int msb, lsb;
+
+    if ((Ag::Bin::popCount(ramSizeKb) <= 4) &&
+        Ag::Bin::bitScanForward(ramSizeKb, lsb) &&
+        Ag::Bin::bitScanReverse(ramSizeKb, msb) &&
+        (lsb >= 12) && (msb <= 18))
+    {
+        // The RiscPC can have up to 4 x SIMMs of between 4 and 64 MB.
+        uint32_t size = ramSizeKb;
+        uint8_t simmCount = 0;
+
+        while (Ag::Bin::bitScanReverse(size, lsb))
+        {
+            // Count 128MB and 256MB as 2 or 4 SIMMs respectively.
+            simmCount += static_cast<uint8_t>(std::max<int>(lsb, 16) >> 16);
+
+            // Clear the size bit.
+            size ^= 1 << lsb;
+        }
+
+        return (simmCount > 0) && (simmCount <= 4);
+    }
+
+    return false;
+}
+
+//! @brief Sets the path to the folder containing the 'known' OS ROM images.
+//! @param[in] basePath The new base ROM image folder path.
+void Options::setRomImageBasePath(const Ag::Fs::Path &basePath)
+{
+    if (basePath.isEmpty() == false)
+    {
+        // Ensure the path is rooted.
+        _romImageDirPath = basePath.convertToAbsolute();
+    }
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // Global Function Definitions
 ////////////////////////////////////////////////////////////////////////////////
@@ -536,8 +695,9 @@ const SystemModelType &getSystemModelType()
 const ProcessorModelType &getProcessorModelType()
 {
     static const ProcessorModelType metadata({
-        { ProcessorModel::ARM2, "ARM2", "ARM 2", "Base on the original ARMv2 architecture." },
-        { ProcessorModel::ARM3, "ARM3", "ARM 3", "The ARMv2 architecture with on-chip cache." },
+        { ProcessorModel::ARM2, "ARM2", "ARM 2", "Based on the original ARMv2 architecture." },
+        { ProcessorModel::ARM250, "ARM250", "ARM 250", "The base ARMv2 architecture with the SWP instruction." },
+        { ProcessorModel::ARM3, "ARM3", "ARM 3", "The ARMv2 architecture with SWP and on-chip cache." },
         { ProcessorModel::ARM3_FPA, "ARM3_FPA", "ARM 3 + FPA", "The ARM 3 processor with a Floating Point Accelerator co-processor."},
         { ProcessorModel::ARM610, "ARM610", "ARM 610", "The first ARMv3 desktop processor." },
         { ProcessorModel::ARM710, "ARM710", "ARM 710", "The second ARMv3 desktop processor." },
@@ -555,19 +715,19 @@ const ProcessorModelType &getProcessorModelType()
 const SystemROMPresetType &getSystemROMPresetType()
 {
     static const SystemROMPresetType metadata({
-        { SystemROMPreset::Custom, "Custom", "Custom ROM Image", "A custom ROM image provided by an external file." },
-        { SystemROMPreset::Arthur_0_30, "Arthur_0_30", "Arthur 0.30", "The original Archimedes operating system heavily based on MOS." },
-        { SystemROMPreset::Arthur_1_20, "Arthur_1_20", "Arthur 1.20", "The second iteration of the basic Archimedes operating system." },
-        { SystemROMPreset::RiscOS_2_00, "RISCOS_2_00", "RISC OS 2.00", "A system with a graphically rich WIMP user interface." },
-        { SystemROMPreset::RiscOS_2_01, "RISCOS_2_01", "RISC OS 2.01", "Contained minor bug fixes from RISC OS 2.00." },
-        { SystemROMPreset::RiscOS_3_00, "RISCOS_3_00", "RISC OS 3.00", "Much more feature rich than RISC OS 2 with support for A-Series hardware." },
-        { SystemROMPreset::RiscOS_3_10, "RISCOS_3_10", "RISC OS 3.10", "Adds bug fixes on top of RISC OS 3.00." },
-        { SystemROMPreset::RiscOS_3_11, "RISCOS_3_11", "RISC OS 3.11", "Adds further minor bug fixes on RISC OS 3.10." },
-        { SystemROMPreset::RiscOS_3_19, "RISCOS_3_19", "RISC OS 3.19", "A German language version of RISC OS 3.11." },
-        { SystemROMPreset::RiscOS_3_50, "RISCOS_3_50", "RISC OS 3.50", "Provides support for RiscPC hardware and the ARM 610." },
-        { SystemROMPreset::RiscOS_3_60, "RISCOS_3_60", "RISC OS 3.60", "Required to provide support for the ARM 710 processor." },
-        { SystemROMPreset::RiscOS_3_70, "RISCOS_3_70", "RISC OS 3.70", "Required to provide support for the StrongARM processor." },
-        { SystemROMPreset::RiscOS_3_71, "RISCOS_3_71", "RISC OS 3.71", "Contained additions for Java on a StrongARM RiscPC." },
+        { SystemROMPreset::Custom, "Custom", "Custom ROM Image", "A custom ROM image provided by an external file.", "" },
+        { SystemROMPreset::Arthur_0_30, "Arthur_0_30", "Arthur 0.30", "The original Archimedes operating system heavily based on MOS.", "Arthur_0_30.rom" },
+        { SystemROMPreset::Arthur_1_20, "Arthur_1_20", "Arthur 1.20", "The second iteration of the basic Archimedes operating system.", "Arthur_1_20.rom" },
+        { SystemROMPreset::RiscOS_2_00, "RISCOS_2_00", "RISC OS 2.00", "A system with a graphically rich WIMP user interface.", "RiscOS_2_00.rom" },
+        { SystemROMPreset::RiscOS_2_01, "RISCOS_2_01", "RISC OS 2.01", "Contained minor bug fixes from RISC OS 2.00.", "RiscOS_2_01.rom" },
+        { SystemROMPreset::RiscOS_3_00, "RISCOS_3_00", "RISC OS 3.00", "Much more feature rich than RISC OS 2 with support for A-Series hardware.", "RiscOS_3_00.rom" },
+        { SystemROMPreset::RiscOS_3_10, "RISCOS_3_10", "RISC OS 3.10", "Adds bug fixes on top of RISC OS 3.00.", "RiscOS_3_10.rom" },
+        { SystemROMPreset::RiscOS_3_11, "RISCOS_3_11", "RISC OS 3.11", "Adds further minor bug fixes on RISC OS 3.10.", "RiscOS_3_11.rom" },
+        { SystemROMPreset::RiscOS_3_19, "RISCOS_3_19", "RISC OS 3.19", "A German language version of RISC OS 3.11.", "RiscOS_3_19.rom" },
+        { SystemROMPreset::RiscOS_3_50, "RISCOS_3_50", "RISC OS 3.50", "Provides support for RiscPC hardware and the ARM 610.", "RiscOS_3_50.rom" },
+        { SystemROMPreset::RiscOS_3_60, "RISCOS_3_60", "RISC OS 3.60", "Required to provide support for the ARM 710 processor.", "RiscOS_3_60.rom" },
+        { SystemROMPreset::RiscOS_3_70, "RISCOS_3_70", "RISC OS 3.70", "Required to provide support for the StrongARM processor.", "RiscOS_3_70.rom" },
+        { SystemROMPreset::RiscOS_3_71, "RISCOS_3_71", "RISC OS 3.71", "Contained additions for Java on a StrongARM RiscPC.", "RiscOS_3_71.rom" },
     });
 
     return metadata;

@@ -1,7 +1,7 @@
 //! @file ArmEmu/ArmSystem.cpp
 //! @brief The definition of an object representing an emulated ARM-based system.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2023
+//! @date 2023-2024
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -25,16 +25,6 @@ namespace Arm {
 void IArmSystemDeleter::operator()(IArmSystem *sys) const
 {
     Ag::safeDelete(sys);
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// IAddressRegionDeleter Member Definitions
-////////////////////////////////////////////////////////////////////////////////
-//! @brief Disposes of a dynamically allocated IAddressRegion implementation.
-//! @param[in] region A pointer to the object to dispose of.
-void IAddressRegionDeleter::operator()(IAddressRegion *region) const
-{
-    Ag::safeDelete(region);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -295,80 +285,40 @@ uint32_t writeToPhysicalAddress(IArmSystem *sys, uint32_t physicalAddr,
 uint32_t readFromLogicalAddress(IArmSystem *sys, uint32_t logicalAddr,
                                 void *buffer, uint32_t length)
 {
-    const AddressMap &readMap = sys->getReadAddresses();
     uint8_t *target = reinterpret_cast<uint8_t *>(buffer);
     uint32_t bytesRead = 0;
     uint32_t logAddr = logicalAddr;
-    uint32_t physAddr;
 
-    while ((bytesRead < length) &&
-           sys->logicalToPhysicalAddress(logAddr, physAddr))
+    while (bytesRead < length)
     {
-        IAddressRegionPtr region;
-        uint32_t baseAddr = physAddr & ~3;
-        uint32_t addrOffset = physAddr & 3;
-        uint32_t mappingOffset, mappingLength;
+        PageMapping mapping;
 
-        if (readMap.tryFindRegion(baseAddr, region, mappingOffset,
-                                  mappingLength))
+        sys->logicalToPhysicalAddress(logAddr, mapping);
+
+        if (mapping.PageSize > 0)
         {
-            auto regionType = region->getType();
+            uint32_t pageOffset = logAddr - mapping.VirtualBaseAddr;
+            uint32_t bytesToRead = std::min(mapping.PageSize - pageOffset,
+                                            length - bytesRead);
 
-            // Adjust for alignment.
-            mappingLength -= addrOffset;
-            mappingOffset += addrOffset;
-            uint32_t bytesToRead = std::min(mappingLength, length - bytesRead);
-
-            if (regionType == RegionType::HostBlock)
+            if (mapping.Access & PageMapping::IsPresent)
             {
-                uint8_t *block = reinterpret_cast<uint8_t *>(static_cast<IHostBlockPtr>(region)->getHostAddress());
-
-                std::memcpy(target + bytesRead, block + mappingOffset,
-                            bytesToRead);
-
-                bytesRead += bytesToRead;
+                // The page is present, copy the data.
+                readFromPhysicalAddress(sys, mapping.PageBaseAddr + pageOffset,
+                                        target + bytesRead, bytesToRead);
             }
-            else if (regionType == RegionType::MMIO)
+            else
             {
-                if (mappingOffset & 3)
-                {
-                    throw Ag::OperationException("Reading from memory mapped I/O "
-                                                 "at a non-aligned address.");
-                }
-
-                IMMIOBlockPtr mmio = static_cast<IMMIOBlockPtr>(region);
-                uint32_t wordsToRead = bytesToRead >> 2;
-                uint32_t *wordTarget = reinterpret_cast<uint32_t *>(target + bytesRead);
-
-                for (uint32_t wordsRead = 0; wordsRead < wordsToRead; ++wordsRead)
-                {
-                    uint32_t word = mmio->read(mappingOffset + (wordsRead * 4));
-                    wordTarget[wordsRead] = word;
-                }
-
-                uint32_t wordBytesRead = wordsToRead * 4;
-                bytesRead += wordBytesRead;
-                bytesToRead -= wordBytesRead;
-
-                if (bytesToRead > 0)
-                {
-                    // Read a final word.
-                    uint32_t word = mmio->read(mappingOffset + wordBytesRead);
-
-                    // Copy the last 1-3 bytes.
-                    std::copy_n(reinterpret_cast<uint8_t *>(&word),
-                                bytesToRead, target + bytesRead);
-
-                    bytesRead += bytesToRead;
-                }
+                // The page is not present, fill with zeros.
+                std::memset(target + bytesRead, 0, bytesToRead);
             }
 
-            // Update the logical address so that we might read more.
+            // Move past the block.
+            bytesRead += bytesToRead;
             logAddr += bytesToRead;
         }
         else
         {
-            // The address is not mapped.
             break;
         }
     }
@@ -388,85 +338,39 @@ uint32_t readFromLogicalAddress(IArmSystem *sys, uint32_t logicalAddr,
 //! @note Writes to memory mapped I/O should be at 4-byte aligned addresses,
 //! even when quantities smaller than 4 bytes are to be written.
 uint32_t writeToLogicalAddress(IArmSystem *sys, uint32_t logicalAddr,
-                           const void *buffer, uint32_t length,
-                           bool useReadMap /*= false*/)
+                               const void *buffer, uint32_t length,
+                               bool useReadMap /*= false*/)
 {
-    const AddressMap &writeMap = useReadMap ? sys->getReadAddresses() :
-                                              sys->getWriteAddresses();
     const uint8_t *target = reinterpret_cast<const uint8_t *>(buffer);
     uint32_t bytesWritten = 0;
     uint32_t logAddr = logicalAddr;
-    uint32_t physAddr;
 
-    while ((bytesWritten < length) &&
-           sys->logicalToPhysicalAddress(logAddr, physAddr))
+    while (bytesWritten < length)
     {
-        IAddressRegionPtr region;
-        uint32_t baseAddr = physAddr & ~3;
-        uint32_t addrOffset = physAddr & 3;
-        uint32_t mappingOffset, mappingLength;
+        PageMapping mapping;
 
-        if (writeMap.tryFindRegion(baseAddr, region, mappingOffset,
-                                   mappingLength))
+        sys->logicalToPhysicalAddress(logAddr, mapping);
+
+        if (mapping.PageSize > 0)
         {
-            auto regionType = region->getType();
+            uint32_t pageOffset = logAddr - mapping.VirtualBaseAddr;
+            uint32_t bytesToWrite = std::min(mapping.PageSize - pageOffset,
+                                             length - bytesWritten);
 
-            // Adjust for alignment.
-            mappingLength -= addrOffset;
-            mappingOffset += addrOffset;
-            uint32_t bytesToWrite = std::min(mappingLength, length - bytesWritten);
-
-            if (regionType == RegionType::HostBlock)
+            if (mapping.Access & PageMapping::IsPresent)
             {
-                uint8_t *block = reinterpret_cast<uint8_t *>(static_cast<IHostBlockPtr>(region)->getHostAddress());
-
-                std::memcpy(block + mappingOffset, target + bytesWritten,
-                            bytesToWrite);
-
-                bytesWritten += bytesToWrite;
-            }
-            else if (regionType == RegionType::MMIO)
-            {
-                if (mappingOffset & 3)
-                {
-                    throw Ag::OperationException("Writing to memory mapped I/O "
-                                                 "at a non-aligned address.");
-                }
-
-                IMMIOBlockPtr mmio = static_cast<IMMIOBlockPtr>(region);
-                uint32_t wordsToWrite = bytesToWrite >> 2;
-                const uint32_t *wordTarget = reinterpret_cast<const uint32_t *>(target + bytesWritten);
-
-                for (uint32_t wordsWritten = 0; wordsWritten < wordsToWrite; ++wordsWritten)
-                {
-                    mmio->write(mappingOffset + (wordsWritten * 4),
-                                wordTarget[wordsWritten]);
-                }
-
-                uint32_t wordBytesWritten = wordsToWrite * 4;
-                bytesWritten += wordBytesWritten;
-                bytesToWrite -= wordBytesWritten;
-
-                if (bytesToWrite > 0)
-                {
-                    uint32_t lastWord = wordTarget[wordsToWrite];
-
-                    // Mask superfluous bits.
-                    uint32_t mask = (static_cast<uint32_t>(1) << bytesToWrite) - 1;
-
-                    // Write a final word.
-                    mmio->write(mappingOffset + wordBytesWritten, lastWord & mask);
-
-                    bytesWritten += bytesToWrite;
-                }
+                // The page is present, copy the data.
+                writeToPhysicalAddress(sys, mapping.PageBaseAddr + pageOffset,
+                                       target + bytesWritten, bytesToWrite,
+                                       useReadMap);
             }
 
-            // Update the logical address so that we might read more.
+            // Move past the block.
+            bytesWritten += bytesToWrite;
             logAddr += bytesToWrite;
         }
         else
         {
-            // The address is not mapped.
             break;
         }
     }

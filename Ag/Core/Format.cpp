@@ -1,7 +1,7 @@
 //! @file Core/Format.cpp
 //! @brief The definition of objects and functions used to format values as text.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2021-2023
+//! @date 2021-2024
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -1021,6 +1021,11 @@ void formatValue(std::string &buffer, const InsertionToken &token,
         hexOptions.setRadix(16);
         hexOptions.enableUpperCase(token.TypeCode == 'X');
 
+        if (token.Precision >= 0)
+        {
+            hexOptions.setMinimumWholeDigits(static_cast<uint16_t>(token.Precision));
+        }
+
         value.appendToString(hexOptions, buffer);
     }
     else if ((token.TypeCode == 'P') ||
@@ -1126,7 +1131,7 @@ void formatValue(std::string &buffer, const InsertionToken &token,
         else if (value.tryConvert(VariantTypes::Uint64, scalarType))
         {
             appendFileSize(sizeOptions, buffer,
-                           value.getRef<Uint64VariantType, uint64_t>());
+                           scalarType.getRef<Uint64VariantType, uint64_t>());
         }
         else
         {

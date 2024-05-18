@@ -2,7 +2,7 @@
 //! @brief The definition of an object which shares information between
 //! internal components of an emulated system.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2023
+//! @date 2023-2024
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -26,9 +26,12 @@ namespace Arm {
 //! @param[in] options An object describing the system being emulated.
 //! @param[in] eventQueue A reference to the FIFO used to pass message to the
 //! host input thread.
+//! @param[in] parentSystem The emulated system being interfaced.
 SystemContext::SystemContext(const Options &sysConfig,
-                             GuestEventQueue &eventQueue) :
+                             GuestEventQueue &eventQueue,
+                             IArmSystem *parentSystem) :
     _eventQueue(eventQueue),
+    _parentSystem(parentSystem),
     _taskQueueHead(nullptr),
     _masterClock(0),
     _masterFreq(sysConfig.getProcessorSpeedMHz() * 1000000u),
@@ -55,6 +58,12 @@ SystemContext::SystemContext(const Options &sysConfig,
 
         _fuzz[i] = fuzz;
     }
+}
+
+//! @brief Gets the emulated system being interfaced with.
+IArmSystem *SystemContext::getSystem() const
+{
+    return _parentSystem;
 }
 
 //! @brief Gets the count of CPU cycles elapsed since the emulated system

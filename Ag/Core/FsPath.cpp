@@ -1,7 +1,7 @@
 //! @file FsPath.cpp
 //! @brief The definition of an object representing a file path.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2022-2023
+//! @date 2022-2024
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -663,6 +663,11 @@ void PathBuilder::makeCanonical()
                         pos = _pathElements.erase(prev, pos);
                     }
                 }
+            }
+            else
+            {
+                // Move on to the next path element.
+                ++pos;
             }
         }
 

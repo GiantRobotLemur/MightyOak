@@ -15,6 +15,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 #include <cstdint>
 
+#include <atomic>
 #include <type_traits>
 #include <vector>
 
@@ -56,7 +57,7 @@ uint8_t popCount(uint32_t bits);
 //! @tparam TIntegral The unsigned integer type of the mask to create.
 //! @param[in] bitCount The count of consecutive bits to set.
 //! @return A mask of bits in the appropriate integral type.
-template<typename TIntegral> TIntegral makeMask(int32_t bitCount)
+template<typename TIntegral> constexpr TIntegral makeMask(int32_t bitCount)
 {
     TIntegral mask = 0;
 
@@ -263,6 +264,62 @@ constexpr TEnum extractEnum(TInput bitfield) noexcept
 //              "extractBits() failed.");
 //static_assert(extractEnum<GeneralRegister, 8, 8, uint16_t>(0x0EEF) == GeneralRegister::R14,
 //              "extractBits() failed.");
+
+//! @brief Turns a bool of true into ~0 and false to 0 using branchless code.
+//! @tparam T The data type of the resultant value.
+//! @param[in] flag The boolean flag to convert.
+//! @return A value of (T)-1 or (T)0.
+template<typename T>
+constexpr T makeNegativeBool(bool flag)
+{
+    using SignedT = typename std::make_signed<T>::type;
+    SignedT signedValue = -static_cast<int8_t>(flag);
+
+    return static_cast<T>(signedValue);
+}
+
+//! @brief Updates a bit within a bitfield based on a boolean value.
+//! @tparam T The data type of the bitfield being updated.
+//! @param[in] inputMask The current state of the bitfield.
+//! @param[in] bit The 0-based index of the bit to modify.
+//! @param[in] state The new state of the bit.
+//! @return The new mask value.
+//! @note Branchless implementation.
+template<typename T>
+constexpr void updateBit(std::atomic<T> &inputMask, uint8_t bit, bool state) noexcept
+{
+    const T modifyMask = static_cast<T>(1) << bit;
+
+    inputMask = (inputMask & ~modifyMask) | (makeNegativeBool<T>(state) & modifyMask);
+}
+
+//! @brief Updates a bit within a bitfield based on a boolean value.
+//! @tparam T The data type of the bitfield being updated.
+//! @param[in] inputMask The current state of the bitfield.
+//! @param[in] bit The 0-based index of the bit to modify.
+//! @param[in] state The new state of the bit.
+//! @return The new mask value.
+//! @note Branchless implementation.
+template<typename T>
+constexpr void updateBit(T &inputMask, uint8_t bit, bool state) noexcept
+{
+    const T modifyMask = static_cast<T>(1) << bit;
+
+    inputMask = (inputMask & ~modifyMask) | (makeNegativeBool<T>(state) & modifyMask);
+}
+
+//! @brief Updates a set of bits within a bitfield based on a boolean value.
+//! @tparam T The data type of the bitfield being updated.
+//! @param[in] inputMask The current state of the bitfield.
+//! @param[in] bitMask The mask of bits to modify.
+//! @param[in] state The new state of the bit.
+//! @return The new mask value.
+//! @note Branchless implementation.
+template<typename T>
+constexpr void updateMask(T &inputMask, T bitMask, bool state) noexcept
+{
+    inputMask = (inputMask & ~bitMask) | (makeNegativeBool<T>(state) & bitMask);
+}
 
 } // namespace Bin
 } // namespace Ag

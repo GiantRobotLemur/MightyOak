@@ -2,7 +2,7 @@
 //! @brief The declaration of a set of template components which manage the
 //! emulated execution of ARM or Thumb instructions.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2023
+//! @date 2023-2024
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -67,7 +67,21 @@ public:
     {
     }
 
+    // Accessors
+    //! @brief Determines if the current PC points to the next instruction
+    //! to execute rather than the next instruction to fetch, 8-bytes beyond
+    //! due to pipelining.
+    //! @retval true The current PC points to the next instruction to execute,
+    //! as it might after a executing a branch or a direct write.
+    //! @retval false The current PC points to the next instruction to fetch,
+    //! 8 bytes beyond the next instruction to execute.
+    bool isFlushPending() const { return _pipeline.isFlushPending(); }
+
     // Operations
+    //! @brief Flushes the pre-fetch instruction queue after a direct write to
+    //! the PC.
+    void flushPipeline() { _pipeline.flushPipeline(); }
+
     //! @brief Executes instructions until a host or debug interrupt is raised or
     //! after the first run if in single step mode.
     //! @param[in] singleStep True to only run the pipeline once, false to run
@@ -142,6 +156,10 @@ public:
         // Capture the end time and therefore the duration of the run.
         metrics.ElapsedTime = Ag::HighResMonotonicTimer::getDuration(startTime);
         metrics.CycleCount = _context.getCPUClockTicks() - startTicks;
+
+        // Ensure the PC reflects the next instruction to EXECUTE, not the
+        // next one to FETCH.
+        _pipeline.unflushPipeline();
 
         return metrics;
     }

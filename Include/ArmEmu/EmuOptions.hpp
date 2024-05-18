@@ -2,7 +2,7 @@
 //! @brief The declaration of an object defining the configuration of a system
 //! to emulate.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2023
+//! @date 2023-2024
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -51,6 +51,7 @@ using SystemModelType = Ag::EnumInfo<SystemModel>;
 enum class ProcessorModel : uint8_t
 {
     ARM2,
+    ARM250,
     ARM3,
     ARM3_FPA,
     ARM610,
@@ -65,7 +66,7 @@ enum class ProcessorModel : uint8_t
 using ProcessorModelType = Ag::EnumInfo<ProcessorModel>;
 
 //! @brief Identifies the preset ROM configured on the emulated system.
-enum class SystemROMPreset
+enum class SystemROMPreset : uint8_t
 {
     Custom,
     Arthur_0_30,
@@ -82,7 +83,28 @@ enum class SystemROMPreset
     RiscOS_3_71,
 };
 
-using SystemROMPresetType = Ag::EnumInfo<SystemROMPreset>;
+//! @brief An object which describes a symbol in the SystemROMPreset
+//! enumeration type.
+class SystemROMPresetSymbol : public Ag::EnumSymbol<SystemROMPreset>
+{
+private:
+    // Internal Fields
+    std::string_view _romImageFilename;
+
+public:
+    // Construction/Destruction
+    SystemROMPresetSymbol(SystemROMPreset id);
+    SystemROMPresetSymbol(SystemROMPreset id, Ag::utf8_cptr_t symbol,
+                          Ag::utf8_cptr_t displayName,
+                          Ag::utf8_cptr_t description,
+                          Ag::utf8_cptr_t romImageFilename);
+    ~SystemROMPresetSymbol() = default;
+
+    // Accessors
+    const std::string_view &getRomImageFilename() const;
+};
+
+using SystemROMPresetType = Ag::EnumInfo<SystemROMPreset, SystemROMPresetSymbol>;
 
 //! @brief Defines the type of physical display device to assume is attached
 //! to the emulated system.
@@ -157,10 +179,15 @@ public:
     void setJoystickCount(uint8_t count);
     SystemROMPreset getSystemRom() const;
     void setSystemRom(SystemROMPreset presetRom);
+    Ag::Fs::Path getRomPath() const;
     void setCustomRom(const Ag::Fs::Path &romPath);
 
     // Operations
     bool validate(Ag::String &error) const;
+
+    static bool isValidMemcRAMSize(uint32_t ramSizeKb);
+    static bool isValidRiscPCRAMSize(uint32_t ramSizeKb);
+    static void setRomImageBasePath(const Ag::Fs::Path &basePath);
 private:
     // Internal Types
 

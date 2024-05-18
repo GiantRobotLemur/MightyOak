@@ -27,6 +27,9 @@ project(MightyOak
         HOMEPAGE_URL "https://github.com/GiantRobotLemur/MightyOak"
         LANGUAGES ${PROJ_LANGUAGES})
 
+# Set the use of IDE folders before anything else.
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+
 # Configure required external packages.
 include(CheckLanguage)
 find_package(GTest 1.10 REQUIRED)
@@ -34,6 +37,8 @@ find_package(Doxygen 1.8 OPTIONAL_COMPONENTS dot)
 find_package(SDL2 REQUIRED)
 find_package(OpenGL REQUIRED) # For GLU
 find_package(glm REQUIRED)
+
+find_package(Qt6 QUIET COMPONENTS Core Widgets Concurrent)
 
 if (${SDL2_FOUND})
     message(STATUS "Found SDL library ${SDL2_VERSION}.")
@@ -45,6 +50,11 @@ endif()
 
 if (${glm_FOUND})
     message(STATUS "Found GLM library ${glm_VERSION}.")
+endif()
+
+if (${Qt6_FOUND})
+    message(STATUS "Found Qt6 suite ${Qt6_VERSION}.")
+    qt_standard_project_setup()
 endif()
 
 # Limit configurations
@@ -85,9 +95,19 @@ add_subdirectory(Ag/ObjectGL)
 #add_subdirectory(Ag/Geometry)
 #add_subdirectory(Ag/Gfx)
 
+if ("${Qt6_FOUND}")
+    add_subdirectory(Ag/QtInterop)
+endif()
+
 # ARM Emulator Modules
 add_subdirectory(AsmTools)
 add_subdirectory(ArmEmu)
+
+if ("${Qt6_FOUND}")
+    message("-- [Optional] Configuring ARM Debugger project")
+    add_subdirectory(ArmDebugger)
+endif()
+
 #add_subdirectory(EmuPlatform)
 add_subdirectory(EmuUI)
 add_subdirectory(EmulatorApp)
@@ -131,12 +151,25 @@ if (DEFINED DOXYGEN_FOUND)
     list(APPEND DOC_SRCS "${CMAKE_CURRENT_SOURCE_DIR}/Ag/Core" 
                          "${AG_INCLUDE_DIR}/Ag/Core.hpp"
                          "${AG_INCLUDE_DIR}/Ag/Core")
+    list(APPEND DOC_SRCS "${CMAKE_CURRENT_SOURCE_DIR}/Ag/SdlTools" 
+                         "${AG_INCLUDE_DIR}/Ag/SdlTools.hpp"
+                         "${AG_INCLUDE_DIR}/Ag/SdlTools")
     list(APPEND DOC_SRCS "${CMAKE_CURRENT_SOURCE_DIR}/AsmTools"
                          "${MO_INCLUDE_DIR}/AsmTools.hpp"
                          "${MO_INCLUDE_DIR}/AsmTools")
     list(APPEND DOC_SRCS "${CMAKE_CURRENT_SOURCE_DIR}/ArmEmu"
                          "${MO_INCLUDE_DIR}/ArmEmu.hpp"
                          "${MO_INCLUDE_DIR}/ArmEmu")
+
+if (DEFINED WIN32)
+    list(APPEND DOC_SRCS "${CMAKE_CURRENT_SOURCE_DIR}/Ag/Win32Base"
+                         "${AG_INCLUDE_DIR}/Ag/Win32Base.hpp"
+                         "${AG_INCLUDE_DIR}/Ag/Win32Base"
+                         "${CMAKE_CURRENT_SOURCE_DIR}/Ag/Win32UI"
+                         "${AG_INCLUDE_DIR}/Ag/Win32UI.hpp"
+                         "${AG_INCLUDE_DIR}/Ag/Win32UI")
+endif()
+
 
     doxygen_add_docs(Documentation ${DOC_SRCS}
                      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}

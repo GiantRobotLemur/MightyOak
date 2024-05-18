@@ -2,7 +2,7 @@
 //! @brief The definition of an object which indexes IAddressRegion objects
 //! by the range of addresses they span.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2023
+//! @date 2023-2024
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -92,21 +92,64 @@ It branchless_lower_bound(It begin, It end, const T &value)
 } // Anonymous namespace
 
 ////////////////////////////////////////////////////////////////////////////////
+// PageMapping Member Definitions
+////////////////////////////////////////////////////////////////////////////////
+//! @brief Constructs a non-present, empty page mapping.
+PageMapping::PageMapping() :
+    VirtualBaseAddr(0),
+    PageBaseAddr(0),
+    PageSize(0),
+    Access(0)
+{
+}
+
+//! @brief Constructs a populated page mapping.
+//! @param[in] virtBaseAddr The virtual address of the base of the page.
+//! @param[in] physBaseAddr The physical address of the base of the page.
+//! @param[in] size The size of the page in bytes.
+//! @param[in] access The permissions of the page.
+PageMapping::PageMapping(uint32_t virtBaseAddr, uint32_t physBaseAddr,
+                         uint32_t size, uint32_t access) :
+    VirtualBaseAddr(virtBaseAddr),
+    PageBaseAddr(physBaseAddr),
+    PageSize(size),
+    Access(access &PageMapping::Mask)
+{
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// ConnectionContext Member Definitions
+////////////////////////////////////////////////////////////////////////////////
+//! @brief The base implementation of connect does nothing for a block of memory.
+void IAddressRegion::connect(const ConnectionContext &/*context*/)
+{
+    ;
+}
+
+////////////////////////////////////////////////////////////////////////////////
 // ConnectionContext Member Definitions
 ////////////////////////////////////////////////////////////////////////////////
 //! @brief Constructs an object used to connect emulated I/O devices to the
 //! host system and each other.
 //! @param[in] interopContext The context object which provides inter-operation
 //! services for emulated hardware devices.
+//! @param[in] devices A collection of device objects owned by the emulated system.
 //! @param[in] readMap The address map listing readable regions of memory which
 //! map to I/O devices of host memory.
 //! @param[in] writeMap The address map listing writeable regions of memory which
 //! map to I/O devices of host memory.
 ConnectionContext::ConnectionContext(SystemContextPtr interopContext,
+                                     const HardwareDevicePool &devices,
                                      const AddressMap &readMap,
                                      const AddressMap &writeMap) :
     _interopContext(interopContext)
 {
+    // Index owned devices.
+    for (const auto &devicePtr : devices)
+    {
+        addDevice(devicePtr.get());
+    }
+
     // Index the Memory Mapped I/O regions as devices which can be looked up
     // by name.
     for (uint8_t i = 0; i < 2; ++i)
@@ -119,20 +162,7 @@ ConnectionContext::ConnectionContext(SystemContextPtr interopContext,
 
             if (region->getType() == RegionType::MMIO)
             {
-                Ag::string_cref_t deviceName = region->getName();
-                auto insertResult = _devicesByName.try_emplace(deviceName, region);
-
-                // Ensure that if the name was already in the map, it referred
-                // to the same device.
-                if ((insertResult.second == false) &&
-                    (insertResult.first->second != region))
-                {
-                    std::string message("The memory mapped device name '");
-                    Ag::appendAgString(message, deviceName);
-                    message.append("' refers to multiple devices in the same address map.");
-
-                    throw Ag::OperationException(std::string_view(message));
-                }
+                addDevice(region);
             }
         }
     }
@@ -146,7 +176,7 @@ ConnectionContext::ConnectionContext(SystemContextPtr interopContext,
 //! @retval true A matching device was found and its pointer returned.
 //! @retval false name device was found with a matching name.
 bool ConnectionContext::tryFindDevice(Ag::string_cref_t name,
-                                      IAddressRegionPtr &device) const
+                                      IHardwreDevicePtr &device) const
 {
     auto pos = _devicesByName.find(name);
     bool hasMatch = false;
@@ -166,6 +196,28 @@ bool ConnectionContext::tryFindDevice(Ag::string_cref_t name,
 SystemContextPtr ConnectionContext::getInteropContext() const
 {
     return _interopContext;
+}
+
+//! @brief Adds a device to the internal index.
+//! @param[in] device The device implementation to add.
+//! @throws Ag::OperationException If a device with the same name, but 
+//! a different implementation already exists in the index.
+void ConnectionContext::addDevice(IHardwreDevicePtr device)
+{
+    Ag::string_cref_t deviceName = device->getName();
+    auto insertResult = _devicesByName.try_emplace(deviceName, device);
+
+    // Ensure that if the name was already in the map, it referred
+    // to the same device.
+    if ((insertResult.second == false) &&
+        (insertResult.first->second != device))
+    {
+        std::string message("The device name '");
+        Ag::appendAgString(message, deviceName);
+        message.append("' refers to multiple entities in the same emulated system.");
+
+        throw Ag::OperationException(std::string_view(message));
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -365,12 +417,23 @@ GenericHostBlock::GenericHostBlock() :
 //! a lifetime that is at least as long as the emulated system it is mapped it.
 //! @param[in] byteCount The count of bytes in hostBlock.
 GenericHostBlock::GenericHostBlock(const char *name, const char *desc,
-                                   uint8_t *hostBlock, uint32_t byteCount) :
+                                   uint8_t *hostBlock /*= nullptr*/,
+                                   uint32_t byteCount /*= 0*/) :
     _name(name),
     _description(desc),
     _data(hostBlock),
     _length(byteCount)
 {
+}
+
+//! @brief Updates the block of host memory the region maps to.
+//! @param[in] hostBlock The pointer to the first byte of host memory which maps
+//! to the guest memory region.
+//! @param[in] byteCount The size of the block in bytes.
+void GenericHostBlock::updateHostMapping(uint8_t *hostBlock, uint32_t byteCount)
+{
+    _data = hostBlock;
+    _length = byteCount;
 }
 
 // Inherited from IAddressRegion/

@@ -2,7 +2,7 @@
 //! @brief The declaration of a template class which provides metadata for an
 //! enumeration type.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2021-2023
+//! @date 2021-2024
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -363,14 +363,14 @@ public:
     //! @brief Gets information about an enumeration symbol based on its index.
     //! @param[in] index The index of the symbol to obtain.
     //! @return A reference to an object describing the symbol.
-    const SymbolInfo &getSymbolByIndex(size_t index) { return _symbols.at(index); }
+    const SymbolInfo &getSymbolByIndex(size_t index) const { return _symbols.at(index); }
 
     //! @brief Gets information about an enumeration symbol based on its identifier.
     //! @param[in] id The identifier of the symbol to obtain.
     //! @return A reference to an object describing the symbol.
     //! @throws ArgumentException Thrown if the identifier does not have a
     //! corresponding description.
-    const SymbolInfo &getSymbolById(TEnum id)
+    const SymbolInfo &getSymbolById(TEnum id) const
     {
         size_t index;
 
