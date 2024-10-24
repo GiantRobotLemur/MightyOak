@@ -11,10 +11,10 @@
 ////////////////////////////////////////////////////////////////////////////////
 #ifdef _MSC_VER
 #include <direct.h>
+#include <io.h>
 #else
 #include <unistd.h>
 #endif
-#include <io.h>
 
 #include <cstring>
 #include <string>
@@ -548,13 +548,20 @@ bool CommandLine::tryParse(int argc, const char *argv[], std::string &error)
             // Try to see if there is an EXE with the same base name.
             exeFile.append(".exe");
 
-            if (access(exeFile.c_str(), 0) < 0)
+// Prevent MSVCRT warning about access()/_access() naming.
+#ifdef _MSC_VER
+#define FILE_ACCESS _access
+#else
+#define FILE_ACCESS access
+#endif
+
+            if (FILE_ACCESS(exeFile.c_str(), 0) < 0)
             {
                 // Try for a DLL.
                 exeFile.erase(exeFile.begin() + lastDot, exeFile.end());
                 exeFile.append(".dll");
 
-                if (access(exeFile.c_str(), 0) >= 0)
+                if (FILE_ACCESS(exeFile.c_str(), 0) >= 0)
                 {
                     _exeFile = std::move(exeFile);
                 }
@@ -563,6 +570,7 @@ bool CommandLine::tryParse(int argc, const char *argv[], std::string &error)
             {
                 _exeFile = std::move(exeFile);
             }
+#undef FILE_ACCESS
         }
 
         if ((_command == Command_PackagePdbFile) && _exeFile.empty())
