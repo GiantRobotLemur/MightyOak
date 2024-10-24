@@ -1,6 +1,6 @@
 //! @file CommandLine.cpp
 //! @brief The definition of an object which manages command line arguments.
-//! @date 2021-2023
+//! @date 2021-2024
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -14,7 +14,7 @@
 #else
 #include <unistd.h>
 #endif
-
+#include <io.h>
 
 #include <cstring>
 #include <string>
@@ -483,17 +483,7 @@ bool CommandLine::tryParse(int argc, const char *argv[], std::string &error)
 #ifdef _WIN32
                     else if (ext.isEqualIgnoreCase(pdbExt))
                     {
-                        if (_exeFile.empty())
-                        {
-                            error.assign("A PDB file must be accompanied by an "
-                                         "executable file (.exe, .dll, etc.) "
-                                         "specified using the --exe option in "
-                                         "order to extract symbols.");
-                        }
-                        else
-                        {
-                            _command = Command_PackagePdbFile;
-                        }
+                        _command = Command_PackagePdbFile;
                     }
 #endif
                     else if (ext.isEqualIgnoreCase(nmExt))
@@ -548,6 +538,39 @@ bool CommandLine::tryParse(int argc, const char *argv[], std::string &error)
                     break;
                 }
             }
+        }
+
+        if ((_command == Command_PackagePdbFile) && _exeFile.empty() && !_inputFile.empty())
+        {
+            size_t lastDot = _inputFile.rfind('.');
+            std::string exeFile(_inputFile, 0, lastDot);
+
+            // Try to see if there is an EXE with the same base name.
+            exeFile.append(".exe");
+
+            if (access(exeFile.c_str(), 0) < 0)
+            {
+                // Try for a DLL.
+                exeFile.erase(exeFile.begin() + lastDot, exeFile.end());
+                exeFile.append(".dll");
+
+                if (access(exeFile.c_str(), 0) >= 0)
+                {
+                    _exeFile = std::move(exeFile);
+                }
+            }
+            else
+            {
+                _exeFile = std::move(exeFile);
+            }
+        }
+
+        if ((_command == Command_PackagePdbFile) && _exeFile.empty())
+        {
+            error.assign("A PDB file must be accompanied by an "
+                "executable file (.exe, .dll, etc.) "
+                "specified using the --exe option in "
+                "order to extract symbols.");
         }
     }
 

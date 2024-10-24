@@ -1,7 +1,7 @@
 //! @file Ag/Core/StackTrace.hpp
 //! @brief The declaration of a class used to gather a stack trace.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2021-2023
+//! @date 2021-2024
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -14,6 +14,7 @@
 // Dependent Header Files
 ////////////////////////////////////////////////////////////////////////////////
 #include <cstdint>
+#include <string>
 #include <string_view>
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -99,6 +100,8 @@ public:
     // Operations
     void appendToString(std::string &destination, bool includeModules = true) const;
     void captureCurrentThread(size_t pruneEntries = 0);
+    static size_t captureCurrentThread(ActivationRecord* stackRecords, size_t count,
+                                       size_t pruneEntries = 0);
     void capture(const ActivationRecord *stackRecords, size_t count);
 #ifdef _WIN32
     void capture(const _CONTEXT *context, size_t pruneEntries = 0);
