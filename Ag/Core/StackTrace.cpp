@@ -893,6 +893,14 @@ StackTracePrivate *resolveStackTrace(const ActivationRecord *records, size_t cou
             resolveSymbols(stringTable[module.FilePathOrdinal].Text,
                            stringTable, start, end);
         }
+        else
+        {
+            // Mark symbols from an unknown module as unknown.
+            for (auto pos = start; pos != end; ++pos)
+            {
+                pos->SymbolOrdinal = SIZE_MAX;
+            }
+        }
 
         // Move on to the next group.
         start = end;
@@ -1347,6 +1355,25 @@ void StackTrace::capture(const _CONTEXT *context, size_t pruneEntries /* = 0 */)
     // Process the trace.
     _info = resolveStackTrace(activationRecords.data(), count);
 }
+
+size_t StackTrace::captureCurrentThread(ActivationRecord* stackRecords, size_t count, size_t pruneEntries /*= 0*/)
+{
+#ifdef _WIN32
+    CONTEXT cpuState;
+    ::RtlCaptureContext(&cpuState);
+
+    // Ensure we prune the current function from the call record.
+    return captureActivationRecords(&cpuState, stackRecords, count, pruneEntries + 1);
+#else
+    void** rawPtrs = reinterpret_cast<void**>(stackRecords);
+
+    // Use the gcc compiler function to get a raw stack trace.
+    size_t callStackSize = backtrace(rawPtrs, count);
+
+    // TODO: fix up pointers to activation records IN THE SAME BUFFER.
+#error Not (yet) supported under Linux.
+#endif
+}
 #endif
 
 //! @brief Assigns a call stack to the object and disables destroy
@@ -1429,6 +1456,17 @@ void StackTrace::dispose()
 ////////////////////////////////////////////////////////////////////////////////
 
 #ifdef _WIN32
+
+#ifdef _M_ARM64
+#define CONTEXT_PC(x) (x.Pc)
+#define CONTEXT_SP(x) (x.Sp)
+#elif defined _M_AMD64 || defined _M_ARM64EC
+#define CONTEXT_PC(x) (x.Rip)
+#define CONTEXT_SP(x) (x.Rsp)
+#else
+#error Unsupported architecture for stack tracing.
+#endif
+
 //! @brief Captures the activation records of a processor stack described
 //! by a captured processor state.
 //! @param[in] context A pointer to the processor state defining the top of
@@ -1459,11 +1497,11 @@ size_t captureActivationRecords(const CONTEXT *context,
     maxCount += skip;
 
     for (entryCount = 0;
-         (entryCount < maxCount) && (simulatedState.Rip != 0);
+         (entryCount < maxCount) && (CONTEXT_PC(simulatedState) != 0);
          ++entryCount)
     {
         size_t functionImageBase;
-        PRUNTIME_FUNCTION functionInfo = RtlLookupFunctionEntry(simulatedState.Rip,
+        PRUNTIME_FUNCTION functionInfo = RtlLookupFunctionEntry(CONTEXT_PC(simulatedState),
                                                                 &functionImageBase,
                                                                 &unwindCache);
 
@@ -1473,8 +1511,8 @@ size_t captureActivationRecords(const CONTEXT *context,
             // address.
 
             // Simulate a simple function return.
-            simulatedState.Rip = *reinterpret_cast<const DWORD64 *>(simulatedState.Rsp);
-            simulatedState.Rsp += wordSize;
+            CONTEXT_PC(simulatedState) = *reinterpret_cast<const uintptr_t *>(CONTEXT_SP(simulatedState));
+            CONTEXT_SP(simulatedState) += wordSize;
         }
         else
         {
@@ -1483,14 +1521,15 @@ size_t captureActivationRecords(const CONTEXT *context,
                 // Store an entry defining the current location in the simulated code.
                 ActivationRecord &entry = records[entryCount - skip];
                 entry.ModuleBase = functionImageBase;
-                entry.Offset = simulatedState.Rip - functionImageBase;
+                entry.Offset = CONTEXT_PC(simulatedState) - functionImageBase;
             }
 
             // Simulate the effects of a return form the selected function on the
             // copy of the processor state.
             size_t establisherFrame;
-            RtlVirtualUnwind(UNW_FLAG_NHANDLER, functionImageBase, simulatedState.Rip,
-                             functionInfo, &simulatedState, nullptr,
+            PVOID handlerData = nullptr;
+            RtlVirtualUnwind(UNW_FLAG_NHANDLER, functionImageBase, CONTEXT_PC(simulatedState),
+                             functionInfo, &simulatedState, &handlerData,
                              &establisherFrame, nullptr);
         }
     }

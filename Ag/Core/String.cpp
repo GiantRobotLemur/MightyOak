@@ -1,7 +1,7 @@
 //! @file Core/String.cpp
 //! @brief The definition of an immutable UTF-8-encoded string value data type.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2021-2023
+//! @date 2021-2024
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -1532,6 +1532,67 @@ std::wstring String::toWide() const
 #endif
 
     return wideText;
+}
+
+//! @brief Converts the contents of the string to wide characters and appends
+//! them to a buffer.
+//! @param[out] buffer The buffer to receive the converted characters.
+//! @note Only the string characters are appended, not any terminating null
+//! character.
+void String::appendToWideBuffer(std::vector<wchar_t> &buffer) const
+{
+    StringPrivatePtr str = _str.get();
+
+    if (str->isEmpty())
+        return;
+
+    size_t wideLength;
+
+#ifdef WCHAR_IS_32BIT
+    wideLength = str->getUTF32Length();
+#else
+    wideLength = str->getUTF16Length();
+    Utf::ToUtf16Converter outputConverter;
+#endif
+
+    // Ensure the buffer has enough space for the new characters.
+    size_t requiredSize = buffer.size() + wideLength + 1;
+
+    if (requiredSize > buffer.capacity())
+    {
+        buffer.reserve(requiredSize);
+    }
+
+    Utf::FromUtf8Converter inputConverter;
+    uint8_cptr_t bytes = reinterpret_cast<uint8_cptr_t>(str->getData().c_str());
+    size_t byteCount = str->getData().length();
+
+    bool hasError = false;
+    char32_t codePoint = U'\0';
+
+    for (size_t index = 0; index < byteCount; ++index)
+    {
+        // Append the converted code points raw.
+        if (inputConverter.tryConvert(bytes[index], codePoint, hasError))
+        {
+#ifdef WCHAR_IS_32BIT
+            buffer.push_back(codePoint);
+#else
+            // Convert to code points and then UTF-16.
+            outputConverter.setCodePoint(codePoint);
+            char16_t utf16word = u'\0';
+
+            while (outputConverter.tryGetNextCharacter(utf16word))
+            {
+                buffer.push_back(utf16word);
+            }
+#endif
+        }
+        else if (hasError)
+        {
+            inputConverter.reset();
+        }
+    }
 }
 
 //! @brief Performs a per-byte comparison of two string.

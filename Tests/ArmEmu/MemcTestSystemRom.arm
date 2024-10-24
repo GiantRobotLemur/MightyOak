@@ -1,0 +1,375 @@
+; ARM/MEMC Test ROM Image
+; A ROM image to test an ARM-based system running on MEMC/IOC/VIDC hardware
+; as part of the MightyOak project
+
+; HW Vector table 8 entries + 8 routine addresses.
+.OS_Workspace   0x8000      ; 32 KB
+.SVC_StackTop   0x8000      ; 32 KB
+.FIRQ_StackTop  0x7000      ; 28 KB
+.IRQ_StackTop   0x6000      ; 24 KB
+.USR_StackTop   0x5000      ; 20 KB
+.USR_StackBase  0x4000      ; 16 KB
+
+; Define offsets within OS_Workspace
+.OS_RamSize     0           ; Detected physical RAM size in bytes
+.OS_SysCtrlID   4           ; Value of CP15->CR0, or a made up value if not present.
+
+; At power-on, the low ROM is mapped to address 0x00000000, so the start of
+; the ROM image needs to be the hardware vector table.
+; See ARM Family Data Manual Page 2-28 (50)
+B Initial_Reset
+B Initial_HandleUndefInstruction
+B Initial_HandleSoftwareIrq
+B Initial_HandlePrefetchAbort
+B Initial_HandleDataAbort
+B Initial_HandleAddressException
+B Initial_HandleIrq
+
+; The last entry executes the handler for FIRQs
+.Initial_HandleFirq
+
+; For the moment, any exception or trap will cause
+; an infinite loop.
+.Initial_HandleUndefInstruction
+.Initial_HandleSoftwareIrq
+.Initial_HandlePrefetchAbort
+.Initial_HandleDataAbort
+.Initial_HandleAddressException
+.Initial_HandleIrq
+
+.Infinite_Loop
+    BKPT 0                                ; Break point to stop execution.
+    B Infinite_Loop
+
+; Run at power-on. Low ROM (this) is mapped to 0x00000000
+; Running in SVC mode, IRQs and FIRQs are disabled.
+.Initial_Reset
+    ADR R0,Reset_MEMC                   ; Calculate the address of the ROM entry point.
+    ADD R0,R0,#0x3400000                ; Add the Low ROM base address.
+    MOV PC,R0                           ; Jump to the same code running at the
+                                        ;   ROM's native location.
+
+.Reset_MEMC
+; MEMC - Effect of Reset - ARM Family Data Manual Page 4-9 (193)
+; The process or starts executing code from location 0000000H after RES goes
+; inactive. To ensure the processor always finds valid code at this location
+; (which is normally logically mapped RAM), MEMC continually enables ROM.
+;
+; To restore the normal memory map, the processor must first access the address
+; lines A25 and A24 both low and then perform a memory access with address line
+; A25 high.
+;
+; These conditions are satisfied when the processor starts executing
+; instructions from 0000000h, and later jumps to the normal ROM space.
+;
+; - ROM access times - The ROM access times for both high and low ROM are
+;   reset to 450ns
+; - Pages sizes - The DRAM page size defaults to 4 Kbytes on reset.
+; - Operating System mode - The Operating system mode is disabled on reset.
+; - Direct Memory Access (DMA) operations - Sound DMA operations are disabled
+;   by reset, and may be enabled by programming the MEMC Control Register.
+;   Video and cursor operations are unaffected by reset.
+; - Sound Interrupts - The sound interrupt pin, -SIRQ is set low on reset. The
+;   interrupt may be removed by initializing the sound DMA buffers in the DMA
+;   address generator.
+; - The processor may generate spurious addresses while RES is active high. To
+;   avoid accidentally triggering an I/O controller, the -IORQ signal is held
+;   high during reset.
+; - The Test mode (used in functional testing) is disabled by RES. Test mode
+;   maybe set by programming the MEMC control register, but will crash the
+;   system; control is regained by resetting MEMC.
+
+; Calculate memory size by accessing physically mapped RAM between addresses
+; 0x2000000 and 0x3000000.
+    MOV R0,#0x2000000                   ; Set the base address
+    MOV R1,#4096                        ; Set the address increment.
+    MOV R2,R1                           ; Initialise the memory size.
+    LDR R3,Reset_MEMC_Markers           ; Cache the marker values in memory.
+    LDR R4,Reset_MEMC_Markers + 4
+    B Reset_MEMC_SizeLoop               ; Start memory size detection.
+
+.Reset_MEMC_Markers
+    EQUD 0xDEADBEEF
+    EQUD 0xCAFEBABE
+
+.Reset_MEMC_SizeLoop
+    CMP R2,#0x1000000                   ; See if we have reached the 16 MB mark.
+    BGE Reset_MEMC_SizeLoopEnd          ; Branch if we reached the limit.
+
+    STR R3,[R0]                         ; Set the value at physical RAM base.
+    STR R4,[R0,R2]                      ; Store a different value at the
+                                        ;   target address
+    LDR R5,[R0]                         ; Load the value from physical RAM base.
+    CMP R5,R4                           ; Does Phys[0x0000] == Phys[Target] ?
+    BEQ Reset_MEMC_SizeLoopEnd
+    LDR R5,[R0,R2]                      ; Load the value at test location.
+    CMP R5,R4                           ; Did the target RAM location retain
+                                        ;   the value we wrote?
+    BNE Reset_MEMC_SizeLoopEnd
+    ADD R2,R2,R1                        ; Increment the memory size.
+    B Reset_MEMC_SizeLoop               ; Go around again.
+
+.Reset_MEMC_SizeLoopEnd
+; RAM size in bytes is in R2.
+    MOV R11,R2                          ; Stash the RAM size out of the way.
+
+; Initially, identity map the first 1 Mb using 8 Kb pages.
+    MOV R0,#0x3000000                   ; Make up an address 0x036E0004 to
+    ORR R0,R0,#0x6E0000                 ;   program the MEMC control register
+    ORR R0,R0,#4                        ;   for 8 KB pages, normal RAM/ROM
+                                        ;   access times and no DMA.
+    STR R2,[R0]                         ; Write the MEMC control register by
+                                        ;   writing to the address we made up.
+
+    MOV R0,#0x3800000                   ; Set the base address from address
+                                        ;   mapping Content Addressable Memory (CAM)
+    MOV R1,#0                           ; Initialise the counter.
+    MOV R6,#1 << 10                     ; Set the mask to get LPN bits [9:0]
+    SUB R6,R6,#1                        ; Make a 10-bit mask.
+.Reset_MEMC_AddrMapInitLoop8KB
+    MOV R2,R0                           ; Create a new mapping
+    AND R4,R1,#0x3F                     ; Get bits PPN [5:1]
+    ORR R2,R2,R4,LSL #1                 ; Set the physical page number.
+    AND R3,R1,#0x40                     ; Extract the MSB of the page no.
+    ORR R2,R2,R3,LSR #6                 ; Store the LSB at bit 6
+
+    AND R4,R1,R6                        ; Extract LPN [9:0]
+    ORR R2,R2,R4,LSL #13                ; Set the logical page number.
+    AND R4,R1,#0xC00                    ; Extract LPN [11:10]
+    ORR R2,R2,R4,LSL #10                ; Set the upper bits of the LPN.
+
+    STR R2,[R2]                         ; Access the address we calculated to
+                                        ;   set the mapping in CAM.
+    ADD R1,R1,#1                        ; Increment the page counter.
+    CMP R1,#128
+    BLT Reset_MEMC_AddrMapInitLoop8KB
+
+.Init_Hardware_Vectors
+; The addresses 0x000000 - 0x100000 are now identity mapped.
+; Set up independent stacks for the various operating modes.
+    MOV R12,#OS_Workspace               ; Set up workspace at the the 32 KB mark.
+    STR R11,[R12]                       ; Store the RAM size
+
+    MOV R13,#SVC_StackTop               ; Set up the supervisor (current) mode stack.
+    SUB R13,R13,#4                      ; Create a full-descending supervisor stack.
+
+    TEQP PC,#1                          ; Switch to FIRQ mode
+    MOV R0,R0                           ; Non-op after mode change.
+    MOV R13,#FIRQ_StackTop              ; Initialise the FIRQ stack.
+    SUB R13,R13,#4
+
+    TEQP PC,#2                          ; Switch to IRQ mode.
+    MOV R0,R0                           ; Non-op after mode change.
+    MOV R13,#IRQ_StackTop               ; Initialise the IRQ stack.
+    SUB R13,R13,#4
+
+    ; Initialise the user mode stack pointer without switching to user mode.
+    TEQP PC,#3                          ; Switch back to SVC mode.
+    MOV R0,#USR_StackTop                ; Calculate the top of the user mode stack.
+    SUB R0,R0,#4
+    STMFD SP!,{R0}                      ; Store the user stack pointer on the SVC stack.
+    LDMIA SP,{SP}^                      ; Load the user mode SP into the user
+                                        ;   register bank. We can't user write-back.
+    MOV R0,R0                           ; A non-op due to register banking issues.
+    ADD SP,SP,#4                        ; Restore the SVC stack.
+
+; We need to write instructions into the RAM-based hardware vectors to handle
+; exceptions and interrupts.
+    MOV R0,#0                           ; Overwrite the reset vector
+    ADR R1,Do_HandleReset
+    BL Write_HW_Vector
+
+    MOV R0,#1                           ; Overwrite the undefined instruction vector.
+    ADR R1,Do_HandleUndefInstruction
+    BL Write_HW_Vector
+
+    MOV R0,#2                           ; Overwrite the software interrupt vector.
+    ADR R1,Do_HandleSoftwareIrq
+    BL Write_HW_Vector
+
+    MOV R0,#3                           ; Overwrite the pre-fetch abort vector.
+    ADR R1,Do_HandlePrefetchAbort
+    BL Write_HW_Vector
+
+    MOV R0,#4                           ; Overwrite the data abort vector
+    ADR R1,Do_HandleDataAbort
+    BL Write_HW_Vector
+
+    MOV R0,#5                           ; Overwrite the address exception vector
+    ADR R1,Do_HandleAddressException
+    BL Write_HW_Vector
+
+    MOV R0,#6                           ; Overwrite the interrupt vector
+    ADR R1,Do_HandleIrq
+    BL Write_HW_Vector
+
+    MOV R0,#7                           ; Overwrite the fast interrupt vector
+    ADR R1,Do_HandleFirq
+    BL Write_HW_Vector
+
+    B Detect_CPU
+
+; Writes a branch instruction into a hardware vector encoding
+; LDR PC,[PC,#24] to perform a full 32-bit branch via an address
+; stored after the hardware vector table.
+; The new vector address will be stored at the vector location + 32
+; Entry:    R0 = HW Vector Number
+;           R1 = Handler address
+.HW_Vector_Instruction
+    EQUD 0xE59FF018
+
+.Write_HW_Vector
+    STMFD SP!,{R0-R2,Link}
+    MOV R2,R0,LSL #2                    ; Calculate the hardware vector address.
+    STR R1,[R2,#32]                     ; Store the address of the handler after
+                                        ;   the hardware vector table.
+    LDR R1,HW_Vector_Instruction        ; Load the instruction pattern
+    STR R1,[R2]                         ; Store it in the hardware vector.
+
+    LDMFD SP!,{R0-R2,PC}                ; Return
+
+.Detect_CPU
+    MOVS R5,PC                          ; Get a copy of the PSR.
+    AND R5,R5,#0xFC000003               ; Mask out PC bits.
+    ADR R4,Reset_IOC                    ; Set a new target PC
+    ORR R4,R4,R5                        ; Merge in the saved PSR bits.
+    STMFD SP!,{R4}                      ; Save the branch target for later re-use.
+    
+    MOV R0,#1                           ; Overwrite the Undefined instruction
+    ADR R1,DetectCPU_NoCP15             ;   hardware vector before reading CP15
+    BL Write_HW_Vector
+    MRC CP15,0,R0,CR0,0,0               ; Copy CP15.CR0 to R0
+    STR R0,[R12,#OS_SysCtrlID]          ; Store the value.
+    B DetectCPU_RestoreVector
+
+.DetectCPU_ARM2_ID
+    EQUD 0x41560100                     ; The CP15.CR0 value for an ARM 2
+.DetectCPU_ARM2sA_ID
+    EQUD 0x41560200                     ; The CP15.CR0 value for an ARM 250
+
+.DetectCPU_NoCP15                       ; If we get here, the MCR instruction faulted.
+    LDR Link,[SP]                       ; Restore the previous return address.
+    LDR R8,DetectCPU_ARM2_ID
+    STR R8,[R12,#OS_SysCtrlID]          ; Store the generated ID.
+
+    ; There is no CP15, but see if the SWP instruction is supported.
+    MOV R0,#1                           ; Overwrite the Undefined instruction
+    ADR R1,DetectCPU_NoSwp              ;   hardware vector before reading CP15
+    BL Write_HW_Vector
+
+    ADD R11,R12,#OS_SysCtrlID           ; Prepare to swap the ARM2sa ID in memory.
+    LDR R10,DetectCPU_ARM2sA_ID
+    SWP R9,R10,[R11]                    ; Swap the old CPU ID with an ARM2sa ID
+    B DetectCPU_RestoreVector
+
+.DetectCPU_NoSwp                        ; If we get here, the SWP instruction faulted.
+    LDR Link,[SP]                       ; Restore the previous return address.
+
+.DetectCPU_RestoreVector
+    MOV R0,#1                           ; Overwrite the undefined instruction vector.
+    ADR R1,Do_HandleUndefInstruction
+    BL Write_HW_Vector
+
+    LDMFD SP!,{PC}^                     ; Branch to Reset_IOC and restore PSR flags.
+
+.Do_HandleReset
+    BKPT 100                            ; Break point to stop execution.
+    B Do_HandleReset                    ; Infinite loop.
+
+.Do_HandleUndefInstruction
+    BKPT 101                            ; Break point to stop execution.
+    B Do_HandleUndefInstruction         ; Infinite loop.
+
+.Do_HandleSoftwareIrq
+    BKPT 102                            ; Break point to stop execution.
+    B Do_HandleSoftwareIrq              ; Infinite loop.
+
+.Do_HandlePrefetchAbort
+    BKPT 103                            ; Break point to stop execution.
+    B Do_HandlePrefetchAbort            ; Infinite loop.
+
+.Do_HandleDataAbort
+    BKPT 104                            ; Break point to stop execution.
+    B Do_HandleDataAbort                ; Infinite loop.
+
+.Do_HandleAddressException
+    BKPT 105                            ; Break point to stop execution.
+    B Do_HandleAddressException         ; Infinite loop.
+
+.Do_HandleIrq
+    BKPT 106                            ; Break point to stop execution.
+    B Do_HandleIrq                      ; Infinite loop.
+
+.Do_HandleFirq
+    BKPT 107                            ; Break point to stop execution.
+    B Do_HandleFirq                     ; Infinite loop.
+
+.Reset_IOC
+; RAM-based hardware vectors are are initialised and point to ROM-based
+; entry points.
+;
+; Initialise IOC to disable most interrupts, but enable keyboard I/O.
+.IOC_BaseAddr 0x3200000
+.Kart_TimerBaseAddr IOC_BaseAddr + 0x70
+    MOV R0,#IOC_BaseAddr                ; Address the IOC ctrl register.
+    MOV R1,#0xFF                        ; Set pins C0-C5 to be inputs.
+    STR R1,[R0]
+
+    MOV R1,#0                           ; Mask all interrupts
+    STR R1,[R0,#0x18]                   ; Write IRQ Mask A
+    STR R1,[R0,#0x28]                   ; Write IRQ Mask B
+    STR R1,[R0,#0x38]                   ; Write FIRQ Mask
+    
+    MOV R1,#0x7C                        ; Clear any pending interrupts,
+                                        ;   including POR
+    STR R1,[R0,#0x14]
+
+    ; A3010/A3020/A4000 Technical Reference manual Page 1-13 (9)
+    ;
+    ; Keyboard and Mouse
+    ; ...
+    ; The microcontroller sends data on key operations and mouse
+    ; movements to the ARM250 (IOC Kart) over a serial interface.
+    ; Data is sent at 32.5 Kbaud using an NRZ bit stream.
+    ;
+    ; IOC Data Sheet 
+    ;
+    ; (KART) Initialisation
+    ;
+    ; After Power-On, the KART is in an undefined state. The KART is
+    ; initialised by programming the serial line speed using counter 3 and
+    ; performing a read from the Serial Rx Data register, discarding the data
+    ; byte. This will clear any outstanding receive interrupt and enable the
+    ; KART for the next reception. Finally the Tx Data register should be
+    ; written to. This will abort any transmission in progress, cause a new one
+    ; to be started and clear any STx interrupt.
+    ;
+    ; Counter 3 (KART) [ Page 17 (21) ]
+    ; ...
+    ; The maximum baud rate of 31250 Hz is obtained by programming
+    ; latch = 1.
+    MOV R1,#1                           ; Set the counter 3 divisor (latch)
+    MOV R2,#0                           ;   to 1.
+    STRB R1,[R0,#0x70]                  ; Write latch low
+    STRB R1,[R0,#0x74]                  ; Write latch high
+    STR R0,[R0,#0x78]                   ; Write a dummy value to the GO command
+    LDRB R3,[R0,#4]                     ; Read from the Serial Rx Data register
+                                        ;   to cancel any previous receive.
+    STRB R2,[R0,#4]                     ; Write to the Serial Tx Data register
+                                        ;   to reset any previous sent.
+
+    ; Re-enable IOC interrupts 14 and 15 for KART ready to send/read
+    LDRB R1,[R0,#0x28]                  ; Read IRQ Mask B
+    BIC R1,R1,#0xC0                     ; Enable IRQs 14 and 15 for KART Tx/Rx
+    STRB R1,[R0,#0x28]                  ; Write IRQ Mask B
+
+    TEQP PC,#0x08000000                 ; Enable IRQs on the CPU.
+    
+    ; TODO: Setup another timer to run at 100Hz?
+    ; Write handler for KART interrupts
+    ; Write SWI handler for system functions
+    ; Interface with Logging Device
+    ; Map logical memory to high RAM so that low RAM
+    ;   can be used for VIDC DMA.
+    
+    B $

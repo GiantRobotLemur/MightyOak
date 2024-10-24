@@ -2,7 +2,7 @@
 //! @brief The definition of unit test for the emulation of data transfer
 //! instructions of a virtual ARM processor.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2022-2023
+//! @date 2022-2024
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -396,10 +396,10 @@ const CoreTestParams basicDataTransfer[] = {
 };
 
 const CoreTestParams basicDataTransfer26Bit[] = {
-    { TLOC, "LDR_PreIndexedAddrException", "R0=0xF0000000,R1=42", "R0=0xF0000000,R1=42,CPSR=0x08000003,R14=0x8008,PC=0x20", "LDR R1,[R0,#3]!" },
-    { TLOC, "LDR_PreIndexedDataAbort", "R0=0x00F00000,R1=42", "R0=0x00F00000,R1=42,CPSR=0x08000003,R14=0x8008,PC=0x1C", "LDR R1,[R0,#3]!" },
-    { TLOC, "LDR_PostIndexedAddrException", "R0=0xF0000000,R1=42", "R0=0xF0000000,R1=42,CPSR=0x08000003,R14=0x8008,PC=0x20", "LDR R1,[R0],#3" },
-    { TLOC, "LDR_PostIndexedDataAbort", "R0=0x00F00000,R1=42", "R0=0x00F00000,R1=42,CPSR=0x08000003,R14=0x8008,PC=0x1C", "LDR R1,[R0],#3" },
+    { TLOC, "LDR_PreIndexedAddrException", "R0=0xF0000000,R1=42", "R0=0xF0000000,R1=42,CPSR=0x08000003,R14=0x8008,PC=0x18", "LDR R1,[R0,#3]!" },
+    { TLOC, "LDR_PreIndexedDataAbort", "R0=0x00F00000,R1=42", "R0=0x00F00000,R1=42,CPSR=0x08000003,R14=0x8008,PC=0x14", "LDR R1,[R0,#3]!" },
+    { TLOC, "LDR_PostIndexedAddrException", "R0=0xF0000000,R1=42", "R0=0xF0000000,R1=42,CPSR=0x08000003,R14=0x8008,PC=0x18", "LDR R1,[R0],#3" },
+    { TLOC, "LDR_PostIndexedDataAbort", "R0=0x00F00000,R1=42", "R0=0x00F00000,R1=42,CPSR=0x08000003,R14=0x8008,PC=0x14", "LDR R1,[R0],#3" },
 
     // TODO: Test accessing protected memory in SVC mode based on underlying MMU.
     { TLOC, "LDR_PostIndexedImmediateUserPrivilages", "R0=0x8104,R1=69,LWORD[8104]=0xDEADBEEF", "R0=0x8108,R1=0xDEADBEEF", "LDRT R1,[R0],#4" },
@@ -407,10 +407,10 @@ const CoreTestParams basicDataTransfer26Bit[] = {
     { TLOC, "STR_PostIndexedImmedOffsetUserPrivileges", "R0=0x8100,R1=0x12345678,LWORD[8100]=0x42424242", "R0=0x8104,R1=0x12345678,LWORD[8100]=0x12345678", "STRT R1,[R0],#4" },
     { TLOC, "STR_PostIndexedRegOffsetUserPrivileges", "R0=0x8100,R1=16,R2=0x12345678,LWORD[8100]=0x42424242", "R0=0x8110,R1=16,R2=0x12345678,LWORD[8100]=0x12345678", "STRT R2,[R0],R1" },
 
-    { TLOC, "STR_PreIndexedAddrException", "R0=0xF0000000,R1=0x12345678", "R0=0xF0000000,R1=0x12345678,R14=0x8008,PC=0x20,CPSR=0x08000003", "STR R1,[R0,#3]!" },
-    { TLOC, "STR_PreIndexedDataAbort", "R0=0x00F00000,R1=0x12345678", "R0=0x00F00000,R1=0x12345678,R14=0x8008,PC=0x1C,CPSR=0x08000003", "STR R1,[R0,#3]!" },
-    { TLOC, "STR_PostIndexedAddrException", "R0=0xF0000000,R1=0x12345678", "R0=0xF0000000,R1=0x12345678,R14=0x8008,PC=0x20,CPSR=0x08000003", "STR R1,[R0],#3" },
-    { TLOC, "STR_PostIndexedDataAbort", "R0=0x00F00000,R1=0x12345678", "R0=0x00F00000,R1=0x12345678,R14=0x8008,PC=0x1C,CPSR=0x08000003", "STR R1,[R0],#3" },
+    { TLOC, "STR_PreIndexedAddrException", "R0=0xF0000000,R1=0x12345678", "R0=0xF0000000,R1=0x12345678,R14=0x8008,PC=0x18,CPSR=0x08000003", "STR R1,[R0,#3]!" },
+    { TLOC, "STR_PreIndexedDataAbort", "R0=0x00F00000,R1=0x12345678", "R0=0x00F00000,R1=0x12345678,R14=0x8008,PC=0x14,CPSR=0x08000003", "STR R1,[R0,#3]!" },
+    { TLOC, "STR_PostIndexedAddrException", "R0=0xF0000000,R1=0x12345678", "R0=0xF0000000,R1=0x12345678,R14=0x8008,PC=0x18,CPSR=0x08000003", "STR R1,[R0],#3" },
+    { TLOC, "STR_PostIndexedDataAbort", "R0=0x00F00000,R1=0x12345678", "R0=0x00F00000,R1=0x12345678,R14=0x8008,PC=0x14,CPSR=0x08000003", "STR R1,[R0],#3" },
 
 
     { TLOC, "LDMIA_PCAndPSR", "R0=0x8100,R1=5,R2=3,LWORD[8100]=0x10008008,Status=NC",
@@ -420,7 +420,7 @@ const CoreTestParams basicDataTransfer26Bit[] = {
                                         "R0=0x8104,R1=1,R2=3,Status=V",
                                         "LDMIA R0!,{R15}^ : MOV R2,#2 : MOV R1,#1" },
     { TLOC, "LDMIA_AddressException",   "R0=0x4000010,Status=NC",
-                                        "R0=0x4000010,R1=0,CPSR=0xA8000003,R14=0xA0008008,PC=0x20",
+                                        "R0=0x4000010,R1=0,CPSR=0xA8000003,R14=0xA0008008,PC=0x18",
                                         "LDMIA R0!,{R1-R5}" },
     { TLOC, "LDMIA_NoException",    "R0=0x03FFFFFC",
                                     "R0=0x00000010,R1=0xE121FF7F,R2=0xDFDFDFDF,R3=0xDFDFDFDF,R4=0xDFDFDFDF,R5=0xDFDFDFDF",
@@ -433,7 +433,7 @@ const CoreTestParams basicDataTransfer26Bit[] = {
                                         "R0=0x8100,R1=1,R2=3,Status=V",
                                         "LDMIB R0!,{R15}^ : MOV R2,#2 : MOV R1,#1" },
     { TLOC, "LDMIB_AddressException",   "R0=0x3FFFFFC,Status=NC",
-                                        "R0=0x3FFFFFC,R1=0,CPSR=0xA8000003,R14=0xA0008008,PC=0x20",
+                                        "R0=0x3FFFFFC,R1=0,CPSR=0xA8000003,R14=0xA0008008,PC=0x18",
                                         "LDMIB R0!,{R1-R5}" },
     { TLOC, "LDMIB_NoException",    "R0=0x03FFFFF8",
                                     "R0=0x0000000C,R1=0xE121FF7F,R2=0xDFDFDFDF,R3=0xDFDFDFDF,R4=0xDFDFDFDF,R5=0xDFDFDFDF",
@@ -446,7 +446,7 @@ const CoreTestParams basicDataTransfer26Bit[] = {
                                         "R0=0x80FC,R1=1,R2=3,Status=V",
                                         "LDMDA R0!,{R15}^ : MOV R2,#2 : MOV R1,#1" },
     { TLOC, "LDMDA_AddressException",   "R0=0x4000010,Status=NC",
-                                        "R0=0x4000010,R1=0,CPSR=0xA8000003,R14=0xA0008008,PC=0x20",
+                                        "R0=0x4000010,R1=0,CPSR=0xA8000003,R14=0xA0008008,PC=0x18",
                                         "LDMDA R0!,{R1-R5}" },
     { TLOC, "LDMDA_NoException",    "R0=0x0",
                                     "R0=0x03FFFFEC,R1=0xE121FF7C,R2=0xE121FF7D,R3=0xE121FF7E,R4=0xE121FF7F,R5=0xDFDFDFDF",
@@ -459,7 +459,7 @@ const CoreTestParams basicDataTransfer26Bit[] = {
                                         "R0=0x8100,R1=1,R2=3,Status=V",
                                         "LDMDB R0!,{R15}^ : MOV R2,#2 : MOV R1,#1" },
     { TLOC, "LDMDB_AddressException",   "R0=0x4000004,Status=NC",
-                                        "R0=0x4000004,R1=0,CPSR=0xA8000003,R14=0xA0008008,PC=0x20",
+                                        "R0=0x4000004,R1=0,CPSR=0xA8000003,R14=0xA0008008,PC=0x18",
                                         "LDMDB R0!,{R1-R5}" },
     { TLOC, "LDMDB_NoException",    "R0=0x4",
                                     "R0=0x03FFFFF0,R1=0xE121FF7C,R2=0xE121FF7D,R3=0xE121FF7E,R4=0xE121FF7F,R5=0xDFDFDFDF",
@@ -470,7 +470,7 @@ const CoreTestParams basicDataTransfer26Bit[] = {
                                 "R0=0x8100,LWORD[8100]=0x1000800C", // PC + 12, See ARM Family Data Manual Page 2-41.
                                 "STMIA R0,{R15}" },
     { TLOC, "STMIA_AddressException",   "R0=0x4000000,Status=V",
-                                        "R0=0x4000000,R14=0x10008008,PC=0x20,CPSR=0x18000003",
+                                        "R0=0x4000000,R14=0x10008008,PC=0x18,CPSR=0x18000003",
                                         "STMIA R0!,{R1-R3}" },
     { TLOC, "STMIA_NoAddressException", "R0=0x3FFFFFC,CPSR=0x10000000",
                                         "R0=0x0000008,CPSR=0x10000000",
@@ -479,7 +479,7 @@ const CoreTestParams basicDataTransfer26Bit[] = {
                                 "R0=0x80FC,LWORD[8100]=0x1000800C", // PC + 12, See ARM Family Data Manual Page 2-41.
                                 "STMIB R0,{R15}" },
     { TLOC, "STMIB_AddressException",   "R0=0x3FFFFFC,Status=V",
-                                        "R0=0x3FFFFFC,R14=0x10008008,PC=0x20,CPSR=0x18000003",
+                                        "R0=0x3FFFFFC,R14=0x10008008,PC=0x18,CPSR=0x18000003",
                                         "STMIB R0!,{R1-R3}" },
     { TLOC, "STMIB_NoAddressException", "R0=0x3FFFFF8,CPSR=0x10000000",
                                         "R0=0x0000004,CPSR=0x10000000",
@@ -489,7 +489,7 @@ const CoreTestParams basicDataTransfer26Bit[] = {
                                 "R0=0x8100,LWORD[8100]=0x1000800C", // PC + 12, See ARM Family Data Manual Page 2-41.
                                 "STMDA R0,{R15}" },
     { TLOC, "STMDA_AddressException",   "R0=0x4000000,Status=V",
-                                        "R0=0x4000000,R14=0x10008008,PC=0x20,CPSR=0x18000003",
+                                        "R0=0x4000000,R14=0x10008008,PC=0x18,CPSR=0x18000003",
                                         "STMDA R0!,{R1-R3}" },
     { TLOC, "STMDA_NoAddressException", "R0=0x0000000,CPSR=0x10000000",
                                         "R0=0x3FFFFF4,CPSR=0x10000000",
@@ -500,7 +500,7 @@ const CoreTestParams basicDataTransfer26Bit[] = {
                                 "R0=0x8104,LWORD[8100]=0x1000800C", // PC + 12, See ARM Family Data Manual Page 2-41.
                                 "STMDB R0,{R15}" },
     { TLOC, "STMDB_AddressException",   "R0=0x4000004,Status=V",
-                                        "R0=0x4000004,R14=0x10008008,PC=0x20,CPSR=0x18000003",
+                                        "R0=0x4000004,R14=0x10008008,PC=0x18,CPSR=0x18000003",
                                         "STMDB R0!,{R1-R3}" },
     { TLOC, "STMDB_NoAddressException", "R0=0x0000004,CPSR=0x10000000",
                                         "R0=0x3FFFFF8,CPSR=0x10000000",
@@ -570,7 +570,7 @@ const CoreTestParams armV2aDataTransfer[] = {
                                 "R0=0xDEADBEEF,R2=0x8100,LWORD[8100]=0x10008008,Status=V",
                                 "SWP R0,PC,[R2]" },
     { TLOC, "SWP_WordToPC", "R1=0xCAFEBABE,R2=0x8100,LWORD[8100]=0x10000020,Status=C",
-                            "R1=0xCAFEBABE,R2=0x8100,PC=0x2C,LWORD[8100]=0xCAFEBABE,Status=C",
+                            "R1=0xCAFEBABE,R2=0x8100,PC=0x24,LWORD[8100]=0xCAFEBABE,Status=C",
                             "SWP PC,R1,[R2]" },
 
     { TLOC, "SWP_WordUnaligned1",   "R0=0xABBAABBA,R1=0xCAFEBABE,R2=0x8101,LWORD[8100]=0xDEADBEEF",
@@ -584,11 +584,11 @@ const CoreTestParams armV2aDataTransfer[] = {
                                     "SWP R0,R1,[R2]" },
 
     { TLOC, "SWP_WordAddressException", "R0=0xABBAABBA,R1=0xCAFEBABE,R2=0x4000000,LWORD[8100]=0xDEADBEEF",
-                                        "R0=0xABBAABBA,R14=0x8008,PC=0x20,CPSR=0x8000003,LWORD[8100]=0xDEADBEEF",
+                                        "R0=0xABBAABBA,R14=0x8008,PC=0x18,CPSR=0x8000003,LWORD[8100]=0xDEADBEEF",
                                         "SWP R0,R1,[R2]" },
 
     { TLOC, "SWP_WordDataAbort",    "R0=0xABBAABBA,R1=0xCAFEBABE,R2=0x10000,LWORD[8100]=0xDEADBEEF",
-                                    "R0=0xABBAABBA,R14=0x8008,PC=0x1C,CPSR=0x8000003",
+                                    "R0=0xABBAABBA,R14=0x8008,PC=0x14,CPSR=0x8000003",
                                     "SWP R0,R1,[R2]" },
 
 
@@ -607,11 +607,11 @@ const CoreTestParams armV2aDataTransfer[] = {
                                     "SWPB R0,R1,[R2]" },
 
     { TLOC, "SWP_ByteAddressException", "R0=0xABBAABBA,R1=0xCAFEBABE,R2=0x4000000,LWORD[8100]=0xDEADBEEF",
-                                        "R0=0xABBAABBA,R14=0x8008,PC=0x20,CPSR=0x8000003,LWORD[8100]=0xDEADBEEF",
+                                        "R0=0xABBAABBA,R14=0x8008,PC=0x18,CPSR=0x8000003,LWORD[8100]=0xDEADBEEF",
                                         "SWPB R0,R1,[R2]" },
 
     { TLOC, "SWP_ByteDataAbort",    "R0=0xABBAABBA,R1=0xCAFEBABE,R2=0x10000,LWORD[8100]=0xDEADBEEF",
-                                    "R0=0xABBAABBA,R14=0x8008,PC=0x1C,CPSR=0x8000003",
+                                    "R0=0xABBAABBA,R14=0x8008,PC=0x14,CPSR=0x8000003",
                                     "SWPB R0,R1,[R2]" },
 };
 

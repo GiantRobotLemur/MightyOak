@@ -1,8 +1,8 @@
-//! @file Statement.cpp
+//! @file AsmTools/Statement.cpp
 //! @brief The definition of an object created to represent a parsed assembly
 //! language statement.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2022-2023
+//! @date 2022-2024
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -48,6 +48,31 @@ void StatementNode::recover(ParseContext &context, ISyntaxNode *node)
     context.recover(TokenClass::StatementTerminator);
 
     BaseSyntaxNode::recover(context, node);
+}
+
+//! @brief Determines if a statement is prematurely terminated, possibly
+//! generating an error.
+//! @param[in] context The current state of the parsing process.
+//! @param[in] token The token which was being processed.
+//! @param[in] result The result of previous token processing.
+//! @retval true If a premature statement termination condition was recognised.
+//! @retval false If the token has already been recognised or did not represent
+//! a statement terminator.
+bool StatementNode::checkForPrematureEndOfStatement(ParseContext &context,
+                                                    const Token &token,
+                                                    ISyntaxNode *&result)
+{
+    bool isCompleted = false;
+
+    if ((result == nullptr) && (isComplete() == false) &&
+        (token.getClass() == TokenClass::StatementTerminator))
+    {
+        context.getMessages().appendError(token.getLocation(),
+                                          "Unexpected end of statement.");
+        isCompleted = true;
+    }
+
+    return isCompleted;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

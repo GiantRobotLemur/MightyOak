@@ -2,7 +2,7 @@
 //! @brief The declaration of various enumeration types used to annotate tokens
 //! in parsed assembly language.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2021-2023
+//! @date 2021-2024
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -46,22 +46,6 @@ enum class AddressMode : uint8_t
 {
     Bits26,
     Bits32,
-};
-
-//! @brief Expresses the data types expected in data directives.
-enum class DirectiveDataType
-{
-    Byte,
-    HalfWord,
-    Word,
-    LongWord,
-    NativeString,
-    Utf8String,
-    Utf16String,
-    Utf32String,
-    Real32,
-    Real64,
-    Real96,
 };
 
 }} // namespace Mo::Asm

@@ -1,8 +1,8 @@
-//! @file ExpressionNode.hpp
+//! @file AsmTools/ExpressionNode.hpp
 //! @brief The declaration of a number of objects representing nested elements
 //! of expressions.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2021-2023
+//! @date 2021-2024
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -379,7 +379,8 @@ struct ExprToCompile
 ////////////////////////////////////////////////////////////////////////////////
 // Function Declarations
 ////////////////////////////////////////////////////////////////////////////////
-bool compileExpressionNodes(ExprToCompile *exprNodes, IExprUPtr *exprs,
+bool compileExpressionNodes(const Location &baseLocation,
+                            ExprToCompile *exprNodes, IExprUPtr *exprs,
                             size_t count, Messages &log);
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -389,6 +390,8 @@ bool compileExpressionNodes(ExprToCompile *exprNodes, IExprUPtr *exprs,
 //! expression objects.
 //! @tparam NodeCount The count of nodes to compile.
 //! @tparam ExprCount The count of elements in the output array.
+//! @param[in] baseLocation The source code location to report for a missing
+//! expression.
 //! @param[in] nodes The array of nodes to compile.
 //! @param[out] exprs The array to receive the compiled expressions.
 //! @param[in] log The log to receive errors if any expression failed to compile.
@@ -396,7 +399,8 @@ bool compileExpressionNodes(ExprToCompile *exprNodes, IExprUPtr *exprs,
 //! @retval false At least one expression failed to compile, all previously
 //! compiled expressions were disposed of before the function returned.
 template<size_t NodeCount, size_t ExprCount>
-bool compileExpressionArray(ExprToCompile(&nodes)[NodeCount],
+bool compileExpressionArray(const Location &baseLocation,
+                            ExprToCompile(&nodes)[NodeCount],
                             IExprUPtr (&exprs)[ExprCount], Messages &log)
 {
     static_assert(NodeCount <= ExprCount, "The result array size is too small.");
@@ -406,7 +410,7 @@ bool compileExpressionArray(ExprToCompile(&nodes)[NodeCount],
         std::fill_n(exprs + NodeCount, ExprCount - NodeCount, nullptr);
     }
 
-    return compileExpressionNodes(nodes, exprs, NodeCount, log);
+    return compileExpressionNodes(baseLocation, nodes, exprs, NodeCount, log);
 }
 
 }} // namespace Mo::Asm

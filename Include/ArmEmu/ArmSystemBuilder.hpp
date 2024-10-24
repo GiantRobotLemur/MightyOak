@@ -2,7 +2,7 @@
 //! @brief The declaration of an object used to incrementally construct another
 //! object representing an emulated ARM-based system.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2023
+//! @date 2023-2024
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -45,27 +45,19 @@ public:
     // Accessors
 
     // Operations
+    void addDevice(IHardwareDeviceUPtr &&device);
     void addMapping(IAddressRegionPtr region, uint32_t baseAddr, MemoryAccess access);
+    void addMapping(IAddressRegionUPtr &&region, uint32_t baseAddr, MemoryAccess access);
     void reset(const Options &baseOptions);
-    IArmSystemUPtr createSystem() const;
+    IArmSystemUPtr createSystem();
 private:
-    // Internal Types
-
-    // Internal Functions
 
     // Internal Fields
     Options _baseOptions;
     AddressMap _readMap;
     AddressMap _writeMap;
+    HardwareDevicePool _devices;
 };
-
-////////////////////////////////////////////////////////////////////////////////
-// Function Declarations
-////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////
-// Templates
-////////////////////////////////////////////////////////////////////////////////
 
 }} // namespace Mo::Arm
 

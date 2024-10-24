@@ -4,7 +4,6 @@
 add_ag_library(ArmEmu   FOLDER      ARM
                         SOURCES     ArmCore.hpp
                                     ArmCore.cpp
-                                    IrqSink.hpp
                                     Hardware.inl
                                     TestBedHardware.inl
                                     MemcHardware.cpp
@@ -25,6 +24,9 @@ add_ag_library(ArmEmu   FOLDER      ARM
                                     ${MO_INCLUDE_DIR}/ArmEmu/EmuOptions.hpp
                                     AddressMap.cpp
                                     ${MO_INCLUDE_DIR}/ArmEmu/AddressMap.hpp
+                                    ${MO_INCLUDE_DIR}/ArmEmu/IKeyboardController.hpp
+                                    AcornKeyboardController.cpp
+                                    AcornKeyboardController.hpp
                                     IOC.cpp
                                     ${MO_INCLUDE_DIR}/ArmEmu/IOC.hpp
                                     VIDC10.cpp
@@ -37,6 +39,7 @@ add_ag_library(ArmEmu   FOLDER      ARM
                                     ${MO_INCLUDE_DIR}/ArmEmu/GuestEventQueue.hpp
                                     SystemContext.cpp
                                     ${MO_INCLUDE_DIR}/ArmEmu/SystemContext.hpp
+                                    ${MO_INCLUDE_DIR}/ArmEmu/HostMessageID.hpp
                                     ArmSystem.cpp
                                     ${MO_INCLUDE_DIR}/ArmEmu/ArmSystem.hpp
                         HEADERS     ${MO_INCLUDE_DIR}/ArmEmu.hpp
@@ -59,6 +62,8 @@ source_group(Emulation FILES
              TestBedHardware.inl
              MemcHardware.cpp
              MemcHardware.hpp
+             AcornKeyboardController.cpp
+             AcornKeyboardController.hpp
              RegisterFile.inl
              ARMv2CoreRegisterFile.inl
              AluInstructions.inl
@@ -72,13 +77,13 @@ source_group(Emulation FILES
              ArmSystem.inl)
 
 source_group(Interface FILES
-             IrqSink.hpp
              EmuOptions.cpp
              ${MO_INCLUDE_DIR}/ArmEmu/EmuOptions.hpp
              ArmEmu.cpp
              ${MO_INCLUDE_DIR}/ArmEmu.hpp
              AddressMap.cpp
              ${MO_INCLUDE_DIR}/ArmEmu/AddressMap.hpp
+             ${MO_INCLUDE_DIR}/ArmEmu/IKeyboardController.hpp
              IOC.cpp
              ${MO_INCLUDE_DIR}/ArmEmu/IOC.hpp
              VIDC10.cpp
@@ -89,6 +94,7 @@ source_group(Interface FILES
              ${MO_INCLUDE_DIR}/ArmEmu/ExecutionMetrics.hpp
              GuestEventQueue.cpp
              ${MO_INCLUDE_DIR}/ArmEmu/GuestEventQueue.hpp
+             ${MO_INCLUDE_DIR}/ArmEmu/HostMessageID.hpp
              SystemContext.cpp
              ${MO_INCLUDE_DIR}/ArmEmu/SystemContext.hpp
              ArmSystem.cpp
@@ -98,6 +104,8 @@ source_group(Interface FILES
 add_ag_test_app(ArmEmu_Tests    TEST_LIB ArmEmu
                                 SOURCES  Test/TestTools.cpp
                                          Test/TestTools.hpp
+                                         Test/LoggerDevice.cpp
+                                         Test/LoggerDevice.hpp
                                          Test/TestConstraints.cpp
                                          Test/TestConstraints.hpp
                                          Test/TestExecTools.cpp
@@ -107,6 +115,7 @@ add_ag_test_app(ArmEmu_Tests    TEST_LIB ArmEmu
                                          Test/Test_RegisterFile.cpp
                                          Test/Test_Hardware.cpp
                                          Test/Test_MemcHardware.cpp
+                                         Test/Test_MemcSystem.cpp
                                          Test/Test_AluOperations.cpp
                                          Test/Test_ALU.cpp
                                          Test/Test_DataTransfer.cpp
@@ -146,3 +155,22 @@ add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/Dhrystone.bin"
 # Embed the ARM machine code in the program source code.
 add_static_data(EmuPerf_Test "DhrystoneProgram.hpp" BINARY
                 SOURCES "${CMAKE_CURRENT_BINARY_DIR}/Dhrystone.bin")
+
+# Add a custom command to assemble the MEMC Test System ROM source code into
+# ARM machine code.
+set(MemcTestSystemSourceIn "${PROJECT_SOURCE_DIR}/Tests/ArmEmu/MemcTestSystemRom.arm")
+set(MemcTestRomImagePath "${CMAKE_CURRENT_BINARY_DIR}/MemcTestRom.bin")
+
+cmake_path(ABSOLUTE_PATH MemcTestSystemSourceIn
+           NORMALIZE OUTPUT_VARIABLE MemcTestSystemSource)
+
+add_custom_command(OUTPUT "${MemcTestRomImagePath}"
+                   COMMAND AAsm
+                   ARGS "${MemcTestSystemSource}" "-o" "${MemcTestRomImagePath}"
+                   DEPENDS "${MemcTestSystemSource}"
+                   WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+                   COMMENT "Assembling ${MemcTestSystemSource}...")
+
+# Embed the ARM machine code in the program source code.
+add_static_data(EmuPerf_Test "MemcTestRom.hpp" BINARY
+                SOURCES "${MemcTestRomImagePath}")

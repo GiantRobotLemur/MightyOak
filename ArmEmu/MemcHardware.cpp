@@ -2,7 +2,7 @@
 //! @brief The definition of an object which emulates the hardware of a
 //! MEMC-based system.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2023
+//! @date 2023-2024
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -15,6 +15,7 @@
 
 #include "Ag/Core/Binary.hpp"
 #include "Ag/Core/Exception.hpp"
+#include "Ag/Core/Stream.hpp"
 #include "Ag/Core/Utils.hpp"
 
 #include "MemcHardware.hpp"
@@ -37,17 +38,32 @@ struct GenerateFuzz
 };
 
 //! @brief Defines constants used to encode a MEMC page mapping table.
-struct PageMapping
+struct MemcMapping
 {
-    static constexpr uint8_t PPLBitCount = 2;
-    static constexpr uint8_t PPLShift = (sizeof(uint16_t) * 8) - PPLBitCount;
-    static constexpr uint16_t PPLMask = ((static_cast<uint16_t>(1) << PPLBitCount) - 1) << PPLShift;
-    static constexpr uint16_t PageNoMask = (static_cast<uint16_t>(1) << PPLShift) - 1;
+    // A 16-bit field per logical page describing the mapped physical page, if any.
+    // Bits 0-8: Physical Page No.
+    // Bits 9-10: Page Protection Level (See MEMC Data Sheet page 26)
+    // Bit 11: Page Present
+
+
+    static constexpr uint8_t MaxPhysRamSizePow2 = 26; // 64 MB - So that ROM can be mapped
+                                                      // The base of the logically mapped RAM.
+    static constexpr uint8_t MaxPageSizePow2 = 15; // 32 KB
+    static constexpr uint8_t MaxPhysPageCountPow2 = MaxPhysRamSizePow2 - MaxPageSizePow2;
+    static constexpr uint8_t PhysPageBitCount = MaxPhysPageCountPow2;
+    static constexpr uint8_t PPLBitCount = 2; // See MEMC Data Sheet Page 26.
+
+    static constexpr uint8_t PPLShift = MaxPhysPageCountPow2;
+    static constexpr uint16_t PPLMask = Ag::Bin::makeMask<uint16_t>(PPLBitCount) << PPLShift;
+    static constexpr uint16_t PageNoMask = Ag::Bin::makeMask<uint16_t>(PhysPageBitCount);
+
+    static constexpr uint8_t PagePresentShift = PhysPageBitCount + PPLBitCount;
+    static constexpr uint16_t PagePresentBit = static_cast<uint16_t>(1) << (PagePresentShift);
 };
 
 //! @brief A functor which generates MEMC page map entries which point to a
 //! specific area of physical memory, not necessarily the RAM.
-struct GenerateRomPageMapping
+struct GenerateRomMemcMapping
 {
 private:
     uint32_t _baseAddr;
@@ -55,7 +71,7 @@ private:
     uint8_t _pageSizePow2;
     uint8_t _ppl;
 public:
-    GenerateRomPageMapping(uint32_t baseAddr, uint8_t pageSizePow2, uint8_t ppl) :
+    GenerateRomMemcMapping(uint32_t baseAddr, uint8_t pageSizePow2, uint8_t ppl) :
         _baseAddr(baseAddr),
         _logicalPageNo(0),
         _pageSizePow2(pageSizePow2),
@@ -72,11 +88,43 @@ public:
 
         // Ensure all physical page numbers are relative to the physical RAM base.
         uint16_t physPageNo = static_cast<uint16_t>((targetPhysicalAddress - MEMC::PhysRamStart) >> _pageSizePow2);
+        uint16_t encodedMask = physPageNo & MemcMapping::PageNoMask;
 
-        return (physPageNo & PageMapping::PageNoMask) |
-               (static_cast<uint16_t>(_ppl) << PageMapping::PPLShift);
+        if (physPageNo != encodedMask)
+        {
+            assert(0);
+        }
+
+        return encodedMask |
+               (static_cast<uint16_t>(_ppl) << MemcMapping::PPLShift) |
+               MemcMapping::PagePresentBit;
     }
 };
+
+//! @brief An object describing a range of memory which is page mapped.
+class LogicalRamRegion : public IMMIOBlock
+{
+private:
+
+public:
+
+    virtual RegionType getType() const = 0;
+    virtual Ag::string_cref_t getName() const = 0;
+    virtual Ag::string_cref_t getDescription() const = 0;
+    virtual uint32_t getSize() const = 0;
+
+    // Overrides
+    virtual uint32_t read(uint32_t offset) = 0;
+    virtual void write(uint32_t offset, uint32_t value) = 0;
+    virtual void connect(const ConnectionContext &context) = 0;
+};
+
+
+////////////////////////////////////////////////////////////////////////////////
+// Local Data Definitions
+////////////////////////////////////////////////////////////////////////////////
+static constexpr size_t LowRomSize  = 0x400000;
+static constexpr size_t HighRomSize = 0x800000;
 
 } // Anonymous namespace
 
@@ -89,8 +137,9 @@ public:
 void MemcHardware::setPageSize(uint8_t pageSizePow2)
 {
     _pageSizePow2 = pageSizePow2;
-    _physicalPageCount = static_cast<uint16_t>(_ram.size() >> _pageSizePow2);
-    _pageOffsetMask = (static_cast<uint32_t>(1) << _pageSizePow2) - 1;
+    _physicalPageCount = static_cast<uint16_t>(std::max(_ram.size() >> _pageSizePow2,
+                                                        Ag::toSize(1)));
+    _pageOffsetMask = Ag::Bin::makeMask<uint32_t>(_pageSizePow2);
 }
 
 //! @brief Causes a write to the CAM associated with the MEMC/VIDC registers.
@@ -254,7 +303,10 @@ void MemcHardware::writeMEMC(uint32_t offset, uint32_t value)
         physicalPage |= static_cast<uint16_t>(memcId) << 7;
 
         // Encode the page protection level.
-        physicalPage |= static_cast<uint16_t>(pageProtectionLevel) << PageMapping::PPLShift;
+        physicalPage |= static_cast<uint16_t>(pageProtectionLevel) << MemcMapping::PPLShift;
+
+        // Mark the mapping as valid.
+        physicalPage |= MemcMapping::PagePresentBit;
 
         _pageMappings[logicalPage] = physicalPage;
     }
@@ -277,19 +329,20 @@ uint8_t MemcHardware::translateAddress(uint32_t logicalAddr, uint32_t &physAddr,
 
     if (logicalAddr & 0xFE000000)
     {
-        // The address is not in the lower 32 MB of the address space.
+        // The address is not in the lower 16 MB of the address space.
         result = AddrMapResult::NotMapped;
     }
     else
     {
-        // The address is backed by host memory.
-        result = AddrMapResult::HasMapping;
-
+        // The address might be backed by host memory.
         uint16_t logicalPageNo = static_cast<uint16_t>(logicalAddr >> _pageSizePow2);
         uint16_t mapping = _pageMappings[logicalPageNo];
 
+        // Determine if the page is mapped using branchless logic.
+        result = (mapping & MemcMapping::PagePresentBit) >> (MemcMapping::PagePresentShift - AddrMapResult::HasMappingShift);
+
         // Calculate the offset of the page based on its number.
-        physAddr = (mapping & PageMapping::PageNoMask) << _pageSizePow2;
+        physAddr = (mapping & MemcMapping::PageNoMask) << _pageSizePow2;
 
         // Add that to the base of all physical RAM.
         physAddr += MEMC::PhysRamStart;
@@ -307,7 +360,7 @@ uint8_t MemcHardware::translateAddress(uint32_t logicalAddr, uint32_t &physAddr,
         // pre-calculated.
         uint8_t bit = (static_cast<uint8_t>(isPrivilegedMode()) << 1) |
                       static_cast<uint8_t>(_osMode);
-        bit |= static_cast<uint8_t>((mapping & PageMapping::PPLMask) >> (PageMapping::PPLShift - 2));
+        bit |= static_cast<uint8_t>((mapping & MemcMapping::PPLMask) >> (MemcMapping::PPLShift - 2));
         bit |= isWrite << 4;
 
         static constexpr uint32_t perms = 0xCCEFEEFF;
@@ -531,7 +584,10 @@ MemcHardware::MemcHardware(const Options &options,
     _pageSizePow2(0),
     _osMode(false),
     _videoDMAEnabled(false),
-    _soundDMAEnabled(false)
+    _soundDMAEnabled(false),
+    _physicalRamBlock("Physical RAM", "The system RAM without any logical address mapping"),
+    _lowRomBlock("System ROM", "The low ROM area, usually containing the operating system."),
+    _highRomBlock("Extension ROM", "The high ROM area, usually containing extensions ROMs.")
 {
     // Generate random fuzz to use when memory can be accessed, but isn't mapped.
     std::generate_n(_fuzz, std::size(_fuzz), GenerateFuzz());
@@ -567,6 +623,10 @@ MemcHardware::MemcHardware(const Options &options,
 
     // Allocate the RAM and initialize it all to 0.
     _ram.resize(ramSize, 0);
+    _physicalRamBlock.updateHostMapping(_ram.data(),
+                                        static_cast<uint32_t>(_ram.size()));
+
+    // Set the initial page size to 4 KB.
     setPageSize(12);
 
     // Set up one mapping for each possible logical page.
@@ -576,6 +636,31 @@ MemcHardware::MemcHardware(const Options &options,
     // low ROM is mapped to the bottom of the logical address space.
     // 
     // See ARM Family Data Manual Page 4-9.
+
+    // Load low ROM image.
+    _lowRom.clear();
+    _lowRom.resize(LowRomSize, 0);
+
+    const auto &romPath = options.getRomPath();
+
+    if (romPath.isEmpty() == false)
+    {
+        // Open the file and read up to the first 4 MB.
+        if (auto romFile = Ag::IFileStream::open(romPath, Ag::FileAccess::Read |
+                                                          Ag::FileAccess::OpenExisting))
+        {
+            romFile->read(_lowRom.data(), _lowRom.size());
+        }
+
+        _lowRomBlock.updateHostMapping(_lowRom.data(),
+                                       static_cast<uint32_t>(_lowRom.size()));
+    }
+
+    // TODO: Load high ROM?
+    _highRom.clear();
+    _highRom.reserve(HighRomSize);
+    _highRomBlock.updateHostMapping(_highRom.data(),
+                                    static_cast<uint32_t>(_highRom.size()));
 }
 
 //! @brief Replaces the low ROM with a block of data.
@@ -584,8 +669,6 @@ MemcHardware::MemcHardware(const Options &options,
 //! @throws Ag::OperationException If romBytes contains more than 4 MB.
 void MemcHardware::setLowRom(const uint8_t *romBytes, size_t byteCount)
 {
-    static constexpr size_t LowRomSize = 0x400000;
-
     if (byteCount > LowRomSize)
     {
         throw Ag::OperationException("Lower ROM data too large.");
@@ -593,6 +676,8 @@ void MemcHardware::setLowRom(const uint8_t *romBytes, size_t byteCount)
 
     _lowRom.resize(LowRomSize, 0);
     std::memcpy(_lowRom.data(), romBytes, byteCount);
+
+    _lowRomBlock.updateHostMapping(_lowRom.data(), LowRomSize);
 }
 
 //! @brief Replaces the high ROM with a block of data.
@@ -601,8 +686,6 @@ void MemcHardware::setLowRom(const uint8_t *romBytes, size_t byteCount)
 //! @throws Ag::OperationException If romBytes contains more than 8 MB.
 void MemcHardware::setHighRom(const uint8_t *romBytes, size_t byteCount)
 {
-    static constexpr size_t HighRomSize = 0x800000;
-
     if (byteCount > HighRomSize)
     {
         throw Ag::OperationException("High ROM data too large.");
@@ -610,12 +693,24 @@ void MemcHardware::setHighRom(const uint8_t *romBytes, size_t byteCount)
 
     _highRom.resize(HighRomSize, 0);
     std::memcpy(_highRom.data(), romBytes, byteCount);
+
+    _highRomBlock.updateHostMapping(_highRom.data(), HighRomSize);
 }
 
 // Based on GenericHardware::reset().
 void MemcHardware::reset()
 {
-    setPageSize(12);
+    // HACK: The MEMC data sheet says the page size on reset is 4 KB (2^12),
+    // however, our filthy hack of remapping the page tables to point the
+    // lowest logical pages to the Low ROM only works with a larger page size
+    // as we don't have enough bits in each page mapping entry to map such
+    // large offsets with 4 KB pages.
+
+    // We'll create 1 x 4 MB page mapping logical address 0x0000 to
+    // physical address 0x3400000.
+    constexpr uint8_t InitialPageSizePow2 = 22;
+
+    setPageSize(InitialPageSizePow2);
     _osMode = false;
 
     // MEMC Data Sheet page 25: Sound DMA operations are disabled when RESET is
@@ -626,8 +721,17 @@ void MemcHardware::reset()
     // Generate a set of mappings which map logical addresses from 0x0000
     // to physical addresses 0x3400000 where the low ROM is positioned.
     // The PPL is set so that the pages are read-only in user mode.
-    std::generate(_pageMappings.begin(), _pageMappings.end(),
-                  GenerateRomPageMapping(0x3400000, 12, 1));
+    constexpr uint32_t LowRomPageCount = LowRomSize >> InitialPageSizePow2;
+    auto lastMapped = _pageMappings.begin() + LowRomPageCount;
+
+    std::generate(_pageMappings.begin(), lastMapped,
+                  GenerateRomMemcMapping(0x3400000, InitialPageSizePow2, 1));
+
+    // Mark the rest of the page entries as not present.
+    std::fill(lastMapped, _pageMappings.end(), static_cast<uint16_t>(0));
+
+    // Set the POR interrupt so that the OS knows it was a hard reset.
+    _ioc.powerOnReset();
 }
 
 // Based on GenericHardware::writeWords().
@@ -705,6 +809,11 @@ bool MemcHardware::writeWords(uint32_t logicalAddr, const uint32_t *values,
 
                 wordsWritten += static_cast<uint8_t>(wordsToWrite);
             }
+            else
+            {
+                // The word was written to unmapped memory and lost.
+                ++wordsWritten;
+            }
         }
         else
         {
@@ -781,8 +890,7 @@ bool MemcHardware::readWords(uint32_t logicalAddr, uint32_t *results, uint8_t co
             {
                 // Read static from the unmapped location.
                 std::copy_n(reinterpret_cast<uint32_t *>(_fuzz),
-                            (count - wordsRead) * 4,
-                            results + wordsRead);
+                            count - wordsRead, results + wordsRead);
 
                 // Update the count.
                 wordsRead = count;
@@ -799,25 +907,103 @@ bool MemcHardware::readWords(uint32_t logicalAddr, uint32_t *results, uint8_t co
 }
 
 // Based on GenericHardware::logicalToPhysicalAddress().
-bool MemcHardware::logicalToPhysicalAddress(uint32_t logicalAddr, uint32_t &physAddr) const
+bool MemcHardware::logicalToPhysicalAddress(uint32_t logicalAddr,
+                                            PageMapping &mapping) const
 {
-    bool isMapped;
-
     if (logicalAddr < MEMC::PhysRamStart)
     {
         // The address is in the logical address space and subject to translation.
-        uint8_t result = translateAddress(logicalAddr, physAddr, false);
+        const uint32_t logicalPageNo = logicalAddr >> _pageSizePow2;
+        const uint16_t memcMapping = _pageMappings[logicalPageNo];
 
-        isMapped = (result & AddrMapResult::HasMapping);
+        mapping.VirtualBaseAddr = logicalPageNo << _pageSizePow2;
+        mapping.PageSize = 1u << _pageSizePow2;
+
+        if (memcMapping & MemcMapping::PagePresentBit)
+        {
+            const uint16_t physPageNo = memcMapping & MemcMapping::PageNoMask;
+            const uint16_t pageAccess = memcMapping >> MemcMapping::PPLShift;
+
+            mapping.PageBaseAddr = (static_cast<uint32_t>(physPageNo) << _pageSizePow2) +
+                                   MEMC::PhysRamStart;
+            mapping.Access = PageMapping::SvcCanRead |
+                             PageMapping::SvcCanWrtie |
+                             PageMapping::IsPresent;
+
+            if (pageAccess < 2)
+            {
+                mapping.Access |= PageMapping::UserCanRead;
+
+                if (pageAccess & 1)
+                {
+                    mapping.Access |= PageMapping::UserCanWrite;
+                }
+            }
+        }
+        else
+        {
+            mapping.PageBaseAddr = 0;
+            mapping.Access = 0;
+        }
     }
     else
     {
         // It's not in the logical address space, the mapping is 1:1.
-        physAddr = logicalAddr;
-        isMapped = true;
+        mapping.VirtualBaseAddr = MEMC::PhysRamStart;
+        mapping.PageBaseAddr = MEMC::PhysRamStart;
+        mapping.PageSize = MEMC::AddrSpaceEnd - MEMC::PhysRamStart;
+        mapping.Access = PageMapping::IsPresent |
+                         PageMapping::SvcCanRead |
+                         PageMapping::SvcCanWrtie;
     }
 
-    return isMapped;
+    return (mapping.Access & PageMapping::IsPresent);
+}
+
+// Inherited from BasicIrqManagerHardware.
+AddressMap MemcHardware::createMasterReadMap()
+{
+    // Create copies of the address maps for non-real-time usage which describe all
+    // physical memory areas, including those with optimised address decoding logic.
+    AddressMap masterReadAddrMap = _readAddrDecoder;
+
+    bool isOK = true;
+
+    if (_physicalRamBlock.getSize() > 0)
+    {
+        isOK &= masterReadAddrMap.tryInsert(MEMC::PhysRamStart, &_physicalRamBlock);
+    }
+
+    if (isOK && _lowRom.size() > 0)
+    {
+        isOK &= masterReadAddrMap.tryInsert(MEMC::LowRomStart, &_lowRomBlock);
+    }
+
+    if (isOK && _highRom.size() > 0)
+    {
+        isOK &= masterReadAddrMap.tryInsert(MEMC::HighRomStart, &_highRomBlock);
+    }
+
+    if (!isOK)
+    {
+        throw Ag::OperationException("Fixed address map regions overlap.");
+    }
+
+    return masterReadAddrMap;
+}
+
+// Inherited from BasicIrqManagerHardware.
+AddressMap MemcHardware::createMasterWriteMap()
+{
+    AddressMap masterWriteAddrMap = _writeAddrDecoder;
+
+    if ((_physicalRamBlock.getSize() > 0) &&
+        !masterWriteAddrMap.tryInsert(MEMC::PhysRamStart, &_physicalRamBlock))
+    {
+        throw Ag::OperationException("Fixed address map regions overlap.");
+    }
+
+    return masterWriteAddrMap;
 }
 
 }} // namespace Mo::Arm

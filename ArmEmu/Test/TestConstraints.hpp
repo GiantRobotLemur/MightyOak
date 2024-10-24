@@ -2,7 +2,7 @@
 //! @brief The declaration of a system of objects used to set and verify the
 //! state of an emulated system in tests.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2023
+//! @date 2023-2024
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -442,15 +442,15 @@ public:
             switch (Ag::fromScalar<SystemRegister>(constraint.ElementIndex))
             {
             case SystemRegister::PC:
-                value = target.getRegisters().getPC();
+                value = target.getCoreRegister(CoreRegister::PC);
                 break;
 
             case SystemRegister::CPSR:
-                value = target.getRegisters().getPSR();
+                value = target.getCoreRegister(CoreRegister::CPSR);
                 break;
 
             case SystemRegister::Status:
-                value = target.getRegisters().getPSR() >> PsrShift::Status;
+                value = target.getCoreRegister(CoreRegister::CPSR) >> PsrShift::Status;
                 break;
 
             case SystemRegister::ProcessorMode:

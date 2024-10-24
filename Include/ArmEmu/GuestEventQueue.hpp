@@ -2,7 +2,7 @@
 //! @brief The declaration of an object which manages messages marshalled out
 //! of the emulator thread and into an observer thread.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2023
+//! @date 2023-2024
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -16,6 +16,8 @@
 ////////////////////////////////////////////////////////////////////////////////
 #include "ReaderWriterQueue.h"
 
+#include "Ag/Core/Memory.hpp"
+
 namespace Mo {
 namespace Arm {
 
@@ -28,7 +30,9 @@ struct GuestEvent
     uintptr_t SourceID;
     uintptr_t Data1;
     uintptr_t Data2;
-    int32_t Type;
+
+    //! @brief See the HostMessageID enumeration for useful values.
+    uint32_t Type;
 #if INTPTR_MAX > 0xFFFFFFFF
     // Only pad on 64-bit architectures.
     uint32_t Padding;
@@ -65,6 +69,8 @@ private:
     Queue _queue;
     uintptr_t _sourceID;
 };
+
+using GuestEventQueueUPtr = std::unique_ptr<GuestEventQueue, Ag::AlignedDeleter<GuestEventQueue>>;
 
 }} // namespace Mo::Arm
 

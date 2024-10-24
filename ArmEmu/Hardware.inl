@@ -1,8 +1,8 @@
-//! @file ArmEmu/name_here.inl
+//! @file ArmEmu/Hardware.inl
 //! @brief The declaration of an example of an implementation of a hardware layer underlying
 //! register files and data transfer.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2023
+//! @date 2023-2024
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -17,6 +17,8 @@
 #include <cstdint>
 
 #include <vector>
+
+#include "Ag/Core/Binary.hpp"
 
 namespace Mo {
 namespace Arm {
@@ -113,7 +115,7 @@ class GenericHardware
     //! it to a known power-on state.
     void reset();
 
-    //! @brief Updates the bits of the bits of the interrupt mask field.
+    //! @brief Updates the bits of the interrupt mask field.
     //! @param[in] mask The new pattern of bits to apply to the mask.
     //! @param[in] significantBits The bits describing which digits of mask
     //! parameter are significant.
@@ -236,16 +238,16 @@ class GenericHardware
     //! @brief Attempts to convert a logical address to a physical address
     //! given the current state of the system.
     //! @param[in] logicalAddr The logical address to translate.
-    //! @param[out] physAddr The physical address produced by the conversion if
-    //! one was possible. The next available logical address if conversion
-    //! wasn't possible.
+    //! @param[out] mapping A structure describing the physical region of
+    //! addresses containing the virtual address, or at least the size of the
+    //! region if no pages are mapped.
     //! @retval true The logical address had a corresponding physical address
-    //! which was returned in the physAddr parameter.
+    //! which was returned in the mapping parameter.
     //! @retval false The logical address was not mapped to a physical address.
-    //! The physAddr parameter is updated with the next logical address after
-    //! logicalAddr which can be mapped, or 0.
+    //! The mapping parameter will be updated with a base virtual address and
+    //! page size or the page size will be set to 0.
     bool logicalToPhysicalAddress(uint32_t logicalAddr,
-                                  uint32_t &physAddr) const;
+                                  PageMapping &mapping) const;
 
     //! @brief Gets a map describing the entities read from indexed by physical
     //! address.
@@ -254,6 +256,14 @@ class GenericHardware
     //! @brief Gets a map describing the entities written to indexed by physical
     //! address.
     const AddressMap &getWriteAddressMap() const;
+
+    //! @brief Create a map of all readable memory regions in the system,
+    //! including ranges of addresses with fixed decoding logic.
+    AddressMap createMasterReadMap();
+
+    //! @brief Create a map of all writeable memory regions in the system,
+    //! including ranges of addresses with fixed decoding logic.
+    AddressMap createMasterWriteMap();
 };
 
 //! @brief An implementation of the common interrupt management requirements of
@@ -272,6 +282,8 @@ private:
 
 public:
     // Construction/Destruction
+    //! @brief Constructs a basic hardware framework with no specific
+    //! address map.
     BasicIrqManagerHardware() :
         _irqStatus(0),
         _irqMask(0),
@@ -279,6 +291,10 @@ public:
     {
     }
 
+    //! @brief Constructs a basic hardware framework with specific regions
+    //! defined in the address map.
+    //! @param readMap 
+    //! @param writeMap 
     BasicIrqManagerHardware(const AddressMap &readMap,
                             const AddressMap writeMap) :
         _masterReadMap(readMap),
@@ -290,49 +306,98 @@ public:
     }
 
     // Accessors
+    //! @brief Gets the bit field indicating which unmasked interrupts are
+    //! pending, if any.
+    //! @returns IrqsPending & ~IrqMask
+    //! @note Bit patterns are described by the constants of the
+    //! IrqState structure.
     uint8_t getIrqStatus() const noexcept { return _irqStatus & ~_irqMask; }
 
     // Operations
+    //! @brief Updates the bits of the interrupt mask field.
+    //! @param[in] mask The new pattern of bits to apply to the mask.
+    //! @param[in] significantBits The bits describing which digits of mask
+    //! parameter are significant.
+    //! @note Bit patterns are described by the constants of the
+    //! IrqState structure.
     void updateIrqMask(uint8_t mask, uint8_t significantBits) noexcept
     {
         _irqMask &= ~mask;
         _irqMask |= significantBits & mask;
     }
 
+    //! @brief Determines whether the processor is operating in a privileged
+    //! mode for the purposes of accessing memory.
     constexpr bool isPrivilegedMode() const noexcept { return _isPriviledged; }
 
+    //! @brief Sets whether the processor is operating in a privileged mode
+    //! for the purposes of accessing memory.
     void setPrivilegedMode(bool isPrivileged) noexcept
     {
         _isPriviledged = isPrivileged;
     }
 
+    //! @brief Updates the pending interrupt state to indicate whether a debug
+    //! interrupt is currently pending.
+    //! @param[in] isRaised True to mark the interrupt as raised, false to mark
+    //! it as handled.
+    //! @note Debug interrupts are generally raised when the processor executes
+    //! a BKPT instruction or is in single step mode.
     void setDebugIrq(bool isRaised) noexcept
     {
-        _irqStatus = (_irqStatus & ~IrqState::DebugPending) |
-                     (-static_cast<uint8_t>(isRaised) & IrqState::DebugPending);
+        Ag::Bin::updateMask(_irqStatus, IrqState::DebugPending, isRaised);
     }
 
+    //! @brief Updates the pending interrupt state to indicate whether a
+    //! host-generated interrupt is currently pending.
+    //! @param[in] isRaised True to mark the interrupt as raised, false to mark
+    //! it as handled.
+    //! @note Host interrupts are raised by the emulator application to
+    //! interrupt the execution loop of the guest processor.
     void setHostIrq(bool isRaised) noexcept
     {
-        _irqStatus = (_irqStatus & ~IrqState::HostPending) |
-                     (-static_cast<uint8_t>(isRaised) & IrqState::HostPending);
+        Ag::Bin::updateMask(_irqStatus, IrqState::HostPending, isRaised);
     }
 
+    //! @brief Updates the pending interrupt state to indicate whether a
+    //! guest-generated interrupt is currently pending.
+    //! @param[in] isRaised True to mark the interrupt as raised, false to mark
+    //! it as handled.
+    //! @note Guest interrupts are raised by emulated interrupt controller
+    //! hardware which allows multiple (simulated) hardware devices to interrupt
+    //! the processor.
     void setGuestIrq(bool isRaised) noexcept
     {
-        _irqStatus = (_irqStatus & ~IrqState::IrqPending) |
-                     (-static_cast<uint8_t>(isRaised) & IrqState::IrqPending);
+        Ag::Bin::updateMask(_irqStatus, IrqState::IrqPending, isRaised);
     }
 
+    //! @brief Updates the pending fast interrupt state to indicate whether a
+    //! guest-generated fast interrupt is currently pending.
+    //! @param[in] isRaised True to mark the interrupt as raised, false to mark
+    //! it as handled.
+    //! @note Guest fast interrupts are raised by emulated interrupt controller
+    //! hardware which allows multiple (simulated) hardware devices to interrupt
+    //! the processor.
     void setGuestFastIrq(bool isRaised) noexcept
     {
-        _irqStatus = (_irqStatus & ~IrqState::FastIrqPending) |
-                     (-static_cast<uint8_t>(isRaised) & IrqState::FastIrqPending);
+        Ag::Bin::updateMask(_irqStatus, IrqState::FastIrqPending, isRaised);
     }
 
+    //! @brief Gets a map describing the entities read from indexed by physical
+    //! address.
     const AddressMap &getReadAddressMap() const { return _masterReadMap; }
 
+    //! @brief Gets a map describing the entities written to indexed by physical
+    //! address.
     const AddressMap &getWriteAddressMap() const { return _masterWriteMap; }
+
+    //! @brief Create a map of all readable memory regions in the system,
+    //! including ranges of addresses with fixed decoding logic.
+    AddressMap createMasterReadMap() { return _masterReadMap; }
+
+    //! @brief Create a map of all writeable memory regions in the system,
+    //! including ranges of addresses with fixed decoding logic.
+    AddressMap createMasterWriteMap() { return _masterWriteMap; }
 };
 
 }} // namespace Mo::Arm

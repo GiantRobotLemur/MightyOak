@@ -2,7 +2,7 @@
 //! @brief The definition of the entry point for the EmuPerfTest CLI performance
 //! measurement tool.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2023
+//! @date 2023-2024
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -417,10 +417,11 @@ private:
 
         output.clear();
         appendFormat(FormatInfo::getDisplay(),
-                     "Executed {0} cycles in {1:F2} seconds.\n"
-                     "Simulated clock speed: {2:F2} MHz\n"
-                     "Simulated performance: {3:F2} MIPS\n", output,
+                     "Executed {0} CPU cycles in {1:F2} seconds (~{2:F0} Dhrystone's per second).\n"
+                     "Simulated clock speed: {3:F2} MHz\n"
+                     "Simulated performance: {4:F2} MIPS\n", output,
                      { metrics.CycleCount, durationInSeconds,
+                       std::floor(_cycleCount / durationInSeconds),
                        clockSpeedHz / 1.0e6,
                        metrics.calculateSpeedInMIPS() });
 

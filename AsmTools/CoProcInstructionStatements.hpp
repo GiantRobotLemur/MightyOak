@@ -2,7 +2,7 @@
 //! @brief The declaration of syntax nodes which represent partially parsed
 //! generic ARM co-processor instructions.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2023
+//! @date 2023-2024
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.////////////////////////////////////////////////////////////////////////////////
@@ -80,6 +80,7 @@ private:
     ExpressionNodeUPtr _rdExpr;
     ExpressionNodeUPtr _rnExpr;
     ExpressionNodeUPtr _rmExpr;
+    size_t _lexicalBaseState;
     InstructionMnemonic _mnemonic;
     ConditionCode _condition;
     State _state;

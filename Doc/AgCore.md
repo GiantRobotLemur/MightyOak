@@ -32,3 +32,8 @@ Some notable features of AG Core are:
 * URI management.
 * File path management using both Win32 and POSIX-style paths.
 * File system integration.
+
+# QtInterop
+
+This is a library which provides basic utilities for working Qt6 and
+allowing the AgCore library to inter-operate with it.

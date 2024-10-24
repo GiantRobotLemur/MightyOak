@@ -2,7 +2,7 @@
 //! @brief The declaration of useful stand-alone utility functions defined by
 //! the core library.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2021-2023
+//! @date 2021-2024
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -53,16 +53,16 @@ typedef std::unique_ptr<FILE, StdFileCloser> StdFilePtr;
 
 //! @brief An object defined in lexical scope which overwrites a property at
 //! construction and restores the value at destruction.
-template<typename T> class ValueScope
+template<typename TSource, typename TValue = TSource> class ValueScope
 {
 private:
-    T &_value;
-    T _oldValue;
+    TSource &_value;
+    TValue _oldValue;
 public:
     //! @brief Overwrites a property with a value, but capturing the old value.
     //! @param[in] scopedValue A reference to the property to update.
     //! @param[in] value The value to write to scopedValue now.
-    ValueScope(T &scopedValue, const T &value) :
+    ValueScope(TSource &scopedValue, const TValue &value) :
         _value(scopedValue),
         _oldValue(scopedValue)
     {
@@ -93,6 +93,9 @@ int compareBoundedStringsIgnoreCase(utf8_cptr_t lhs, utf8_cptr_t rhs, size_t len
 // Implemented in CoreInternal.cpp.
 bool tryOpenFile(const String &fileName, const utf8_cptr_t mode,
                  FILE *&stream, String &error);
+
+bool isStdoutEnabled();
+void enableStdout();
 
 ////////////////////////////////////////////////////////////////////////////////
 // Templates

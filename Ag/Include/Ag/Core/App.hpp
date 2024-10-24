@@ -2,7 +2,7 @@
 //! @brief The declaration of an object which represents the root of an
 //! application object hierarchy.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2021-2023
+//! @date 2021-2024
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -20,9 +20,17 @@
 // Macro Definitions
 ////////////////////////////////////////////////////////////////////////////////
 // Define macros to minimise the definitions introduced by including windows.h.
+#ifndef WIN32_MEAN_AND_LEAN
 #define WIN32_MEAN_AND_LEAN
+#endif
+
+#ifndef UNICODE
 #define UNICODE
+#endif
+
+#ifndef NOMINMAX
 #define NOMINMAX    // Macros min(a,b) and max(a,b)
+#endif
 
 #include <Windows.h>
 #endif

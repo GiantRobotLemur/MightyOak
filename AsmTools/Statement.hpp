@@ -1,8 +1,8 @@
-//! @file Statement.hpp
+//! @file AsmTools/Statement.hpp
 //! @brief The declaration of an object created to represent a parsed assembly
 //! language statement.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2022-2023
+//! @date 2022-2024
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -23,11 +23,6 @@
 #include "AsmTools/Options.hpp"
 
 #include "BaseSyntaxNode.hpp"
-
-
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
 
 namespace Mo {
 
@@ -83,8 +78,10 @@ public:
 
     virtual Statement *compile(Messages &output) const = 0;
 
-private:
-    // Internal Fields
+protected:
+    // Internal Functions
+    bool checkForPrematureEndOfStatement(ParseContext &context, const Token &token,
+                                         ISyntaxNode *&result);
 };
 
 //! @brief An object created to represent a parsed assembly language statement.

@@ -2,7 +2,7 @@
 //! @brief The definition of unit tests for the emulation of the Arithmetic
 //! Logic Unit of an ARM processor core.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2022-2023
+//! @date 2022-2024
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -27,7 +27,6 @@ namespace {
 // Parameters for tests compatible with all ARM ALUs.
 const CoreTestParams basicAlu[] = {
     // Verify no 'S' suffix leaves status flags unaffected.
-    { TLOC, "MOV_Immediate", "R0=0", "R0=42,Status=0", "MOV R0,#42" },
     { TLOC, "MOV_Immediate", "R0=0", "R0=42,Status=0", "MOV R0,#42" },
     { TLOC, "MOV_Immediate_V_Preserved", "Status=V,R0=0", "R0=42,Status=V", "MOV R0,#42" },
     { TLOC, "MOV_Zero", "R2=69", "R2=0,Status=0", "MOV R2,#0" },

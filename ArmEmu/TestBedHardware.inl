@@ -2,7 +2,7 @@
 //! @brief The declaration of an implementation of an emulator hardware layer
 //! suitable for testing.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2023
+//! @date 2023-2024
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -228,13 +228,32 @@ public:
         return isRead;
     }
 
-    bool logicalToPhysicalAddress(uint32_t logicalAddr, uint32_t &physAddr) const
+    bool logicalToPhysicalAddress(uint32_t logicalAddr, PageMapping &mapping) const
     {
         // There is no address translation, the mapping from the logical to
         // physical address space is 1:1.
-        physAddr = logicalAddr;
 
-        return true;
+        // Address map:
+        // 0x0000 - RomEnd - ROM
+        // RomEnd - RamEnd - RAM
+        // RamEnd - AddrTop - unmapped.
+
+        if (logicalAddr < RamEnd)
+        {
+            mapping.VirtualBaseAddr = 0;
+            mapping.PageBaseAddr = 0;
+            mapping.PageSize = RamEnd;
+            mapping.Access = PageMapping::Mask;
+        }
+        else
+        {
+            mapping.VirtualBaseAddr = RamEnd;
+            mapping.PageBaseAddr = RamEnd;
+            mapping.PageSize = AddrTop - RamEnd;
+            mapping.Access = 0;
+        }
+
+        return (mapping.Access & PageMapping::IsPresent);
     }
 
     bool tryMapLogicalAddress(uint32_t logicalAddr, bool /*isRead*/,

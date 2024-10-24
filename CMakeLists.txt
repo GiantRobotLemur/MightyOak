@@ -27,24 +27,18 @@ project(MightyOak
         HOMEPAGE_URL "https://github.com/GiantRobotLemur/MightyOak"
         LANGUAGES ${PROJ_LANGUAGES})
 
+# Set the use of IDE folders before anything else.
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+
 # Configure required external packages.
 include(CheckLanguage)
 find_package(GTest 1.10 REQUIRED)
 find_package(Doxygen 1.8 OPTIONAL_COMPONENTS dot)
-find_package(SDL2 REQUIRED)
-find_package(OpenGL REQUIRED) # For GLU
-find_package(glm REQUIRED)
+find_package(Qt6 QUIET COMPONENTS Core Widgets Concurrent)
 
-if (${SDL2_FOUND})
-    message(STATUS "Found SDL library ${SDL2_VERSION}.")
-endif()
-
-if (${OPENGL_GLU_FOUND})
-    message(STATUS "Found GLU library.")
-endif()
-
-if (${glm_FOUND})
-    message(STATUS "Found GLM library ${glm_VERSION}.")
+if (${Qt6_FOUND})
+    message(STATUS "Found Qt6 suite ${Qt6_VERSION}.")
+    qt_standard_project_setup()
 endif()
 
 # Limit configurations
@@ -79,18 +73,19 @@ add_subdirectory("Ag/Include/ReaderWriterQueue")
 # Underlying runtime components.
 add_subdirectory(Ag/SymbolPackager)
 add_subdirectory(Ag/Core)
-add_subdirectory(Ag/SdlTools)
-add_subdirectory(Ag/GLAPI)
-add_subdirectory(Ag/ObjectGL)
-#add_subdirectory(Ag/Geometry)
-#add_subdirectory(Ag/Gfx)
+
+if ("${Qt6_FOUND}")
+    add_subdirectory(Ag/QtInterop)
+endif()
 
 # ARM Emulator Modules
 add_subdirectory(AsmTools)
 add_subdirectory(ArmEmu)
-#add_subdirectory(EmuPlatform)
-add_subdirectory(EmuUI)
-add_subdirectory(EmulatorApp)
+
+if ("${Qt6_FOUND}")
+    message("-- [Optional] Configuring ARM Debugger project")
+    add_subdirectory(ArmDebugger)
+endif()
 
 # Generate Documentation from code.
 if (DEFINED DOXYGEN_FOUND)
@@ -137,6 +132,8 @@ if (DEFINED DOXYGEN_FOUND)
     list(APPEND DOC_SRCS "${CMAKE_CURRENT_SOURCE_DIR}/ArmEmu"
                          "${MO_INCLUDE_DIR}/ArmEmu.hpp"
                          "${MO_INCLUDE_DIR}/ArmEmu")
+
+
 
     doxygen_add_docs(Documentation ${DOC_SRCS}
                      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}

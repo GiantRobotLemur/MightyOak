@@ -1,0 +1,69 @@
+//! @file ArmDebugger/Annotations/DataReplacement.hpp
+//! @brief The declaration of an annotation which replaces the emulator memory
+//! contents to be interpreted for display to the user.
+//! @author GiantRobotLemur@na-se.co.uk
+//! @date 2024
+//! @copyright This file is part of the Mighty Oak project which is released
+//! under LGPL 3 license. See LICENSE file at the repository root or go to
+//! https://github.com/GiantRobotLemur/MightyOak for full license details.
+////////////////////////////////////////////////////////////////////////////////
+
+#ifndef __ARM_DEBUGGER_DATA_REPLACEMENT_HPP__
+#define __ARM_DEBUGGER_DATA_REPLACEMENT_HPP__
+
+////////////////////////////////////////////////////////////////////////////////
+// Dependent Header Files
+////////////////////////////////////////////////////////////////////////////////
+#include <cstdint>
+#include <vector>
+
+#include "Annotations/Annotation.hpp"
+
+namespace Mo {
+
+////////////////////////////////////////////////////////////////////////////////
+// Data Type Declarations
+////////////////////////////////////////////////////////////////////////////////
+
+////////////////////////////////////////////////////////////////////////////////
+// Class Declarations
+////////////////////////////////////////////////////////////////////////////////
+//! @brief An annotation which replaces the emulator memory contents to be
+//! interpreted for display to the user.
+class DataReplacement : public Annotation
+{
+public:
+    // Construction/Destruction
+    DataReplacement();
+    DataReplacement(uint32_t startAddress, const uint32_t *data, uint32_t length);
+    virtual ~DataReplacement() = default;
+
+    // Accessors
+    const uint32_t *replacementData() const;
+
+    // Operations
+
+    // Overrides
+    virtual QJsonObject write() const override;
+    virtual void read(const QJsonObject &jsonObj) override;
+private:
+    // Internal Types
+
+    // Internal Functions
+
+    // Internal Fields
+    std::vector<uint32_t> _replacementWords;
+};
+
+////////////////////////////////////////////////////////////////////////////////
+// Function Declarations
+////////////////////////////////////////////////////////////////////////////////
+
+////////////////////////////////////////////////////////////////////////////////
+// Templates
+////////////////////////////////////////////////////////////////////////////////
+
+} // namespace Mo
+
+#endif // Header guard
+////////////////////////////////////////////////////////////////////////////////

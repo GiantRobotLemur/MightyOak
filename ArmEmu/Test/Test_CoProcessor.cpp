@@ -2,7 +2,7 @@
 //! @brief The definition of unit tests verifying the execution of generic
 //! co-processor instructions.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2023
+//! @date 2023-2024
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -27,23 +27,23 @@ namespace {
 ////////////////////////////////////////////////////////////////////////////////
 const CoreTestParams armV2CPAccessDenied[] = {
     { TLOC, "MRC_ReadCPReg",    "R9=0xCAFEBABE,Mode=Svc26",
-                                "R9=0xCAFEBABE,PC=0x10",
+                                "R9=0xCAFEBABE,PC=0x08",
                                 "MRC CP12,0,R9,CR4,CR0,0" },
 
     { TLOC, "MCR_WriteCP",  "R9=0xCAFEBABE,Mode=Svc26",
-                            "R9=0xCAFEBABE,PC=0x10",
+                            "R9=0xCAFEBABE,PC=0x08",
                             "MCR CP9,0,R9,CR0,CR0,0" },
 
     { TLOC, "CDP_Invalid",  "Mode=Svc26",
-                            "PC=0x10",
+                            "PC=0x08",
                             "CDP CP5,0,CR2,CR0,CR1,0" },
 
     { TLOC, "LDC_Invalid",  "R2=0x8100,Mode=Svc26",
-                            "PC=0x10",
+                            "PC=0x08",
                             "LDC CP11,CR0,[R2]" },
 
     { TLOC, "STC_Invalid",  "R2=0x8100,Mode=Svc26",
-                            "PC=0x10",
+                            "PC=0x08",
                             "STC CP1,CR0,[R2]" },
 };
 
@@ -69,19 +69,19 @@ const CoreTestParams armV2aCP15Access[] = {
                                 "MRC CP15,0,R7,CR5,CR0,0" },
 
     { TLOC, "MRC_ReadCP15_Unprivileged",    "R9=0xCAFEBABE,Mode=Usr26",
-                                            "R9=0xCAFEBABE,PC=0x10",
+                                            "R9=0xCAFEBABE,PC=0x08",
                                             "MRC CP15,0,R9,CR0,CR0,0" },
     { TLOC, "MRC_ReadCP15_Extranious1", "R9=0xCAFEBABE,Mode=Svc26",
-                                        "R9=0xCAFEBABE,PC=0x10",
+                                        "R9=0xCAFEBABE,PC=0x08",
                                         "MRC CP15,0,R9,CR0,CR3,0" },
     { TLOC, "MRC_ReadCP15_Extranious2", "R9=0xCAFEBABE,Mode=Svc26",
-                                        "R9=0xCAFEBABE,PC=0x10",
+                                        "R9=0xCAFEBABE,PC=0x08",
                                         "MRC CP15,1,R9,CR0,CR0,0" },
     { TLOC, "MRC_ReadCP15_Extranious3", "R9=0xCAFEBABE,Mode=Svc26",
-                                        "R9=0xCAFEBABE,PC=0x10",
+                                        "R9=0xCAFEBABE,PC=0x08",
                                         "MRC CP15,0,R9,CR0,CR0,1" },
     { TLOC, "MRC_ReadNotCP15",  "R9=0xCAFEBABE,Mode=Svc26",
-                                "R9=0xCAFEBABE,PC=0x10",
+                                "R9=0xCAFEBABE,PC=0x08",
                                 "MRC CP11,0,R9,CR0,CR0,0" },
 
     // MRC CP15
@@ -105,32 +105,32 @@ const CoreTestParams armV2aCP15Access[] = {
                                     "MCR CP15,0,R7,CR5,CR0,0" },
 
     { TLOC, "MCR_WriteCP15_Unprivileged",   "R9=0xCAFEBABE,Mode=Usr26",
-                                            "R9=0xCAFEBABE,PC=0x10",
+                                            "R9=0xCAFEBABE,PC=0x08",
                                             "MCR CP15,0,R9,CR0,CR0,0" },
     { TLOC, "MCR_WriteCP15_Extranious1",    "R9=0xCAFEBABE,Mode=Svc26",
-                                            "R9=0xCAFEBABE,PC=0x10",
+                                            "R9=0xCAFEBABE,PC=0x08",
                                             "MCR CP15,0,R9,CR0,CR3,0" },
     { TLOC, "MCR_WriteCP15_Extranious2",    "R9=0xCAFEBABE,Mode=Svc26",
-                                            "R9=0xCAFEBABE,PC=0x10",
+                                            "R9=0xCAFEBABE,PC=0x08",
                                             "MCR CP15,1,R9,CR0,CR0,0" },
     { TLOC, "MCR_WriteCP15_Extranious3",    "R9=0xCAFEBABE,Mode=Svc26",
-                                            "R9=0xCAFEBABE,PC=0x10",
+                                            "R9=0xCAFEBABE,PC=0x08",
                                             "MCR CP15,0,R9,CR0,CR0,1" },
     { TLOC, "MCR_WriteNotCP15", "R9=0xCAFEBABE,Mode=Svc26",
-                                "R9=0xCAFEBABE,PC=0x10",
+                                "R9=0xCAFEBABE,PC=0x08",
                                 "MCR CP4,0,R9,CR1,CR7,0" },
 
     // Show other instruction on CP15 are invalid.
     { TLOC, "CDP_CP15", "Mode=Svc26",
-                        "PC=0x10",
+                        "PC=0x08",
                         "CDP CP15,0,CR2,CR0,CR1,0" },
 
     { TLOC, "LDC_CP15", "R2=0x8100,Mode=Svc26",
-                        "PC=0x10",
+                        "PC=0x08",
                         "LDC CP15,CR0,[R2]" },
 
     { TLOC, "STC_CP15", "R2=0x8100,Mode=Svc26",
-                        "PC=0x10",
+                        "PC=0x08",
                         "STC CP15,CR0,[R2]" },
 };
 

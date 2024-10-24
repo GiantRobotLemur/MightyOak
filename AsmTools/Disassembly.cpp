@@ -1,7 +1,7 @@
 //! @file Disassembly.cpp
 //! @brief The definition of logic to disassembly 32-bit ARM machine code.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2022-2023
+//! @date 2022-2024
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -1010,8 +1010,16 @@ OperationClass disassembleInstruction(DisassemblyParams &params)
             opClass = interpretCoProcOp(params);
         }
         break;
+
     default:
         break;
+    }
+
+    if (opClass == OperationClass::None)
+    {
+        // If we can't decode the instruction, it essentially becomes EQUD 0xXXXXXXXX
+        params.Params->Bits.Bits[0] = params.Instructions[0];
+        params.Decoded = 1;
     }
 
     return opClass;

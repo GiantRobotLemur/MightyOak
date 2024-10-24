@@ -1,7 +1,7 @@
 //! @file Ag/Core/String.hpp
 //! @brief The declaration of an immutable UTF-8-encoded string value data type.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2021-2023
+//! @date 2021-2024
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -173,6 +173,7 @@ public:
     std::u16string toUtf16() const;
     std::u32string toUtf32() const;
     std::wstring toWide() const;
+    void appendToWideBuffer(std::vector<wchar_t> &buffer) const;
     int compare(const String &rhs) const;
     int compareIgnoreCase(const String &rhs) const;
     bool startsWith(const std::string_view &prefix) const;

@@ -2,7 +2,7 @@
 //! @brief The declaration of data types which decode and execute ARM
 //! instructions for ARMv2 variants.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2023
+//! @date 2023-2024
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -309,6 +309,11 @@ uint32_t execMcrARMv2aCP15(TRegisterFile &regs, uint32_t instruction)
 
     return result;
 }
+
+// TODO: There should be an ARMv2aS decoder replicating the functionality of the
+// ARM250 microcell. It is based on the ARM3 core, supporting SWP, but not cache,
+// so ANY co-processor instructions should cause an Undefined instruction
+// exception.
 
 //! @brief An instruction decoder implementation which executes instructions
 //! for ARMv2a processor variants.

@@ -2,7 +2,7 @@
 //! @brief The definition of syntax nodes which represent partially parsed
 //! generic ARM co-processor instructions.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2023
+//! @date 2023-2024
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -179,11 +179,11 @@ public:
 CoProcDataProcInstructionNode::CoProcDataProcInstructionNode(ParseContext &context,
                                                              const Token &mnemonic) :
     StatementNode(context, mnemonic),
+    _lexicalBaseState(context.pushLexicalContext(getExpressionLexer())),
     _mnemonic(getTokenEnum(mnemonic, TokenProperty::Mnemonic, InstructionMnemonic::Cdp)),
     _condition(getTokenEnum(mnemonic, TokenProperty::ConditionCode, ConditionCode::Al)),
     _state(State::BeforeProcID)
 {
-    context.pushLexicalContext(getExpressionLexer());
 }
 
 // Inherited from ISyntaxNode.
@@ -197,7 +197,7 @@ bool CoProcDataProcInstructionNode::isValid() const
 }
 
 // Inherited from ISyntaxNode.
-ISyntaxNode *CoProcDataProcInstructionNode::applyToken(ParseContext &/*context*/,
+ISyntaxNode *CoProcDataProcInstructionNode::applyToken(ParseContext &context,
                                                        const Token &token)
 {
     ISyntaxNode *result = nullptr;
@@ -206,43 +206,69 @@ ISyntaxNode *CoProcDataProcInstructionNode::applyToken(ParseContext &/*context*/
     {
         case State::BeforeProcID: break;
         case State::AfterProcID:
-            confirmToken(token, TokenClass::Comma, State::BeforeOpCode1,
-                         _state, result);
+            if (confirmToken(token, TokenClass::Comma, State::BeforeOpCode1,
+                             _state, result))
+            {
+                // Start parsing expression tokens.
+                _lexicalBaseState = context.pushLexicalContext(getExpressionLexer());
+            }
             break;
 
         case State::BeforeOpCode1: break;
         case State::AfterOpCode1:
-            confirmToken(token, TokenClass::Comma, State::BeforeRd,
-                         _state, result);
+            if (confirmToken(token, TokenClass::Comma, State::BeforeRd,
+                             _state, result))
+            {
+                // Start parsing expression tokens.
+                _lexicalBaseState = context.pushLexicalContext(getExpressionLexer());
+            }
             break;
 
         case State::BeforeRd: break;
         case State::AfterRd:
-            confirmToken(token, TokenClass::Comma, State::BeforeRn,
-                         _state, result);
+            if (confirmToken(token, TokenClass::Comma, State::BeforeRn,
+                             _state, result))
+            {
+                // Start parsing expression tokens.
+                _lexicalBaseState = context.pushLexicalContext(getExpressionLexer());
+            }
             break;
 
         case State::BeforeRn: break;
         case State::AfterRn:
-            confirmToken(token, TokenClass::Comma, State::BeforeRm,
-                         _state, result);
+            if (confirmToken(token, TokenClass::Comma, State::BeforeRm,
+                             _state, result))
+            {
+                // Start parsing expression tokens.
+                _lexicalBaseState = context.pushLexicalContext(getExpressionLexer());
+            }
             break;
 
         case State::BeforeRm: break;
         case State::AfterRm:
-            confirmToken(token, TokenClass::Comma, State::BeforeOpCode2,
-                         _state, result);
+            if (confirmToken(token, TokenClass::Comma, State::BeforeOpCode2,
+                             _state, result))
+            {
+                // Start parsing expression tokens.
+                _lexicalBaseState = context.pushLexicalContext(getExpressionLexer());
+            }
             break;
 
         case State::BeforeOpCode2: break;
         case State::Complete: break;
     }
 
+    if (checkForPrematureEndOfStatement(context, token, result))
+    {
+        // Handle premature end of statement.
+        _state = State::Complete;
+    }
+
     return result;
 }
 
 // Inherited from ISyntaxNode.
-ISyntaxNode *CoProcDataProcInstructionNode::applyNode(ParseContext &/*context*/,
+ISyntaxNode *CoProcDataProcInstructionNode::applyNode(ParseContext &context,
                                                       ISyntaxNode *childNode)
 {
     ISyntaxNode *result = nullptr;
@@ -250,38 +276,56 @@ ISyntaxNode *CoProcDataProcInstructionNode::applyNode(ParseContext &/*context*/,
     switch (_state)
     {
     case State::BeforeProcID:
-        confirmNodeType(childNode, _cpIdExpr, State::AfterProcID,
-                        _state, result);
+        if (confirmNodeType(childNode, _cpIdExpr, State::AfterProcID,
+                            _state, result))
+        {
+            context.restoreLexicalState(_lexicalBaseState);
+        }
         break;
 
     case State::AfterProcID: break;
     case State::BeforeOpCode1:
-        confirmNodeType(childNode, _opCode1Expr, State::AfterOpCode1,
-                        _state, result);
+        if (confirmNodeType(childNode, _opCode1Expr, State::AfterOpCode1,
+                            _state, result))
+        {
+            context.restoreLexicalState(_lexicalBaseState);
+        }
         break;
 
     case State::AfterOpCode1: break;
     case State::BeforeRd:
-        confirmNodeType(childNode, _rdExpr, State::AfterRd,
-                        _state, result);
+        if (confirmNodeType(childNode, _rdExpr, State::AfterRd,
+                        _state, result))
+        {
+            context.restoreLexicalState(_lexicalBaseState);
+        }
         break;
 
     case State::AfterRd: break;
     case State::BeforeRn:
-        confirmNodeType(childNode, _rnExpr, State::AfterRn,
-                        _state, result);
+        if (confirmNodeType(childNode, _rnExpr, State::AfterRn,
+                            _state, result))
+        {
+            context.restoreLexicalState(_lexicalBaseState);
+        }
         break;
 
     case State::AfterRn: break;
     case State::BeforeRm:
-        confirmNodeType(childNode, _rmExpr, State::AfterRm,
-                        _state, result);
+        if (confirmNodeType(childNode, _rmExpr, State::AfterRm,
+                            _state, result))
+        {
+            context.restoreLexicalState(_lexicalBaseState);
+        }
         break;
 
     case State::AfterRm: break;
     case State::BeforeOpCode2:
-        confirmNodeType(childNode, _opCode2Expr, State::Complete,
-                        _state, result);
+        if (confirmNodeType(childNode, _opCode2Expr, State::Complete,
+                            _state, result))
+        {
+            context.restoreLexicalState(_lexicalBaseState);
+        }
         break;
 
     case State::Complete: break;
@@ -315,7 +359,7 @@ Statement *CoProcDataProcInstructionNode::compile(Messages &output) const
     IExprUPtr exprs[std::size(exprNodes)];
 
     // Compile all the expressions.
-    bool isOK = compileExpressionArray(exprNodes, exprs, output);
+    bool isOK = compileExpressionArray(getStart(), exprNodes, exprs, output);
 
     Statement *statement = nullptr;
 
@@ -392,6 +436,12 @@ ISyntaxNode *CoProcDataTransferInstructionNode::applyToken(ParseContext &context
     case State::Complete: break;
     }
 
+    if (checkForPrematureEndOfStatement(context, token, result))
+    {
+        // Handle premature end of statement.
+        _state = State::Complete;
+    }
+
     return result;
 }
 
@@ -452,7 +502,7 @@ Statement *CoProcDataTransferInstructionNode::compile(Messages &output) const
 
     // Compile all the expressions and operands.
     if (_addrNode->compile(addrOperand, output) &&
-        compileExpressionArray(exprNodes, exprs, output))
+        compileExpressionArray(getStart(), exprNodes, exprs, output))
     {
         // Create a new statement which will take ownership of the
         // various compiled expressions.

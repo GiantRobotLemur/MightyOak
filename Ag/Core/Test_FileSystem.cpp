@@ -1,7 +1,7 @@
 //! @file Test_FileSystem.cpp
 //! @brief The definition of unit tests for file system related classes.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2021
+//! @date 2021-2024
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -760,6 +760,34 @@ GTEST_TEST(FsPathBuilder, SetFileExtensionPosix)
     // Try replacing the extension with multiple leading periods.
     specimen.setFileExtension("..txt");
     EXPECT_STRINGEQC(specimen.getFileExtension(), "txt");
+}
+
+GTEST_TEST(FsPathBuilder, MakeCanonicalWin32)
+{
+    // Start with no extension.
+    PathBuilder specimen("C:\\Program Files\\MightyOak\\.\\Bin\\..\\Data\\ROMs\\RiscOS_2_00.rom",
+                         getWin32Schema());
+    EXPECT_EQ(specimen.getElementCount(), 8u);
+
+    specimen.makeCanonical();
+
+    EXPECT_EQ(specimen.getElementCount(), 5u);
+    EXPECT_STRINGEQC(specimen.toString(PathUsage::Display),
+                     "C:\\Program Files\\MightyOak\\Data\\ROMs\\RiscOS_2_00.rom");
+}
+
+GTEST_TEST(FsPathBuilder, MakeCanonicalPosix)
+{
+    // Start with no extension.
+    PathBuilder specimen("/usr/bin/../shared/./MightyOak/Data/ROMs/RiscOS_2_00.rom",
+                         getPosixSchema());
+    EXPECT_EQ(specimen.getElementCount(), 9u);
+
+    specimen.makeCanonical();
+
+    EXPECT_EQ(specimen.getElementCount(), 6u);
+    EXPECT_STRINGEQC(specimen.toString(PathUsage::Display),
+                     "/usr/shared/MightyOak/Data/ROMs/RiscOS_2_00.rom");
 }
 
 GTEST_TEST(FsPath, DefaultConstruct)

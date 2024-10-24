@@ -2,7 +2,7 @@
 //! @brief The declaration of an object which shares information between
 //! internal components of an emulated system.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2023
+//! @date 2023-2024
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -22,6 +22,7 @@ namespace Arm {
 ////////////////////////////////////////////////////////////////////////////////
 // Class Declarations
 ////////////////////////////////////////////////////////////////////////////////
+class IArmSystem;
 class GuestEventQueue;
 class SystemContext;
 class Options;
@@ -44,16 +45,18 @@ struct GuestTask
     TaskFn Task;
 };
 
-//! @brief Represents an object used to allow perform communications between the
+//! @brief Represents an object used to perform communications between the
 //! emulated system and the host system while the emulated system is running.
 class SystemContext
 {
 public:
     // Construction/Destruction
-    SystemContext(const Options &sysConfig, GuestEventQueue &eventQueue);
+    SystemContext(const Options &sysConfig, GuestEventQueue &eventQueue,
+                  IArmSystem *parentSystem);
     ~SystemContext() = default;
 
     // Accessors
+    IArmSystem *getSystem() const;
     uint64_t getCPUClockTicks() const;
     uint64_t getMasterClockTicks() const;
     uint64_t getMasterClockFrequency() const;
@@ -72,6 +75,7 @@ private:
 
     // Internal Fields
     GuestEventQueue &_eventQueue;
+    IArmSystem *_parentSystem;
     GuestTask *_taskQueueHead;
     uint64_t _masterClock;
     uint64_t _masterFreq;

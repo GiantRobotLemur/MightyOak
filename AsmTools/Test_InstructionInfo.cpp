@@ -1,7 +1,7 @@
-//! @file Test_InstructionInfo.cpp
+//! @file AsmTools/Test_InstructionInfo.cpp
 //! @brief The definition of unit tests for the InstructionInfo class.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2022-2023
+//! @date 2022-2024
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -873,7 +873,8 @@ public:
 
         _point.configure(specimen);
 
-        Ag::String text = specimen.toString(baseAddr, FormatterOptions::ShowOffsets);
+        Ag::String text = specimen.toString(baseAddr, FormatterOptions::ShowOffsets |
+                                                      FormatterOptions::UseBasicStyleHex);
         EXPECT_STRINGEQ(text, _point.getAssemblerText());
 
         Ag::String error;
@@ -888,7 +889,8 @@ public:
                              InstructionInfo::AllowFPA |
                              InstructionInfo::AllowThumb |
                              InstructionInfo::UseStackModesOnR13);
-        Ag::String disText = specimen.toString(baseAddr, FormatterOptions::ShowOffsets);
+        Ag::String disText = specimen.toString(baseAddr, FormatterOptions::ShowOffsets |
+                                                         FormatterOptions::UseBasicStyleHex);
 
         // Ensure the condition code from source matches that which was
         // interpreted through disassembly.
@@ -919,7 +921,8 @@ public:
 
         _point.configure(specimen);
 
-        Ag::String text = specimen.toString(baseAddr, FormatterOptions::ShowOffsets);
+        Ag::String text = specimen.toString(baseAddr, FormatterOptions::ShowOffsets |
+                                                      FormatterOptions::UseBasicStyleHex);
         EXPECT_STRINGEQ(text, _point.getAssemblerText());
 
         Ag::String error;
@@ -928,10 +931,6 @@ public:
         EXPECT_FALSE(error.isEmpty());
     }
 };
-
-////////////////////////////////////////////////////////////////////////////////
-// Local Data
-////////////////////////////////////////////////////////////////////////////////
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1001,16 +1000,16 @@ void registerInstructionTests()
                                                                std::size(bkptSuccesses));
 
     BranchTestPoint branchSuccesses[] = {
-        { LOC, "Branch_Simple", "B $ + &18", ConditionCode::Al, InstructionMnemonic::B, 0x10018, 0xEA000004 },
-        { LOC, "Branch_Condition", "BLT $ + &18", ConditionCode::Lt, InstructionMnemonic::B, 0x10018, 0xBA000004 },
+        { LOC, "Branch_Simple", "B $+&18", ConditionCode::Al, InstructionMnemonic::B, 0x10018, 0xEA000004 },
+        { LOC, "Branch_Condition", "BLT $+&18", ConditionCode::Lt, InstructionMnemonic::B, 0x10018, 0xBA000004 },
     };
 
     registerTestPoints<PositiveInstructionTest<BranchTestPoint>>(
         "Instruction_Branch", branchSuccesses, std::size(branchSuccesses));
 
     BranchTestPoint branchFail[] = {
-        { LOC, "Branch_OffsetTooHigh", "BGE $ + &4000000", ConditionCode::Ge, InstructionMnemonic::B, 0x4010000u },
-        { LOC, "Branch_OffsetTooLow", "BLHI $ - &4000000", ConditionCode::Hi, InstructionMnemonic::Bl, static_cast<uint32_t>(0x10000 - 0x4000000) },
+        { LOC, "Branch_OffsetTooHigh", "BGE $+&4000000", ConditionCode::Ge, InstructionMnemonic::B, 0x4010000u },
+        { LOC, "Branch_OffsetTooLow", "BLHI $-&4000000", ConditionCode::Hi, InstructionMnemonic::Bl, static_cast<uint32_t>(0x10000 - 0x4000000) },
     };
 
     registerTestPoints<NegativeInstructionTest<BranchTestPoint>>(
@@ -1093,8 +1092,8 @@ void registerInstructionTests()
     MultiTransferTestPoint mtrSuccess[] = {
         { LOC, "Ldm_IA", "LDMIA R0, {R1}", ConditionCode::Al, InstructionMnemonic::Ldm, MultiTransferMode::IncrementAfter, false, false, CoreRegister::R0, 0x0002u, 0xE8900002u },
         { LOC, "Stm_IB", "STMNEIB R6, {R0-R4}", ConditionCode::Ne, InstructionMnemonic::Stm, MultiTransferMode::IncrementBefore, false, false, CoreRegister::R6, 0x001Fu, 0x1986001Fu },
-        { LOC, "Ldm_DA", "LDMCCDA R8, {R10, R12-R15}", ConditionCode::Cc, InstructionMnemonic::Ldm, MultiTransferMode::DecrementAfter, false, false, CoreRegister::R8, 0xF400u, 0x3818F400u },
-        { LOC, "Stm_DB", "STMVSDB R1, {R0, R2-R7}", ConditionCode::Vs, InstructionMnemonic::Stm, MultiTransferMode::DecrementBefore, false, false, CoreRegister::R1, 0x00FDu, 0x690100FDu },
+        { LOC, "Ldm_DA", "LDMCCDA R8, {R10,R12-R15}", ConditionCode::Cc, InstructionMnemonic::Ldm, MultiTransferMode::DecrementAfter, false, false, CoreRegister::R8, 0xF400u, 0x3818F400u },
+        { LOC, "Stm_DB", "STMVSDB R1, {R0,R2-R7}", ConditionCode::Vs, InstructionMnemonic::Stm, MultiTransferMode::DecrementBefore, false, false, CoreRegister::R1, 0x00FDu, 0x690100FDu },
         { LOC, "Ldm_FA", "LDMFA R13, {R8-R11}", ConditionCode::Al, InstructionMnemonic::Ldm, MultiTransferMode::FullAscending, false, false, CoreRegister::R13, 0x0F00u, 0xE81D0F00u },
         { LOC, "Stm_FA", "STMFA R13!, {R0-R4}", ConditionCode::Al, InstructionMnemonic::Stm, MultiTransferMode::FullAscending, true, false, CoreRegister::R13, 0x001Fu, 0xE9AD001Fu },
         { LOC, "Ldm_FD", "LDMFD R13!, {R8-R11}", ConditionCode::Al, InstructionMnemonic::Ldm, MultiTransferMode::FullDescending, true, false, CoreRegister::R13, 0x0F00u, 0xE8BD0F00u },

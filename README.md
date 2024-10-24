@@ -58,6 +58,7 @@ The project is currently dependent on the following up-stream components:
 * Doxygen [Optional]
 * SDL 2 [Required, but not yet] - for later GUI application
 * GLM [Required, but not yet] - for later GUI application
+* Qt 6.5 [Optional] - For interactive ARM Debugger
 
 ## License
 
