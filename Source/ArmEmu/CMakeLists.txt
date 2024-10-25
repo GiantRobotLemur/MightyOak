@@ -1,7 +1,7 @@
 # CMakeLists configuration for the ARM Processor Emulator library
 
 # Define the library.
-add_ag_library(ArmEmu   FOLDER      ARM
+ag_add_library(ArmEmu   FOLDER      ARM
                         SOURCES     ArmCore.hpp
                                     ArmCore.cpp
                                     Hardware.inl
@@ -53,6 +53,10 @@ else()
     source_group(Emulation FILES AluOperations_NoArch.cpp)
 endif()
 
+list(APPEND DOC_SRCS "${CMAKE_CURRENT_SOURCE_DIR}"
+                     "${MO_INCLUDE_DIR}/ArmEmu.hpp"
+                     "${MO_INCLUDE_DIR}/ArmEmu")
+
 source_group(Tools FILES
              ArmCore.hpp
              ArmCore.cpp)
@@ -101,7 +105,7 @@ source_group(Interface FILES
              ${MO_INCLUDE_DIR}/ArmEmu/ArmSystem.hpp)
 
 # Define the unit test harness.
-add_ag_test_app(ArmEmu_Tests    TEST_LIB ArmEmu
+ag_add_test_app(ArmEmu_Tests    TEST_LIB ArmEmu
                                 SOURCES  Test/TestTools.cpp
                                          Test/TestTools.hpp
                                          Test/LoggerDevice.cpp
@@ -130,12 +134,12 @@ target_include_directories(ArmEmu_Tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
 # We need the assembly language tools to perform the tests.
 target_link_libraries(ArmEmu_Tests PRIVATE AsmTools)
 
-add_cli_app(EmuPerf_Test FOLDER ARM
-                         NAME "EmuPerfTest"
-                         DESCRIPTION "Measures the performance of different emulated system configurations."
-                         VERSION "${PROJECT_VERSION}"
-                         SOURCES EmuPerfTest_Main.cpp
-                         LIBS AgCore AsmTools ArmEmu)
+ag_add_cli_app(EmuPerf_Test FOLDER ARM
+                NAME "EmuPerfTest"
+                DESCRIPTION "Measures the performance of different emulated system configurations."
+                VERSION "${PROJECT_VERSION}"
+                SOURCES EmuPerfTest_Main.cpp
+                LIBS AgCore AsmTools ArmEmu)
 
 set(DhyrstoneSourceIn "${PROJECT_SOURCE_DIR}/Tests/ArmEmu/Dhrystone2_1.arm")
 
@@ -153,8 +157,8 @@ add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/Dhrystone.bin"
                    COMMENT "Assembling ${DhrystoneSource}...")
 
 # Embed the ARM machine code in the program source code.
-add_static_data(EmuPerf_Test "DhrystoneProgram.hpp" BINARY
-                SOURCES "${CMAKE_CURRENT_BINARY_DIR}/Dhrystone.bin")
+ag_add_static_data(EmuPerf_Test "DhrystoneProgram.hpp" BINARY
+                   SOURCES "${CMAKE_CURRENT_BINARY_DIR}/Dhrystone.bin")
 
 # Add a custom command to assemble the MEMC Test System ROM source code into
 # ARM machine code.
@@ -172,5 +176,5 @@ add_custom_command(OUTPUT "${MemcTestRomImagePath}"
                    COMMENT "Assembling ${MemcTestSystemSource}...")
 
 # Embed the ARM machine code in the program source code.
-add_static_data(EmuPerf_Test "MemcTestRom.hpp" BINARY
-                SOURCES "${MemcTestRomImagePath}")
+ag_add_static_data(EmuPerf_Test "MemcTestRom.hpp" BINARY
+                   SOURCES "${MemcTestRomImagePath}")

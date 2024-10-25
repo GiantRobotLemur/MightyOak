@@ -2,9 +2,6 @@
 
 include(CMakePrintHelpers)
 
-set_property(GLOBAL PROPERTY USE_FOLDERS ON)
-set(UtilsDir ${CMAKE_CURRENT_LIST_DIR})
-
 # Create a static library which is part of the Ag suite.
 # Arguments: target                   - The mandatory target name
 #            QT                       - Defines the target using qt_add_library().
@@ -18,7 +15,7 @@ set(UtilsDir ${CMAKE_CURRENT_LIST_DIR})
 #            POSIX_HEADERS <files>    - Linux-specific public interface header files.
 #            PUBLIC_LIBS <libraries>  - Libraries which the library and its clients should link to.
 #            PRIVATE_LIBS <libraries> - Libraries which the library link to.
-function(add_ag_library target)
+function(ag_add_library target)
     set(prefix LIB)
     set(noValues QT)
     set(singleValues "FOLDER" "NAME")
@@ -74,7 +71,7 @@ endfunction()
 # Arguments: target - The mandatory target name
 #            TEST_LIB <libName> - The Ag library to test.
 #            SOURCES <files>    - The unit test source code files.
-function(add_ag_test_app target)
+function(ag_add_test_app target)
     set(prefix TAPP)
     set(noValues "")
     set(singleValues "TEST_LIB")
@@ -87,7 +84,8 @@ function(add_ag_test_app target)
                           ${ARGN})
 
     add_executable(${target})
-    target_link_libraries(${target} PRIVATE GTest::GTest GTest::Main)
+
+    target_link_libraries(${target} PRIVATE gtest gtest_main)
 
     if(DEFINED TAPP_TEST_LIB)
         # Link to the library under test.
@@ -108,12 +106,11 @@ function(add_ag_test_app target)
 
     target_sources(${target} PRIVATE ${TAPP_SOURCES})
     gtest_discover_tests(${target})
-    enable_stacktrace(${target})
+    ag_enable_stacktrace(${target})
 endfunction()
 
-
 # Create a GUI application dependent upon the Ag suite of libraries.
-# add_gui_app(target ...)
+# ag_add_gui_app(target ...)
 # Arguments: target                  - The mandatory target name
 #            QT                      - The application will be defined using qt_add_executable()
 #            FOLDER <folder name>    - The name of the project folder to add the item to.
@@ -124,7 +121,7 @@ endfunction()
 #            WIN_SOURCES <files>     - Win32-specific source and header files.
 #            POSIX_SOURCES <files>   - Linux-specific source and header files.
 #            LIBS                    - The libraries the application should link to.
-function(add_gui_app target)
+function(ag_add_gui_app target)
     set(prefix APP)
     set(noValues QT)
     set(singleValues FOLDER NAME DESCRIPTION VERSION)
@@ -214,9 +211,9 @@ function(add_gui_app target)
     endif()
 
     if(WIN32)
-        configure_file("${UtilsDir}/Win32Version.rc.in"
+        configure_file("${CMAKE_CURRENT_FUNCTION_LIST_DIR}/Win32Version.rc.in"
                        "Win32Version.rc" COPYONLY)
-        configure_file("${UtilsDir}/Win32Version.h.in"
+        configure_file("${CMAKE_CURRENT_FUNCTION_LIST_DIR}/Win32Version.h.in"
                        "Win32Version.h" @ONLY NEWLINE_STYLE WIN32)
 
         target_sources("${target}" PRIVATE
@@ -224,7 +221,7 @@ function(add_gui_app target)
                        "${CMAKE_CURRENT_BINARY_DIR}/Win32Version.h")
     endif()
 
-    configure_file("${UtilsDir}/Version.hpp.in"
+    configure_file("${CMAKE_CURRENT_FUNCTION_LIST_DIR}/Version.hpp.in"
                    "Version.hpp" @ONLY)
 
     target_sources("${target}" PRIVATE
@@ -232,12 +229,12 @@ function(add_gui_app target)
 
     include_directories("${target}" PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
 
-    enable_stacktrace(${target})
+    ag_enable_stacktrace(${target})
 endfunction()
 
 
 # Create a console application dependent upon the Ag suite of libraries.
-# add_cli_app(target ...)
+# ag_add_cli_app(target ...)
 # Arguments: target                  - The mandatory target name
 #            FOLDER <folder name>    - The name of the project folder to add the item to.
 #            NAME <app name>         - The base name of the application program file.
@@ -247,7 +244,7 @@ endfunction()
 #            WIN_SOURCES <files>     - Win32-specific source and header files.
 #            POSIX_SOURCES <files>   - Linux-specific source and header files.
 #            LIBS                    - The libraries the application should link to.
-function(add_cli_app target)
+function(ag_add_cli_app target)
     set(prefix APP)
     set(noValues "")
     set(singleValues FOLDER NAME DESCRIPTION VERSION)
@@ -284,10 +281,10 @@ function(add_cli_app target)
         set_target_properties(${target} PROPERTIES OUTPUT_NAME "${APP_NAME}")
     endif()
 
-    enable_stacktrace(${target})
+    ag_enable_stacktrace(${target})
 endfunction()
 
-# add_static_data(target, StaticData.hpp, Input1.txt Input2.txt ...)
+# ag_add_static_data(target, StaticData.hpp, Input1.txt Input2.txt ...)
 #
 # Will produce StaticData.hpp containing function declarations like:
 # const char *getInputText1();
@@ -299,7 +296,7 @@ endfunction()
 # The source file is generated via a custom command, so post-configuration-time
 # changes to the source text files will force a re-generation and recompilation
 # of the generated code.
-function(add_static_data target headerName)
+function(ag_add_static_data target headerName)
     set(prefix data)
     set(noValues BINARY)
     set(singleValues)
@@ -342,7 +339,7 @@ function(add_static_data target headerName)
 
     string(REPLACE "-" "_" headerGuard ${headerGuardGuid})
 
-    configure_file("${UtilsDir}/StaticData.hpp.in"
+    configure_file("${CMAKE_CURRENT_FUNCTION_LIST_DIR}/StaticData.hpp.in"
                    "${fullHeaderPath}" @ONLY)
 
     # Schedule the source file to be generated at build time if any of
@@ -350,9 +347,9 @@ function(add_static_data target headerName)
     set(buildTimeScript "${CMAKE_CURRENT_BINARY_DIR}/${headerBaseName}.cmake")
 
     if (data_BINARY)
-        configure_file("${UtilsDir}/GenerateData.cmake.in" "${buildTimeScript}" @ONLY)
+        configure_file("${CMAKE_CURRENT_FUNCTION_LIST_DIR}/GenerateData.cmake.in" "${buildTimeScript}" @ONLY)
     else()
-        configure_file("${UtilsDir}/GenerateText.cmake.in" "${buildTimeScript}" @ONLY)
+        configure_file("${CMAKE_CURRENT_FUNCTION_LIST_DIR}/GenerateText.cmake.in" "${buildTimeScript}" @ONLY)
     endif()
 
     add_custom_command(OUTPUT ${fullSourceName}

@@ -1,7 +1,7 @@
 # CMakeLists configuration for the ARM Assembler Tools library
 
 # Define the library.
-add_ag_library(AsmTools FOLDER      ARM
+ag_add_library(AsmTools FOLDER      ARM
                         SOURCES     AsmTools.cpp
                                     AsmEnums.hpp
                                     ${MO_INCLUDE_DIR}/AsmTools/Options.hpp
@@ -88,6 +88,10 @@ add_ag_library(AsmTools FOLDER      ARM
                                     CoProcInstructionStatements.hpp
                         HEADERS     ${MO_INCLUDE_DIR}/AsmTools.hpp
                         PUBLIC_LIBS AgCore)
+
+list(APPEND DOC_SRCS "${CMAKE_CURRENT_SOURCE_DIR}"
+                     "${MO_INCLUDE_DIR}/AsmTools.hpp"
+                     "${MO_INCLUDE_DIR}/AsmTools")
 
 source_group(Assembly FILES
     AsmTools.cpp
@@ -190,7 +194,7 @@ source_group("Instructions" FILES
 )
 
 # Define the unit test harness.
-add_ag_test_app(AsmTools_Tests TEST_LIB AsmTools
+ag_add_test_app(AsmTools_Tests TEST_LIB AsmTools
                                SOURCES  Test_Main.cpp
                                         TestTools.cpp
                                         TestTools.hpp
@@ -212,16 +216,16 @@ add_ag_test_app(AsmTools_Tests TEST_LIB AsmTools
                                         Test_InstructionInfo.cpp
                                         Test_SimpleInstructions.cpp)
 
-add_cli_app(AAsm FOLDER ARM
+ag_add_cli_app(AAsm FOLDER ARM
                  NAME AAsm
                  DESCRIPTION "A 32-bit ARM assembler."
                  VERSION "${PROJECT_VERSION}"
                  SOURCES AAsm_Main.cpp
                  LIBS AgCore AsmTools)
 
-add_cli_app(ADisasm FOLDER ARM
-                    NAME ADisasm
-                    DESCRIPTION "A 32-bit ARM disassembler."
-                    VERSION "${PROJECT_VERSION}"
-                    SOURCES ADisasm_Main.cpp
-                    LIBS AgCore AsmTools)
+ag_add_cli_app(ADisasm FOLDER ARM
+                NAME ADisasm
+                DESCRIPTION "A 32-bit ARM disassembler."
+                VERSION "${PROJECT_VERSION}"
+                SOURCES ADisasm_Main.cpp
+                LIBS AgCore AsmTools)

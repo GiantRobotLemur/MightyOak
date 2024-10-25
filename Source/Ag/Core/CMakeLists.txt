@@ -1,7 +1,7 @@
 # CMakeLists configuration for the Ag::Core library
 
 # Define the library.
-add_ag_library(AgCore SOURCES   CoreInternal.hpp
+ag_add_library(AgCore SOURCES   CoreInternal.hpp
                                 CoreInternal.cpp
                                 Binary.cpp
                                 ByteOrder.cpp
@@ -75,8 +75,14 @@ add_ag_library(AgCore SOURCES   CoreInternal.hpp
                                 ${AG_INCLUDE_DIR}/Ag/GTest_Core.hpp
                     FOLDER      Core)
 
+list(APPEND DOC_SRCS "${CMAKE_CURRENT_SOURCE_DIR}"
+                     "${AG_INCLUDE_DIR}/Ag/Core.hpp"
+                     "${AG_INCLUDE_DIR}/Ag/Core")
+
+target_include_directories(AgCore PUBLIC "${AG_INCLUDE_DIR}")
+
 # Define the unit test harness.
-add_ag_test_app(Core_Tests TEST_LIB AgCore
+ag_add_test_app(Core_Tests TEST_LIB AgCore
                            SOURCES  Test_Binary.cpp
                                     Test_Utils.cpp
                                     Test_EnumInfo.cpp
@@ -97,4 +103,3 @@ add_ag_test_app(Core_Tests TEST_LIB AgCore
                                     Test_Uri.cpp
                                     Test_Timer.cpp
                                     Test_Version.cpp)
-

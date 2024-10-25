@@ -2,7 +2,7 @@
 
 set(QT_INTEROP_PATH "${AG_INCLUDE_DIR}/Ag/QtInterop")
 
-add_ag_library(QtInterop    QT
+ag_add_library(QtInterop    QT
                             FOLDER      "Core"
                             HEADERS     ${AG_INCLUDE_DIR}/Ag/QtInterop.hpp
                             SOURCES     ${QT_INTEROP_PATH}/CommandLineWrangler.hpp

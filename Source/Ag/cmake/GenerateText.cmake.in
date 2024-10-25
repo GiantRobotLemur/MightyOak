@@ -36,7 +36,7 @@ function(add_static_text sourceFileName)
     endforeach()
 
     # Write the source code to a file.
-    configure_file("@UtilsDir@/StaticData.cpp.in" ${sourceFileName} @ONLY)
+    configure_file("@CMAKE_CURRENT_FUNCTION_LIST_DIR@/StaticData.cpp.in" ${sourceFileName} @ONLY)
 endfunction()
 
 add_static_text("@fullSourceName@" "@inputFiles@")

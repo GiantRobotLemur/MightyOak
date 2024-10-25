@@ -31,7 +31,7 @@ function(add_static_data sourceFileName)
             set(separator ", ")
             math(EXPR dataProcessed "${dataProcessed} + 2")
             math(EXPR lineLength "${lineLength} + 1")
-            
+
             if (${lineLength} GREATER 15)
                 set(separator ",\n        ")
                 set(lineLength 0)
@@ -44,7 +44,7 @@ function(add_static_data sourceFileName)
     endforeach()
 
     # Write the source code to a file.
-    configure_file("@UtilsDir@/StaticData.cpp.in" ${sourceFileName} @ONLY)
+    configure_file("@CMAKE_CURRENT_FUNCTION_LIST_DIR@/StaticData.cpp.in" ${sourceFileName} @ONLY)
 endfunction()
 
 add_static_data("@fullSourceName@" "@inputFiles@")

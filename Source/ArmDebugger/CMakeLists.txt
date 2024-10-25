@@ -1,76 +1,76 @@
 # CMakeLists file for the Mighty Oak interactive debugger application project.
 
-add_gui_app(ArmDebugger QT
-                        NAME        ArmDebugger
-                        DESCRIPTION "An interactive debugger for the Mighty Oak Archimedes and RiscPC emulator."
-                        VERSION     ${PROJECT_VERSION}
-                        FOLDER      ARM
-                        SOURCES     Main.cpp
-                                    Tools.cpp
-                                    Tools.hpp
-                                    CommandLineOptions.cpp
-                                    CommandLineOptions.hpp
-                                    ActionManager.cpp
-                                    ActionManager.hpp
-                                    DebuggerActions.hpp
-                                    DebuggerApp.cpp
-                                    DebuggerApp.hpp
-                                    Breakpoint.cpp
-                                    Breakpoint.hpp
-                                    EmulatorIOAdapter.hpp
-                                    MemcIOAdapter.cpp
-                                    MemcIOAdapter.hpp
-                                    EmulatorSession.cpp
-                                    EmulatorSession.hpp
-                                    DebuggerWindow.cpp
-                                    DebuggerWindow.hpp
-                                    UI/AboutDialog.ui
-                                    UI/AboutDialog.cpp
-                                    UI/AboutDialog.hpp
-                                    UI/NewSessionDialog.ui
-                                    UI/NewSessionDialog.cpp
-                                    UI/NewSessionDialog.hpp
-                                    UI/MemoryBlockView.cpp
-                                    UI/MemoryBlockView.hpp
-                                    UI/CodeBlockView.cpp
-                                    UI/CodeBlockView.hpp
-                                    UI/UnmappedBlockView.cpp
-                                    UI/UnmappedBlockView.hpp
-                                    UI/UniformBlockView.cpp
-                                    UI/UniformBlockView.hpp
-                                    UI/DataBlockView.cpp
-                                    UI/DataBlockView.hpp
-                                    UI/LabelBlockView.cpp
-                                    UI/LabelBlockView.hpp
-                                    UI/MemoryViewWidget.cpp
-                                    UI/MemoryViewWidget.hpp
-                                    UI/MemoryViewBar.cpp
-                                    UI/MemoryViewBar.hpp
-                                    UI/RegisterViewWidget.cpp
-                                    UI/RegisterViewWidget.hpp
-                                    UI/RegisterViewWidget.ui
-                                    UI/OutputViewWidget.cpp
-                                    UI/OutputViewWidget.hpp
-                                    UI/EditOrdinalMappingDialog.cpp
-                                    UI/EditOrdinalMappingDialog.hpp
-                                    UI/EditOrdinalMappingDialog.ui
-                                    UI/EditDisplayOptionsDialog.cpp
-                                    UI/EditDisplayOptionsDialog.hpp
-                                    UI/EditDisplayOptionsDialog.ui
-                                    MemoryViewOptions.cpp
-                                    MemoryViewOptions.hpp
-                                    SessionSettings.cpp
-                                    SessionSettings.hpp
-                                    Annotations/Annotation.cpp
-                                    Annotations/Annotation.hpp
-                                    Annotations/DataReplacement.cpp
-                                    Annotations/DataReplacement.hpp
-                                    Annotations/InstructionFormat.cpp
-                                    Annotations/InstructionFormat.hpp
-                                    Annotations/TypeOverride.cpp
-                                    Annotations/TypeOverride.hpp
+ag_add_gui_app(ArmDebugger QT
+                NAME        ArmDebugger
+                DESCRIPTION "An interactive debugger for the Mighty Oak Archimedes and RiscPC emulator."
+                VERSION     ${PROJECT_VERSION}
+                FOLDER      ARM
+                SOURCES     Main.cpp
+                            Tools.cpp
+                            Tools.hpp
+                            CommandLineOptions.cpp
+                            CommandLineOptions.hpp
+                            ActionManager.cpp
+                            ActionManager.hpp
+                            DebuggerActions.hpp
+                            DebuggerApp.cpp
+                            DebuggerApp.hpp
+                            Breakpoint.cpp
+                            Breakpoint.hpp
+                            EmulatorIOAdapter.hpp
+                            MemcIOAdapter.cpp
+                            MemcIOAdapter.hpp
+                            EmulatorSession.cpp
+                            EmulatorSession.hpp
+                            DebuggerWindow.cpp
+                            DebuggerWindow.hpp
+                            UI/AboutDialog.ui
+                            UI/AboutDialog.cpp
+                            UI/AboutDialog.hpp
+                            UI/NewSessionDialog.ui
+                            UI/NewSessionDialog.cpp
+                            UI/NewSessionDialog.hpp
+                            UI/MemoryBlockView.cpp
+                            UI/MemoryBlockView.hpp
+                            UI/CodeBlockView.cpp
+                            UI/CodeBlockView.hpp
+                            UI/UnmappedBlockView.cpp
+                            UI/UnmappedBlockView.hpp
+                            UI/UniformBlockView.cpp
+                            UI/UniformBlockView.hpp
+                            UI/DataBlockView.cpp
+                            UI/DataBlockView.hpp
+                            UI/LabelBlockView.cpp
+                            UI/LabelBlockView.hpp
+                            UI/MemoryViewWidget.cpp
+                            UI/MemoryViewWidget.hpp
+                            UI/MemoryViewBar.cpp
+                            UI/MemoryViewBar.hpp
+                            UI/RegisterViewWidget.cpp
+                            UI/RegisterViewWidget.hpp
+                            UI/RegisterViewWidget.ui
+                            UI/OutputViewWidget.cpp
+                            UI/OutputViewWidget.hpp
+                            UI/EditOrdinalMappingDialog.cpp
+                            UI/EditOrdinalMappingDialog.hpp
+                            UI/EditOrdinalMappingDialog.ui
+                            UI/EditDisplayOptionsDialog.cpp
+                            UI/EditDisplayOptionsDialog.hpp
+                            UI/EditDisplayOptionsDialog.ui
+                            MemoryViewOptions.cpp
+                            MemoryViewOptions.hpp
+                            SessionSettings.cpp
+                            SessionSettings.hpp
+                            Annotations/Annotation.cpp
+                            Annotations/Annotation.hpp
+                            Annotations/DataReplacement.cpp
+                            Annotations/DataReplacement.hpp
+                            Annotations/InstructionFormat.cpp
+                            Annotations/InstructionFormat.hpp
+                            Annotations/TypeOverride.cpp
+                            Annotations/TypeOverride.hpp
 
-                        LIBS        QtInterop ArmEmu AsmTools Qt::Widgets Qt::Concurrent)
+                LIBS        QtInterop ArmEmu AsmTools Qt::Widgets Qt::Concurrent)
 
 # Specifically allow files in sub-folders to resolve include files above.
 target_include_directories(ArmDebugger PRIVATE "${CMAKE_CURRENT_SRC_DIR}")

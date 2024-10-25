@@ -41,7 +41,7 @@ images containing appropriate metadata captured from the original media.
 
 At the current time, the project consists of the following major components
 written in C++.
-* [Ag Core](Doc/AgCore.md) - A platform agnostic runtime library build base
+* [Ag Core](Source/Ag/Doc/AgCore.md) - A platform agnostic runtime library build based
 on the STL and C Runtime on which to build the system. Some unit test coverage.
 * [Asm Tools](Doc/AsmTools.md) - A library which can assemble and disassemble
 32-bit ARM assembly language up to the ARMv4 architecture. This includes a
@@ -53,11 +53,9 @@ processor, but not MMU or any other hardware yet. Some unit test coverage.
 ## Dependencies
 
 The project is currently dependent on the following up-stream components:
-* Google Test 1.10+ [Required]
+* Google Test 1.12+ [Required - but downloaded by CMake]
 * MASM [Optional]
 * Doxygen [Optional]
-* SDL 2 [Required, but not yet] - for later GUI application
-* GLM [Required, but not yet] - for later GUI application
 * Qt 6.5 [Optional] - For interactive ARM Debugger
 
 ## License

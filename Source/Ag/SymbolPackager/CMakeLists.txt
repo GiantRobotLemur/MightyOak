@@ -40,14 +40,16 @@ if ("${TARGET_ARCH}" STREQUAL "${CMAKE_HOST_SYSTEM_PROCESSOR}")
                    SymbolFileReader.hpp
                    ${AG_INCLUDE_DIR}/Ag/Private/SymbolEncoding.hpp)
 
+    target_include_directories(SymbolPackager PRIVATE "${AG_INCLUDE_DIR}")
+
     set_target_properties(SymbolPackager PROPERTIES FOLDER Core)
 endif()
 
-if (DEFINED AG_EXT_SYMBOL_PACKAGER)
+if (DEFINED AG_EXT_SYMBOL_PACKAGER AND NOT "${AG_EXT_SYMBOL_PACKAGER}" STREQUAL "")
     message(STATUS "Creating symbol files via external tool: ${AG_EXT_SYMBOL_PACKAGER}")
 endif()
 
-function(enable_stacktrace targetName)
+function(ag_enable_stacktrace targetName)
     # Fix up difference between CMAKE system ID and generator platform.
     if ("${CMAKE_GENERATOR_PLATFORM}" STREQUAL "x64")
         set (TARGET_ARCH "AMD64")
