@@ -1,8 +1,5 @@
 # CMake configuration for the source code component of Mighty Oak
 
-# A third party header-only library for a synchronised queue.
-add_subdirectory("ReaderWriterQueue")
-
 # Add utility library components.
 add_subdirectory("Ag")
 

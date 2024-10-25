@@ -24,10 +24,6 @@ project(MightyOak
         HOMEPAGE_URL "https://github.com/GiantRobotLemur/MightyOak"
         LANGUAGES ${PROJ_LANGUAGES})
 
-# Configure required external packages.
-#include(CheckLanguage)
-
-
 find_package(Doxygen 1.8 OPTIONAL_COMPONENTS dot)
 find_package(Qt6 QUIET COMPONENTS Core Widgets Concurrent)
 
@@ -42,6 +38,13 @@ ag_configure_build()
 
 set(ExtFolderName "3rdParty")
 
+# A third party header-only library for a synchronised queue.
+message(STATUS "Obtaining Moody Camel Reader/Writer Queue...")
+FetchContent_Declare(readerwriterqueue
+                    GIT_REPOSITORY https://github.com/cameron314/readerwriterqueue.git
+                    GIT_TAG v1.0.6)
+FetchContent_MakeAvailable(readerwriterqueue)
+
 message(STATUS "Obtaining Google Test...")
 FetchContent_MakeAvailable(googletest)
 include(GoogleTest)
@@ -50,5 +53,8 @@ set_target_properties(gtest_main PROPERTIES FOLDER "${ExtFolderName}")
 set_target_properties(gmock PROPERTIES FOLDER "${ExtFolderName}")
 set_target_properties(gmock_main PROPERTIES FOLDER "${ExtFolderName}")
 
+# Gather our source code and targets.
 add_subdirectory(Source)
+
+# Create documentation targets.
 add_subdirectory(Doc)

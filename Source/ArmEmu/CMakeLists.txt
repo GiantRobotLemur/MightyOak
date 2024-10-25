@@ -43,7 +43,7 @@ ag_add_library(ArmEmu   FOLDER      ARM
                                     ArmSystem.cpp
                                     ${MO_INCLUDE_DIR}/ArmEmu/ArmSystem.hpp
                         HEADERS     ${MO_INCLUDE_DIR}/ArmEmu.hpp
-                        PUBLIC_LIBS AgCore ReaderWriterQueue)
+                        PUBLIC_LIBS AgCore readerwriterqueue)
 
 if(DEFINED CMAKE_ASM_MASM_COMPILER AND "${USE_ASM}")
     target_sources(ArmEmu PRIVATE AluOperations_Win32_x64.asm)
