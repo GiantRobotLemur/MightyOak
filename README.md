@@ -41,7 +41,7 @@ images containing appropriate metadata captured from the original media.
 
 At the current time, the project consists of the following major components
 written in C++.
-* [Ag Core](https://github.com/GiantRobotLemur/Ag/blob/main/README.md) -
+* [Ag Core](https://github.com/GiantRobotLemur/Ag) -
 A platform agnostic runtime library build based on the STL and C Runtime
 on which to build the system. Some unit test coverage. This has been ported
 to a git sub-module so that it can be used in other projects.

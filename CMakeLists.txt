@@ -29,6 +29,7 @@ find_package(Qt6 QUIET COMPONENTS Core Widgets Concurrent)
 
 if (${Qt6_FOUND})
     message(STATUS "Qt6: Found (Version ${Qt6_VERSION})")
+    set(AG_CONFIG_QT ON)
     qt_standard_project_setup()
 else()
     message(STATUS "Qt6: Not Found (Add Qt6 path to CMAKE_PREFIX_PATH)")
@@ -36,24 +37,19 @@ endif()
 
 # Needs to be called from the top level CMake file.
 include("Source/Ag/cmake/ConfigureBuild.cmake")
-ag_configure_build()
 
-set(ExtFolderName "3rdParty")
+# Apply default build configuration compatible with Ag.
+ag_configure_build()
 
 # A third party header-only library for a synchronised queue.
 message(STATUS "Obtaining Moody Camel Reader/Writer Queue...")
 FetchContent_Declare(readerwriterqueue
-                    GIT_REPOSITORY https://github.com/cameron314/readerwriterqueue.git
-                    GIT_TAG v1.0.6)
+                     GIT_REPOSITORY https://github.com/cameron314/readerwriterqueue.git
+                     GIT_TAG v1.0.6)
 FetchContent_MakeAvailable(readerwriterqueue)
 
-message(STATUS "Obtaining Google Test...")
-FetchContent_MakeAvailable(googletest)
-include(GoogleTest)
-set_target_properties(gtest PROPERTIES FOLDER "${ExtFolderName}")
-set_target_properties(gtest_main PROPERTIES FOLDER "${ExtFolderName}")
-set_target_properties(gmock PROPERTIES FOLDER "${ExtFolderName}")
-set_target_properties(gmock_main PROPERTIES FOLDER "${ExtFolderName}")
+# Download and build Google Test.
+ag_configure_gtest()
 
 # Gather our source code and targets.
 add_subdirectory(Source)
