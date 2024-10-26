@@ -41,8 +41,10 @@ images containing appropriate metadata captured from the original media.
 
 At the current time, the project consists of the following major components
 written in C++.
-* [Ag Core](Source/Ag/Doc/AgCore.md) - A platform agnostic runtime library build based
-on the STL and C Runtime on which to build the system. Some unit test coverage.
+* [Ag Core](https://github.com/GiantRobotLemur/Ag/blob/main/README.md) -
+A platform agnostic runtime library build based on the STL and C Runtime
+on which to build the system. Some unit test coverage. This has been ported
+to a git sub-module so that it can be used in other projects.
 * [Asm Tools](Doc/AsmTools.md) - A library which can assemble and disassemble
 32-bit ARM assembly language up to the ARMv4 architecture. This includes a
 fully fledged assembler akin to the one integrated into BBC BASIC. Plenty of
@@ -53,10 +55,11 @@ processor, but not MMU or any other hardware yet. Some unit test coverage.
 ## Dependencies
 
 The project is currently dependent on the following up-stream components:
-* Google Test 1.12+ [Required - but downloaded by CMake]
+* [Google Test 1.12+](https://github.com/google/googletest) [Required - but downloaded by CMake]
+* [Moody Camel Reader/Writer Queue](https://github.com/cameron314/readerwriterqueue) [Required - but downloaded by CMake]
 * MASM [Optional]
-* Doxygen [Optional]
-* Qt 6.5 [Optional] - For interactive ARM Debugger
+* [Doxygen](https://www.doxygen.nl/) [Optional]
+* [Qt 6.5](https://www.qt.io/product/framework) [Optional] - For interactive ARM Debugger
 
 ## License
 

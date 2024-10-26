@@ -96,6 +96,7 @@ EmulatorSession::EmulatorSession(QObject *owner) :
     Ag::Fs::PathBuilder romPath;
     romPath.assignProgramDirectory();
     romPath.popElement();
+    romPath.pushElement("Source");
     romPath.pushElement("ArmEmu");
     romPath.pushElement("MemcTestRom.bin");
 
