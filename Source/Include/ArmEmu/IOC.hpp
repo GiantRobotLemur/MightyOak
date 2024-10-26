@@ -17,7 +17,7 @@
 #include <atomic>
 #include <new>
 
-#include "ReaderWriterQueue.h"
+#include "readerwriterqueue.h"
 
 #include "Ag/Core/Memory.hpp"
 

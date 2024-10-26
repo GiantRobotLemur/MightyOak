@@ -61,10 +61,31 @@ The project is currently dependent on the following up-stream components:
 * [Doxygen](https://www.doxygen.nl/) [Optional]
 * [Qt 6.5](https://www.qt.io/product/framework) [Optional] - For interactive ARM Debugger
 
+## Build
+
+You can clone the repository and submodules from here using:
+```
+git clone --recurse-submodule https://github.com/GiantRobotLemur/MightyOak.git
+```
+
+Configure with CMake using:
+```
+cmake -S MightyOak -B MightyOakBuild [-G <generator>] [-DCMAKE_PREFIX_PATH=<path to Qt>]
+```
+
+Currently the supported platforms are Visual Studio 2022 and gcc 11, both on x64.
+While other platforms may work, they aren't officially supported.
+
 ## License
 
 This code is provided under the LGPL version 3 licensing conditions as
 described in the [LICENSE file](LICENSE) at the root of the repository.
+
+## Status
+
+The project is currently on ice. The Silver (Ag) library has been split off
+into a sub-module for use in other projects. Hopefully interest will return
+this way sometime soon.
 
 ## TODO
 

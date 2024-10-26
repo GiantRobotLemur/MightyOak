@@ -14,7 +14,7 @@ if (${USE_ASM})
         list(APPEND PROJ_LANGUAGES ASM_MASM)
     else()
         # We're not ready for assembler in the current environment.
-        set(USE_ASM 0 CACHE FORCE)
+        set(USE_ASM 0)
     endif()
 endif()
 
@@ -28,8 +28,10 @@ find_package(Doxygen 1.8 OPTIONAL_COMPONENTS dot)
 find_package(Qt6 QUIET COMPONENTS Core Widgets Concurrent)
 
 if (${Qt6_FOUND})
-    message(STATUS "Found Qt6 suite ${Qt6_VERSION}.")
+    message(STATUS "Qt6: Found (Version ${Qt6_VERSION})")
     qt_standard_project_setup()
+else()
+    message(STATUS "Qt6: Not Found (Add Qt6 path to CMAKE_PREFIX_PATH)")
 endif()
 
 # Needs to be called from the top level CMake file.
