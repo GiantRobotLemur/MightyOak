@@ -2,7 +2,7 @@
 //! @brief The declaration of an object which emulates the function of the
 //! VL86C410 IOC part.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2023-2024
+//! @date 2023-2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -154,6 +154,7 @@ public:
     void setFastHighInterrupt(uint8_t fhNo, bool state);
     void setFastLowInterrupt(bool state);
     void setControlPinInput(uint8_t ctrlLine, bool state);
+    bool raiseVSyncIrq();
     void writeKart(const uint8_t *bytes, uint8_t size);
     void writeKartByte(const uint8_t value);
     void flushKart();

@@ -2,7 +2,7 @@
 //! @brief The definition of an object which emulates the function of the
 //! VL86C410 IOC part.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2023-2024
+//! @date 2023-2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -314,6 +314,14 @@ uint8_t IOC::getCtrlPinInputState() const
 void IOC::setCtrlPinInputState(uint8_t pin, bool state)
 {
     _irqState->setControlPinInputState(pin, state);
+}
+
+//! @brief Raises the VSync (IR) interrupt, IRQ A bit 3.
+//! @retval true An unmasked IRQ is now pending.
+//! @retval false No unmasked IRQs are pending.
+bool IOC::raiseVSyncIrq()
+{
+    return _irqState->raiseIrq(3);
 }
 
 //! @brief Raises the POR interrupt as if the system had just been switched on..

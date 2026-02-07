@@ -31,6 +31,8 @@ ag_add_library(ArmEmu   FOLDER      ARM
                                     ${MO_INCLUDE_DIR}/ArmEmu/IOC.hpp
                                     VIDC10.cpp
                                     ${MO_INCLUDE_DIR}/ArmEmu/VIDC10.hpp
+                                    Display.cpp
+                                    ${MO_INCLUDE_DIR}/ArmEmu/Display.hpp
                                     ArmSystemBuilder.cpp
                                     ${MO_INCLUDE_DIR}/ArmEmu/ArmSystemBuilder.hpp
                                     ExecutionMetrics.cpp
@@ -92,6 +94,8 @@ source_group(Interface FILES
              ${MO_INCLUDE_DIR}/ArmEmu/IOC.hpp
              VIDC10.cpp
              ${MO_INCLUDE_DIR}/ArmEmu/VIDC10.hpp
+             Display.cpp
+             ${MO_INCLUDE_DIR}/ArmEmu/Display.hpp
              ArmSystemBuilder.cpp
              ${MO_INCLUDE_DIR}/ArmEmu/ArmSystemBuilder.hpp
              ExecutionMetrics.cpp
@@ -127,6 +131,8 @@ ag_add_test_app(ArmEmu_Tests    TEST_LIB ArmEmu
                                          Test/Test_Options.cpp
                                          Test/Test_GuestEventQueue.cpp
                                          Test/Test_ArmSystemBuilder.cpp
+                                         Test/Test_VIDC10.cpp
+                                         Test/Test_Display.cpp
                                          Test/Test_Main.cpp)
 
 target_include_directories(ArmEmu_Tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")

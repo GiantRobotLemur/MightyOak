@@ -2,7 +2,7 @@
 //! @brief The declaration of an object which emulates the hardware of a
 //! MEMC-based system.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2023-2024
+//! @date 2023-2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -105,6 +105,9 @@ private:
     bool _osMode;
     bool _videoDMAEnabled;
     bool _soundDMAEnabled;
+    uint32_t _videoInitAddr;
+    uint32_t _videoStartAddr;
+    uint32_t _videoEndAddr;
 
     // Non-cache intensive.
     GenericHostBlock _physicalRamBlock;
@@ -127,9 +130,37 @@ public:
                  const AddressMap &writeMap);
     ~MemcHardware() = default;
 
+    // Accessors
+    //! @brief Gets a reference to the IOC for use by internal hardware devices.
+    IOC &getIOC();
+
+    //! @brief Gets the video DMA initial address (Vinit) as a physical byte offset.
+    uint32_t getVideoInitAddr() const;
+
+    //! @brief Gets the video DMA start address (Vstart) as a physical byte offset.
+    uint32_t getVideoStartAddr() const;
+
+    //! @brief Gets the video DMA end address (Vend) as a physical byte offset.
+    uint32_t getVideoEndAddr() const;
+
+    //! @brief Gets a direct pointer to the physical RAM.
+    const uint8_t *getRamData() const;
+
+    //! @brief Gets the total size of physical RAM in bytes.
+    uint32_t getRamSize() const;
+
+    //! @brief Gets a const reference to the VIDC10 video controller.
+    const VIDC10 &getVIDC() const;
+
+    //! @brief Gets whether video DMA is currently enabled.
+    bool isVideoDMAEnabled() const;
+
     // Operations
     void setLowRom(const uint8_t *romBytes, size_t byteCount);
     void setHighRom(const uint8_t *romBytes, size_t byteCount);
+
+    //! @brief Raises the VSync IRQ (IOC IRQ A bit 3) on behalf of the VIDC.
+    void raiseVSyncIrq();
 
     // Overrides
     // For compatibility with GenericHardware.
