@@ -28,7 +28,7 @@ class EmulatorApp : public Ag::App
 {
 public:
     // Construction/Destruction
-    EmulatorApp();
+    EmulatorApp(const Ag::AppMetadata &appMetadata);
     virtual ~EmulatorApp() = default;
 
     // Accessors
@@ -50,6 +50,7 @@ private:
 
     // Internal Fields
     Ag::SDL3::Initialiser _sdlInitialiser;
+    Ag::AppMetadata _appMetadata;
 };
 
 } // namespace Mo

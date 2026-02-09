@@ -2,6 +2,8 @@
 cmake_minimum_required(VERSION 3.21)
 
 set(MO_VERSION "0.0.1.0")
+set(MO_AUTHOR "GiantRobotLemur@na-se.co.uk")
+string(TIMESTAMP MO_COPYRIGHT "Copyright (c) 2021-%Y ${MO_AUTHOR}. All rights reserved.")
 
 # Use to determine whether to use ASM for small sections of code or
 # the C++, platform agnostic (slower) alternative.

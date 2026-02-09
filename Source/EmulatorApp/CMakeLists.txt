@@ -3,6 +3,8 @@
 ag_add_gui_app( MightyOak
                 NAME        "MightyOak"
                 DESCRIPTION "An Archimedes and RiscPC emulator."
+                AUTHOR      "${MO_AUTHOR}"
+                COPYRIGHT   "${MO_COPYRIGHT}"
                 VERSION     "${PROJECT_VERSION}"
                 FOLDER      ARM
                 SOURCES     "Main.cpp"

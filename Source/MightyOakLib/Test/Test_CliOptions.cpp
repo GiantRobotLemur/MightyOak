@@ -19,18 +19,26 @@ namespace Mo {
 namespace {
 
 ////////////////////////////////////////////////////////////////////////////////
+// Local Data
+////////////////////////////////////////////////////////////////////////////////
+const Ag::AppMetadata metadata(Ag::Version(0, 1, 0, 0, "Test"),
+                               "TestApp", "TestProduct", "Test",
+                               "Testy McTestface",
+                               "(c) Testy McTestFace. All rights reserved.");
+
+////////////////////////////////////////////////////////////////////////////////
 // Unit Tests
 ////////////////////////////////////////////////////////////////////////////////
 GTEST_TEST(CliOptions, DefaultConstruct)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
 
     EXPECT_EQ(specimen.getCommand(), Ag::Cli::StandardCommands::NoCommand);
 }
 
 GTEST_TEST(CliOptions, ParseNoArgsStartsDefaultSession)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     ASSERT_TRUE(specimen.tryParse(L"", error));
@@ -41,7 +49,7 @@ GTEST_TEST(CliOptions, ParseNoArgsStartsDefaultSession)
 
 GTEST_TEST(CliOptions, ParseArgs_UpgradedA3010)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     ASSERT_TRUE(specimen.tryParse(L"--ram 4Mb", error));
@@ -56,7 +64,7 @@ GTEST_TEST(CliOptions, ParseArgs_UpgradedA3010)
 ////////////////////////////////////////////////////////////////////////////////
 GTEST_TEST(CliOptions, ParseBase_A305)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     ASSERT_TRUE(specimen.tryParse(L"--base A305", error));
@@ -74,7 +82,7 @@ GTEST_TEST(CliOptions, ParseBase_A305)
 
 GTEST_TEST(CliOptions, ParseBase_A440)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     ASSERT_TRUE(specimen.tryParse(L"--base A440", error));
@@ -88,7 +96,7 @@ GTEST_TEST(CliOptions, ParseBase_A440)
 
 GTEST_TEST(CliOptions, ParseBase_A3010)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     ASSERT_TRUE(specimen.tryParse(L"--base A3010", error));
@@ -106,7 +114,7 @@ GTEST_TEST(CliOptions, ParseBase_A3010)
 
 GTEST_TEST(CliOptions, ParseBase_A540)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     ASSERT_TRUE(specimen.tryParse(L"--base A540", error));
@@ -121,7 +129,7 @@ GTEST_TEST(CliOptions, ParseBase_A540)
 
 GTEST_TEST(CliOptions, ParseBase_A5000)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     ASSERT_TRUE(specimen.tryParse(L"--base A5000", error));
@@ -137,7 +145,7 @@ GTEST_TEST(CliOptions, ParseBase_A5000)
 
 GTEST_TEST(CliOptions, ParseBase_RiscPC600)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     ASSERT_TRUE(specimen.tryParse(L"--base RiscPC_600", error));
@@ -151,7 +159,7 @@ GTEST_TEST(CliOptions, ParseBase_RiscPC600)
 
 GTEST_TEST(CliOptions, ParseBase_RiscPC_StrongARM)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     ASSERT_TRUE(specimen.tryParse(L"--base RiscPC_StrongARM", error));
@@ -165,7 +173,7 @@ GTEST_TEST(CliOptions, ParseBase_RiscPC_StrongARM)
 
 GTEST_TEST(CliOptions, ParseBase_A7000)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     ASSERT_TRUE(specimen.tryParse(L"--base A7000", error));
@@ -180,7 +188,7 @@ GTEST_TEST(CliOptions, ParseBase_A7000)
 
 GTEST_TEST(CliOptions, ParseBase_A7000Plus)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     ASSERT_TRUE(specimen.tryParse(L"--base A7000_Plus", error));
@@ -193,7 +201,7 @@ GTEST_TEST(CliOptions, ParseBase_A7000Plus)
 
 GTEST_TEST(CliOptions, ParseBase_InvalidValue)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     EXPECT_FALSE(specimen.tryParse(L"--base NotAModel", error));
@@ -206,7 +214,7 @@ GTEST_TEST(CliOptions, ParseBase_InvalidValue)
 ////////////////////////////////////////////////////////////////////////////////
 GTEST_TEST(CliOptions, ParseSystem_Archimedes)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     // ARM250 (default CPU) is compatible with Archimedes.
@@ -218,7 +226,7 @@ GTEST_TEST(CliOptions, ParseSystem_Archimedes)
 
 GTEST_TEST(CliOptions, ParseSystem_ASeries)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     // Default config is already ASeries-compatible.
@@ -230,7 +238,7 @@ GTEST_TEST(CliOptions, ParseSystem_ASeries)
 
 GTEST_TEST(CliOptions, ParseSystem_RiscPC)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     // RiscPC requires ARM610+, speed>=20, valid RAM, and RISC OS 3.50+.
@@ -244,7 +252,7 @@ GTEST_TEST(CliOptions, ParseSystem_RiscPC)
 
 GTEST_TEST(CliOptions, ParseSystem_TestBed)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     // TestBed only supports ARM2/ARM3 with Custom ROM.
@@ -257,7 +265,7 @@ GTEST_TEST(CliOptions, ParseSystem_TestBed)
 
 GTEST_TEST(CliOptions, ParseSystem_InvalidValue)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     EXPECT_FALSE(specimen.tryParse(L"--system FooBar", error));
@@ -269,7 +277,7 @@ GTEST_TEST(CliOptions, ParseSystem_InvalidValue)
 ////////////////////////////////////////////////////////////////////////////////
 GTEST_TEST(CliOptions, ParseCpu_ARM2)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     // ARM2 is compatible with the default ASeries-like config when using
@@ -283,7 +291,7 @@ GTEST_TEST(CliOptions, ParseCpu_ARM2)
 
 GTEST_TEST(CliOptions, ParseCpu_ARM250)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     // ARM250 is the default CPU and compatible with default ASeries.
@@ -295,7 +303,7 @@ GTEST_TEST(CliOptions, ParseCpu_ARM250)
 
 GTEST_TEST(CliOptions, ParseCpu_ARM3)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     ASSERT_TRUE(specimen.tryParse(L"--cpu ARM3 --speed 25", error));
@@ -306,7 +314,7 @@ GTEST_TEST(CliOptions, ParseCpu_ARM3)
 
 GTEST_TEST(CliOptions, ParseCpu_ARM3_FPA)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     ASSERT_TRUE(specimen.tryParse(L"--cpu ARM3_FPA --speed 25", error));
@@ -317,7 +325,7 @@ GTEST_TEST(CliOptions, ParseCpu_ARM3_FPA)
 
 GTEST_TEST(CliOptions, ParseCpu_ARM610)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     ASSERT_TRUE(specimen.tryParse(
@@ -330,7 +338,7 @@ GTEST_TEST(CliOptions, ParseCpu_ARM610)
 
 GTEST_TEST(CliOptions, ParseCpu_StrongARM)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     // StrongARM requires RiscPC with RISC OS 3.70+.
@@ -344,7 +352,7 @@ GTEST_TEST(CliOptions, ParseCpu_StrongARM)
 
 GTEST_TEST(CliOptions, ParseCpu_InvalidValue)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     EXPECT_FALSE(specimen.tryParse(L"--cpu Z80", error));
@@ -355,7 +363,7 @@ GTEST_TEST(CliOptions, ParseCpu_InvalidValue)
 ////////////////////////////////////////////////////////////////////////////////
 GTEST_TEST(CliOptions, ParseSpeed_Integer)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     ASSERT_TRUE(specimen.tryParse(L"--speed 25", error));
@@ -365,7 +373,7 @@ GTEST_TEST(CliOptions, ParseSpeed_Integer)
 
 GTEST_TEST(CliOptions, ParseSpeed_Fractional)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     ASSERT_TRUE(specimen.tryParse(L"--speed 33.3", error));
@@ -376,7 +384,7 @@ GTEST_TEST(CliOptions, ParseSpeed_Fractional)
 
 GTEST_TEST(CliOptions, ParseSpeed_InvalidValue)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     EXPECT_FALSE(specimen.tryParse(L"--speed notanumber", error));
@@ -387,7 +395,7 @@ GTEST_TEST(CliOptions, ParseSpeed_InvalidValue)
 ////////////////////////////////////////////////////////////////////////////////
 GTEST_TEST(CliOptions, ParseRam_MegabytesSuffix)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     ASSERT_TRUE(specimen.tryParse(L"--ram 2Mb", error));
@@ -397,7 +405,7 @@ GTEST_TEST(CliOptions, ParseRam_MegabytesSuffix)
 
 GTEST_TEST(CliOptions, ParseRam_MegabytesSuffixAlone)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     ASSERT_TRUE(specimen.tryParse(L"--ram 4M", error));
@@ -407,7 +415,7 @@ GTEST_TEST(CliOptions, ParseRam_MegabytesSuffixAlone)
 
 GTEST_TEST(CliOptions, ParseRam_KilobytesSuffix)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     ASSERT_TRUE(specimen.tryParse(
@@ -419,7 +427,7 @@ GTEST_TEST(CliOptions, ParseRam_KilobytesSuffix)
 
 GTEST_TEST(CliOptions, ParseRam_LargeValue)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     ASSERT_TRUE(specimen.tryParse(L"--ram 16M", error));
@@ -429,7 +437,7 @@ GTEST_TEST(CliOptions, ParseRam_LargeValue)
 
 GTEST_TEST(CliOptions, ParseRam_OneMegabyte)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     ASSERT_TRUE(specimen.tryParse(L"--ram 1M", error));
@@ -439,7 +447,7 @@ GTEST_TEST(CliOptions, ParseRam_OneMegabyte)
 
 GTEST_TEST(CliOptions, ParseRam_EightMegabytes)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     ASSERT_TRUE(specimen.tryParse(L"--ram 8M", error));
@@ -449,7 +457,7 @@ GTEST_TEST(CliOptions, ParseRam_EightMegabytes)
 
 GTEST_TEST(CliOptions, ParseRam_InvalidFormat)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     EXPECT_FALSE(specimen.tryParse(L"--ram notasize", error));
@@ -461,7 +469,7 @@ GTEST_TEST(CliOptions, ParseRam_InvalidFormat)
 ////////////////////////////////////////////////////////////////////////////////
 GTEST_TEST(CliOptions, ParseVRam_OneMegabyte)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     ASSERT_TRUE(specimen.tryParse(
@@ -472,7 +480,7 @@ GTEST_TEST(CliOptions, ParseVRam_OneMegabyte)
 
 GTEST_TEST(CliOptions, ParseVRam_TwoMegabytes)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     ASSERT_TRUE(specimen.tryParse(
@@ -483,7 +491,7 @@ GTEST_TEST(CliOptions, ParseVRam_TwoMegabytes)
 
 GTEST_TEST(CliOptions, ParseVRam_FourMegabytes)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     ASSERT_TRUE(specimen.tryParse(
@@ -494,7 +502,7 @@ GTEST_TEST(CliOptions, ParseVRam_FourMegabytes)
 
 GTEST_TEST(CliOptions, ParseVRam_KilobytesSuffix)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     ASSERT_TRUE(specimen.tryParse(
@@ -505,7 +513,7 @@ GTEST_TEST(CliOptions, ParseVRam_KilobytesSuffix)
 
 GTEST_TEST(CliOptions, ParseVRam_ZeroMegabytes)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     // VRAM of 0 is valid on RiscPC (no dedicated VRAM).
@@ -520,7 +528,7 @@ GTEST_TEST(CliOptions, ParseVRam_ZeroMegabytes)
 ////////////////////////////////////////////////////////////////////////////////
 GTEST_TEST(CliOptions, ParseDisplay_NormalTV)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     // NormalTV is compatible with Archimedes/ASeries defaults.
@@ -532,7 +540,7 @@ GTEST_TEST(CliOptions, ParseDisplay_NormalTV)
 
 GTEST_TEST(CliOptions, ParseDisplay_HiResMono)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     ASSERT_TRUE(specimen.tryParse(L"--display HiResMono", error));
@@ -543,7 +551,7 @@ GTEST_TEST(CliOptions, ParseDisplay_HiResMono)
 
 GTEST_TEST(CliOptions, ParseDisplay_MultiScan)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     ASSERT_TRUE(specimen.tryParse(L"--display MultiScan", error));
@@ -554,7 +562,7 @@ GTEST_TEST(CliOptions, ParseDisplay_MultiScan)
 
 GTEST_TEST(CliOptions, ParseDisplay_VGA)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     ASSERT_TRUE(specimen.tryParse(L"--display VGA", error));
@@ -565,7 +573,7 @@ GTEST_TEST(CliOptions, ParseDisplay_VGA)
 
 GTEST_TEST(CliOptions, ParseDisplay_SuperVGA)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     ASSERT_TRUE(specimen.tryParse(L"--display SuperVGA", error));
@@ -576,7 +584,7 @@ GTEST_TEST(CliOptions, ParseDisplay_SuperVGA)
 
 GTEST_TEST(CliOptions, ParseDisplay_InvalidValue)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     EXPECT_FALSE(specimen.tryParse(L"--display OLED", error));
@@ -587,7 +595,7 @@ GTEST_TEST(CliOptions, ParseDisplay_InvalidValue)
 ////////////////////////////////////////////////////////////////////////////////
 GTEST_TEST(CliOptions, ParseHDType_None)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     // Must set hd_count to 0 when interface is None.
@@ -599,7 +607,7 @@ GTEST_TEST(CliOptions, ParseHDType_None)
 
 GTEST_TEST(CliOptions, ParseHDType_ST506)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     ASSERT_TRUE(specimen.tryParse(L"--hd_type ST506", error));
@@ -610,7 +618,7 @@ GTEST_TEST(CliOptions, ParseHDType_ST506)
 
 GTEST_TEST(CliOptions, ParseHDType_IDE)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     ASSERT_TRUE(specimen.tryParse(L"--hd_type IDE", error));
@@ -621,7 +629,7 @@ GTEST_TEST(CliOptions, ParseHDType_IDE)
 
 GTEST_TEST(CliOptions, ParseHDType_SCSI)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     ASSERT_TRUE(specimen.tryParse(L"--hd_type SCSI", error));
@@ -632,7 +640,7 @@ GTEST_TEST(CliOptions, ParseHDType_SCSI)
 
 GTEST_TEST(CliOptions, ParseHDType_InvalidValue)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     EXPECT_FALSE(specimen.tryParse(L"--hd_type NVMe", error));
@@ -643,7 +651,7 @@ GTEST_TEST(CliOptions, ParseHDType_InvalidValue)
 ////////////////////////////////////////////////////////////////////////////////
 GTEST_TEST(CliOptions, ParseHDCount_Zero)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     ASSERT_TRUE(specimen.tryParse(L"--hd_count 0", error));
@@ -653,7 +661,7 @@ GTEST_TEST(CliOptions, ParseHDCount_Zero)
 
 GTEST_TEST(CliOptions, ParseHDCount_Two)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     // IDE supports max 2 drives.
@@ -664,7 +672,7 @@ GTEST_TEST(CliOptions, ParseHDCount_Two)
 
 GTEST_TEST(CliOptions, ParseHDCount_InvalidValue)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     EXPECT_FALSE(specimen.tryParse(L"--hd_count many", error));
@@ -675,7 +683,7 @@ GTEST_TEST(CliOptions, ParseHDCount_InvalidValue)
 ////////////////////////////////////////////////////////////////////////////////
 GTEST_TEST(CliOptions, ParseFDCount_Zero)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     ASSERT_TRUE(specimen.tryParse(L"--fd_count 0", error));
@@ -685,7 +693,7 @@ GTEST_TEST(CliOptions, ParseFDCount_Zero)
 
 GTEST_TEST(CliOptions, ParseFDCount_Two)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     ASSERT_TRUE(specimen.tryParse(L"--fd_count 2", error));
@@ -695,7 +703,7 @@ GTEST_TEST(CliOptions, ParseFDCount_Two)
 
 GTEST_TEST(CliOptions, ParseFDCount_InvalidValue)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     EXPECT_FALSE(specimen.tryParse(L"--fd_count lots", error));
@@ -706,7 +714,7 @@ GTEST_TEST(CliOptions, ParseFDCount_InvalidValue)
 ////////////////////////////////////////////////////////////////////////////////
 GTEST_TEST(CliOptions, ParseJoystickType_None)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     ASSERT_TRUE(specimen.tryParse(L"--joystick_type None", error));
@@ -717,7 +725,7 @@ GTEST_TEST(CliOptions, ParseJoystickType_None)
 
 GTEST_TEST(CliOptions, ParseJoystickType_Digital)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     ASSERT_TRUE(specimen.tryParse(L"--joystick_type Digital", error));
@@ -728,7 +736,7 @@ GTEST_TEST(CliOptions, ParseJoystickType_Digital)
 
 GTEST_TEST(CliOptions, ParseJoystickType_Analogue)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     ASSERT_TRUE(specimen.tryParse(L"--joystick_type Analogue", error));
@@ -739,7 +747,7 @@ GTEST_TEST(CliOptions, ParseJoystickType_Analogue)
 
 GTEST_TEST(CliOptions, ParseJoystickType_InvalidValue)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     EXPECT_FALSE(specimen.tryParse(L"--joystick_type Gyro", error));
@@ -750,7 +758,7 @@ GTEST_TEST(CliOptions, ParseJoystickType_InvalidValue)
 ////////////////////////////////////////////////////////////////////////////////
 GTEST_TEST(CliOptions, ParseJoyCount_Zero)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     ASSERT_TRUE(specimen.tryParse(L"--joy_count 0", error));
@@ -760,7 +768,7 @@ GTEST_TEST(CliOptions, ParseJoyCount_Zero)
 
 GTEST_TEST(CliOptions, ParseJoyCount_Two)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     ASSERT_TRUE(specimen.tryParse(L"--joy_count 2", error));
@@ -770,7 +778,7 @@ GTEST_TEST(CliOptions, ParseJoyCount_Two)
 
 GTEST_TEST(CliOptions, ParseJoyCount_InvalidValue)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     EXPECT_FALSE(specimen.tryParse(L"--joy_count abc", error));
@@ -782,7 +790,7 @@ GTEST_TEST(CliOptions, ParseJoyCount_InvalidValue)
 ////////////////////////////////////////////////////////////////////////////////
 GTEST_TEST(CliOptions, ParseRom_Custom)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     ASSERT_TRUE(specimen.tryParse(L"--rom Custom", error));
@@ -793,7 +801,7 @@ GTEST_TEST(CliOptions, ParseRom_Custom)
 
 GTEST_TEST(CliOptions, ParseRom_Arthur_1_20)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     // Arthur ROMs are only compatible with Archimedes.
@@ -806,7 +814,7 @@ GTEST_TEST(CliOptions, ParseRom_Arthur_1_20)
 
 GTEST_TEST(CliOptions, ParseRom_RiscOS_2_00)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     ASSERT_TRUE(specimen.tryParse(
@@ -818,7 +826,7 @@ GTEST_TEST(CliOptions, ParseRom_RiscOS_2_00)
 
 GTEST_TEST(CliOptions, ParseRom_RiscOS_3_11)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     // RiscOS 3.11 is compatible with the default ASeries config.
@@ -830,7 +838,7 @@ GTEST_TEST(CliOptions, ParseRom_RiscOS_3_11)
 
 GTEST_TEST(CliOptions, ParseRom_RiscOS_3_50)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     // RiscOS 3.50 requires RiscPC with ARM610.
@@ -843,7 +851,7 @@ GTEST_TEST(CliOptions, ParseRom_RiscOS_3_50)
 
 GTEST_TEST(CliOptions, ParseRom_RiscOS_3_70)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     // RiscOS 3.70 requires RiscPC with StrongARM.
@@ -856,7 +864,7 @@ GTEST_TEST(CliOptions, ParseRom_RiscOS_3_70)
 
 GTEST_TEST(CliOptions, ParseRom_InvalidValue)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     EXPECT_FALSE(specimen.tryParse(L"--rom Windows_95", error));
@@ -867,7 +875,7 @@ GTEST_TEST(CliOptions, ParseRom_InvalidValue)
 ////////////////////////////////////////////////////////////////////////////////
 GTEST_TEST(CliOptions, ParseCustomRom_SetsCustomPresetAndPath)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
 #ifdef _WIN32
@@ -886,7 +894,7 @@ GTEST_TEST(CliOptions, ParseCustomRom_SetsCustomPresetAndPath)
 ////////////////////////////////////////////////////////////////////////////////
 GTEST_TEST(CliOptions, ParseCombined_ArchimedesConfiguration)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     ASSERT_TRUE(specimen.tryParse(
@@ -909,7 +917,7 @@ GTEST_TEST(CliOptions, ParseCombined_ArchimedesConfiguration)
 
 GTEST_TEST(CliOptions, ParseCombined_RiscPCConfiguration)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     ASSERT_TRUE(specimen.tryParse(
@@ -935,7 +943,7 @@ GTEST_TEST(CliOptions, ParseCombined_RiscPCConfiguration)
 
 GTEST_TEST(CliOptions, ParseCombined_ASeriesConfiguration)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     ASSERT_TRUE(specimen.tryParse(
@@ -961,7 +969,7 @@ GTEST_TEST(CliOptions, ParseCombined_ASeriesConfiguration)
 
 GTEST_TEST(CliOptions, ParseBase_OverriddenBySubsequentOptions)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     // Start with A305 base (512K RAM), then override RAM to 4M.
@@ -976,7 +984,7 @@ GTEST_TEST(CliOptions, ParseBase_OverriddenBySubsequentOptions)
 
 GTEST_TEST(CliOptions, ParseAllCommandsSetsRunSession)
 {
-    CliOptions specimen;
+    CliOptions specimen(metadata);
     Ag::String error;
 
     ASSERT_TRUE(specimen.tryParse(L"--base A3010", error));

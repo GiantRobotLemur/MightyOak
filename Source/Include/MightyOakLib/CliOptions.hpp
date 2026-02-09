@@ -40,7 +40,7 @@ class CliOptions : public Ag::SDL3::ProgramArguments
 {
 public:
     // Construction/Destruction
-    CliOptions();
+    CliOptions(const Ag::AppMetadata &appMetadata);
     virtual ~CliOptions() = default;
 
     // Accessors

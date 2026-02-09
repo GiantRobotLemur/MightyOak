@@ -21,15 +21,31 @@ namespace Mo {
 ////////////////////////////////////////////////////////////////////////////////
 // EmulatorApp Member Definitions
 ////////////////////////////////////////////////////////////////////////////////
-EmulatorApp::EmulatorApp() :
-    _sdlInitialiser(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_EVENTS)
+EmulatorApp::EmulatorApp(const Ag::AppMetadata &appMetadata) :
+    _sdlInitialiser(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_EVENTS),
+    _appMetadata(appMetadata)
 {
+    // Application metadata should be set before calling SDL_Init()
+    Ag::String versionText = _appMetadata.AppVersion.toString();
+
+    SDL_SetAppMetadataProperty(SDL_PROP_APP_METADATA_NAME_STRING,
+                               _appMetadata.AppName.data());
+    SDL_SetAppMetadataProperty(SDL_PROP_APP_METADATA_VERSION_STRING,
+                               versionText.getUtf8Bytes());
+    SDL_SetAppMetadataProperty(SDL_PROP_APP_METADATA_IDENTIFIER_STRING,
+                               "uk.co.na-se.mightyoak");
+    SDL_SetAppMetadataProperty(SDL_PROP_APP_METADATA_CREATOR_STRING,
+                               _appMetadata.Author.data());
+    SDL_SetAppMetadataProperty(SDL_PROP_APP_METADATA_URL_STRING,
+                               "https://github.com/GiantRobotLemur/MightyOak");
+    SDL_SetAppMetadataProperty(SDL_PROP_APP_METADATA_TYPE_STRING,
+                               "application");
 }
 
 // Inherited from Ag::App.
 Ag::CommandLineUPtr EmulatorApp::createCommandLineArguments() const
 {
-    return std::make_unique<CliOptions>();
+    return std::make_unique<CliOptions>(_appMetadata);
 }
 
 // Inherited from Ag::App.

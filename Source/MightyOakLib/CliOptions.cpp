@@ -240,16 +240,16 @@ bool tryParseOptionScalar(Ag::utf8_cptr_t option, Ag::string_cref_t valueText,
 ////////////////////////////////////////////////////////////////////////////////
 //! @brief Constructs a description of valid command line options for the
 //! emulator application.
-CliOptions::CliOptions()
+CliOptions::CliOptions(const Ag::AppMetadata &appMetadata)
 {
     using namespace Ag::Cli;
 
     SchemaBuilder optionSchema;
-    optionSchema.setAppName("Mighty Oak");
-    optionSchema.setDescription("An Acorn Archimedes and RiscPC emulator.");
+    optionSchema.setAppName(appMetadata.AppName);
+    optionSchema.setDescription(appMetadata.Description);
 
     optionSchema.addShowHelpCommand();
-    optionSchema.addShowVersionCommand(Ag::Version(0, 1, 0, 0, "Experimental"));
+    optionSchema.addShowVersionCommand(appMetadata.AppVersion);
 
     std::string descriptionBuilder;
 
@@ -263,7 +263,7 @@ CliOptions::CliOptions()
                               "model name");
     optionSchema.defineAlias(EmulatorOptions::BaseSystem, "base", true);
 
-    // Define the --model option option. TestBed, Archimedes, ASeries, RiscPC.
+    // Define the --model option. Valid values: TestBed, Archimedes, ASeries, RiscPC.
     descriptionBuilder.assign("The basic system type.");
     defineValidValues(descriptionBuilder, Mo::Arm::getSystemModelType());
 

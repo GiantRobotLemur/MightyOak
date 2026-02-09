@@ -141,11 +141,13 @@ target_include_directories(ArmEmu_Tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
 target_link_libraries(ArmEmu_Tests PRIVATE AsmTools)
 
 ag_add_cli_app(EmuPerf_Test FOLDER ARM
-                NAME "EmuPerfTest"
+                NAME        "EmuPerfTest"
                 DESCRIPTION "Measures the performance of different emulated system configurations."
-                VERSION "${PROJECT_VERSION}"
-                SOURCES EmuPerfTest_Main.cpp
-                LIBS AgCore AsmTools ArmEmu)
+                AUTHOR      "${MO_AUTHOR}"
+                COPYRIGHT   "${MO_COPYRIGHT}"
+                VERSION     "${PROJECT_VERSION}"
+                SOURCES     EmuPerfTest_Main.cpp
+                LIBS        AgCore AsmTools ArmEmu)
 
 set(DhyrstoneSourceIn "${PROJECT_SOURCE_DIR}/Tests/ArmEmu/Dhrystone2_1.arm")
 
