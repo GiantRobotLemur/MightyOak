@@ -143,13 +143,12 @@ bool tryParseOptionRamSize(Ag::utf8_cptr_t option, Ag::string_cref_t valueText,
             {
                 multiplier = 1 << 10;
             }
-            if (suffix == 'M')
+            else if (suffix == 'M')
             {
                 multiplier = 1 << 20;
             }
             else
             {
-
                 std::string suffixMessage;
                 suffixMessage.assign("Unknown suffix '");
                 suffixMessage.append(view.substr(i));

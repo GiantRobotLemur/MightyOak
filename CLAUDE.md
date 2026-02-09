@@ -86,3 +86,4 @@ Optional x64 MASM assembly optimizations exist in `AluOperations_Win32_x64.asm` 
 - Public headers go in `Source/Include/AsmTools/` or `Source/Include/ArmEmu/`
 - Test files follow the pattern `Test_*.cpp` using Google Test
 - Do not automatically commit changes
+- Do not ask to commit changes
