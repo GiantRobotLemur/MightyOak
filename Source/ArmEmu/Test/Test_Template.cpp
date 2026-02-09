@@ -1,5 +1,5 @@
-//! @file Test_name.cpp
-//! @brief The definition of 
+//! @file ArmEmu/Tests/Test_name.cpp
+//! @brief The definition of unit tests for the X class/structure.
 //! @author GiantRobotLemur@na-se.co.uk
 //! @date 2026
 //! @copyright This file is part of the Mighty Oak project which is released

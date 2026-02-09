@@ -51,12 +51,18 @@ fully fledged assembler akin to the one integrated into BBC BASIC. Plenty of
 unit test coverage.
 * [Arm Emu](Doc/ArmEmu.md) - A library which emulates the core of an ARM
 processor, but not MMU or any other hardware yet. Some unit test coverage.
+* MightyOakLib - A library which forms the baulk of the emulator application
+while allowing its functionality to be unit tested. This library is dependent
+upon SDL3 via the Ag library Sdl3Tools.
+* MightyOak - The executable emulator application, which does little more than
+call into MightyOakLib.
 
 ## Dependencies
 
 The project is currently dependent on the following up-stream components:
 * [Google Test 1.12+](https://github.com/google/googletest) [Required - but downloaded by CMake]
 * [Moody Camel Reader/Writer Queue](https://github.com/cameron314/readerwriterqueue) [Required - but downloaded by CMake]
+* [SDL3](https://www.libsdl.org/)  [Required - but downloaded by CMake]
 * MASM [Optional]
 * [Doxygen](https://www.doxygen.nl/) [Optional]
 * [Qt 6.5](https://www.qt.io/product/framework) [Optional] - For interactive ARM Debugger
@@ -83,11 +89,11 @@ described in the [LICENSE file](LICENSE) at the root of the repository.
 
 ## Status
 
-The project is currently on ice. The Silver (Ag) library has been split off
-into a sub-module for use in other projects. Hopefully interest will return
-this way sometime soon.
+The project has been on ice for a while. The advent of Claude Code has provided
+options for its completion. In the mean time, the Silver (Ag) library has been
+split off into a sub-module for use in other projects.
 
 ## TODO
 
-There is a long shopping list of elements which need to be developed. These will
-be managed as GitHub issues.
+There is a long shopping list of elements which need to be developed, perhaps
+with the help of Claude Code.

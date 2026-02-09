@@ -1,5 +1,5 @@
-//! @file Test_name.cpp
-//! @brief The definition of unit tests for the X class/structure.
+//! @file MightyOakLib/Test/Test_CliOptions.cpp
+//! @brief  The definition of unit tests for the CliOptions class.
 //! @author GiantRobotLemur@na-se.co.uk
 //! @date 2026
 //! @copyright This file is part of the Mighty Oak project which is released
@@ -12,26 +12,43 @@
 ////////////////////////////////////////////////////////////////////////////////
 #include <gtest/gtest.h>
 
-#include "Y/X.hpp"
-
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
+#include "MightyOakLib/CliOptions.hpp"
 
 namespace Mo {
 
 namespace {
-////////////////////////////////////////////////////////////////////////////////
-// Local Data Types
-////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////
-// Local Data
-////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////
 // Unit Tests
 ////////////////////////////////////////////////////////////////////////////////
+GTEST_TEST(CliOptions, DefaultConstruct)
+{
+    CliOptions specimen;
+
+    EXPECT_EQ(specimen.getCommand(), Ag::Cli::StandardCommands::NoCommand);
+}
+
+GTEST_TEST(CliOptions, ParseNoArgsStartsDefaultSession)
+{
+    CliOptions specimen;
+    Ag::String error;
+
+    ASSERT_TRUE(specimen.tryParse(L"", error));
+
+    EXPECT_EQ(specimen.getCommand(), Ag::toScalar(AppCommand::RunSession));
+    EXPECT_TRUE(specimen.getEmulatedSystemConfig().validate(error));
+}
+
+GTEST_TEST(CliOptions, ParseArgs_UpgradedA3010)
+{
+    CliOptions specimen;
+    Ag::String error;
+
+    ASSERT_TRUE(specimen.tryParse(L"--ram 4Mb", error));
+
+    EXPECT_EQ(specimen.getCommand(), Ag::toScalar(AppCommand::RunSession));
+    EXPECT_TRUE(specimen.getEmulatedSystemConfig().validate(error));
+}
 
 } // Anonymous namespace
 

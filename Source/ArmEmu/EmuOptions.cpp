@@ -2,7 +2,7 @@
 //! @brief The definition of an object defining the configuration of a system
 //! to emulate.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2023-2024
+//! @date 2023-2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -11,6 +11,8 @@
 ////////////////////////////////////////////////////////////////////////////////
 // Header File Includes
 ////////////////////////////////////////////////////////////////////////////////
+#include <map>
+
 #include "Ag/Core/Binary.hpp"
 #include "Ag/Core/Format.hpp"
 #include "Ag/Core/Variant.hpp"
@@ -27,6 +29,177 @@ namespace {
 ////////////////////////////////////////////////////////////////////////////////
 //! @brief The path used to resolve paths to 'known' ROM images.
 static Ag::Fs::Path _romImageDirPath;
+
+////////////////////////////////////////////////////////////////////////////////
+// Local Data Types
+////////////////////////////////////////////////////////////////////////////////
+using ProductionModelMap = std::map<ProductionModel, Options>;
+
+////////////////////////////////////////////////////////////////////////////////
+// Local Functions
+////////////////////////////////////////////////////////////////////////////////
+//! @brief Gets the static index of basic emulator configurations based on
+//! production model identifier.
+const ProductionModelMap &getProductionConfigs()
+{
+    static ProductionModelMap map;
+
+    if (map.empty())
+    {
+        // Initialise the map.
+        Options model;
+
+        // Start with A305 series.
+        model.setHardwareArchitecture(SystemModel::Archimedies);
+        model.setProcessorVariant(ProcessorModel::ARM2);
+        model.setProcessorSpeedMHz(8);
+        model.setRamSizeKb(512);
+        model.setVideoRamSizeKb(0);
+        model.setDisplayType(DisplayInterface::MultiScan);
+        model.setHardDiskTechnology(HardDiskInterface::None);
+        model.setHardDriveCount(0);
+        model.setFloppyDiskCount(1);
+        model.setJoystickType(JoystickInterface::None);
+        model.setJoystickCount(0);
+        model.setSystemRom(SystemROMPreset::Arthur_1_20);
+        map[ProductionModel::A305] = model;
+
+        // Configure A310.
+        model.setRamSizeKb(1024);
+        map[ProductionModel::A310] = model;
+
+        // Configure A410.
+        model.setHardDiskTechnology(HardDiskInterface::ST506);
+        model.setHardDriveCount(1);
+        map[ProductionModel::A410] = model;
+
+        // Configure A420.
+        model.setRamSizeKb(2048);
+        map[ProductionModel::A420] = model;
+
+        // Configure A440.
+        model.setRamSizeKb(4096);
+        map[ProductionModel::A440] = model;
+
+        // Configure A410_1.
+        model.setRamSizeKb(1024);
+        model.setSystemRom(SystemROMPreset::RiscOS_2_00);
+        map[ProductionModel::A410_1] = model;
+
+        // Configure A420_1.
+        model.setRamSizeKb(2048);
+        map[ProductionModel::A420_1] = model;
+
+        // Configure A440_1.
+        model.setRamSizeKb(4096);
+        map[ProductionModel::A440_1] = model;
+
+        // Configure R140 - same as A440/1 as RISC iX was software-only.
+        map[ProductionModel::R140] = model;
+
+        // Configure A3000.
+        model.setRamSizeKb(1024);
+        model.setHardDiskTechnology(HardDiskInterface::None);
+        model.setHardDriveCount(0);
+        map[ProductionModel::A3000] = model;
+
+        // Configure A540.
+        model.setProcessorVariant(ProcessorModel::ARM3);
+        model.setProcessorSpeedMHz(25);
+        model.setRamSizeKb(4096);
+        model.setHardDiskTechnology(HardDiskInterface::SCSI);
+        model.setHardDriveCount(1);
+        map[ProductionModel::A540] = model;
+
+        // Configure R225 - Same as A540, RISC iX was software-only.
+        map[ProductionModel::R225] = model;
+
+        // Configure R260 - Same as R225?
+        map[ProductionModel::R260] = model;
+
+        // Configure A5000.
+        model.setHardwareArchitecture(SystemModel::ASeries);
+        model.setRamSizeKb(2048);
+        model.setHardDiskTechnology(HardDiskInterface::IDE);
+        model.setSystemRom(SystemROMPreset::RiscOS_3_00);
+        map[ProductionModel::A5000] = model;
+
+        // Configure A4.
+        // model.setDisplayType(DisplayInterface::HiResMono); ??
+        map[ProductionModel::A4] = model;
+
+        // Configure A3010.
+        model.setProcessorVariant(ProcessorModel::ARM250);
+        model.setProcessorSpeedMHz(12);
+        model.setRamSizeKb(1024);
+        model.setHardDiskTechnology(HardDiskInterface::None);
+        model.setHardDriveCount(0);
+        model.setDisplayType(DisplayInterface::NormalTV);
+        model.setJoystickType(JoystickInterface::Digital);
+        model.setJoystickCount(2);
+        model.setSystemRom(SystemROMPreset::RiscOS_3_10);
+        map[ProductionModel::A3010] = model;
+
+        // Configure A3020.
+        model.setRamSizeKb(2048);
+        model.setDisplayType(DisplayInterface::MultiScan);
+        model.setJoystickType(JoystickInterface::None);
+        model.setJoystickCount(0);
+        map[ProductionModel::A3020] = model;
+
+        // Configure A4000.
+        model.setHardDiskTechnology(HardDiskInterface::IDE);
+        model.setHardDriveCount(1);
+        map[ProductionModel::A4000] = model;
+
+        // Configure A5000_Alpha.
+        model.setProcessorVariant(ProcessorModel::ARM3);
+        model.setProcessorSpeedMHz(33);
+        model.setRamSizeKb(4096);
+        map[ProductionModel::A5000_Alpha] = model;
+
+        // Configure RiscPC_600.
+        model.setHardwareArchitecture(SystemModel::RiscPC);
+        model.setProcessorVariant(ProcessorModel::ARM610);
+        model.setProcessorSpeedMHz(30);
+        model.setSystemRom(SystemROMPreset::RiscOS_3_50);
+        map[ProductionModel::RiscPC_600] = model;
+
+        // Configure RiscPC_700.
+        model.setProcessorVariant(ProcessorModel::ARM710);
+        model.setProcessorSpeedMHz(40);
+        model.setSystemRom(SystemROMPreset::RiscOS_3_60);
+        map[ProductionModel::RiscPC_700] = model;
+
+        // Configure A7000.
+        model.setProcessorVariant(ProcessorModel::ARM710);
+        model.setProcessorSpeedMHz(32);
+        model.setJoystickType(JoystickInterface::Analog);
+        model.setJoystickCount(1);
+        map[ProductionModel::A7000] = model;
+
+        // Configure A7000_Plus.
+        model.setProcessorVariant(ProcessorModel::ARM710_FPA);
+        model.setProcessorSpeedMHz(48);
+        model.setSystemRom(SystemROMPreset::RiscOS_3_71);
+        map[ProductionModel::A7000_Plus] = model;
+
+        // Configure RiscPC_StrongARM.
+        model.setProcessorVariant(ProcessorModel::StrongARM);
+        model.setProcessorSpeedMHz(233);
+        model.setSystemRom(SystemROMPreset::RiscOS_3_70);
+        model.setJoystickType(JoystickInterface::None);
+        model.setJoystickCount(0);
+        map[ProductionModel::RiscPC_StrongARM] = model;
+
+        // Configure RiscPC_StringARM_J233.
+        model.setSystemRom(SystemROMPreset::RiscOS_3_71);
+        map[ProductionModel::RiscPC_StringARM_J233] = model;
+    }
+
+    return map;
+}
+
 
 } // Anonymous namespace
 
@@ -675,6 +848,26 @@ void Options::setRomImageBasePath(const Ag::Fs::Path &basePath)
     }
 }
 
+//! @brief Returns an emulator configuration based on a released production model.
+//! @param[in] model The production model used to base the emulator configuration on.
+//! @returns A copy of a configuration based on 
+Options Options::makeProductionModel(ProductionModel model)
+{
+    const ProductionModelMap &productMap = getProductionConfigs();
+
+    auto pos = productMap.find(model);
+
+    if (pos == productMap.end())
+    {
+        // Return the default model.
+        return { };
+    }
+    else
+    {
+        return pos->second;
+    }
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // Global Function Definitions
 ////////////////////////////////////////////////////////////////////////////////
@@ -686,6 +879,40 @@ const SystemModelType &getSystemModelType()
         { SystemModel::Archimedies, "Archimedes", "Archimedes", "Original ARM2/3-based desktop systems from the A305 to the A540." },
         { SystemModel::ASeries, "ASeries", "A-Series", "The second generation ARM250/3-based desktop systems from the A3010 to the A5000." },
         { SystemModel::RiscPC, "RiscPC", "Risc PC", "ARMv3/v4-based desktop systems, including A7000 models." },
+    });
+
+    return metadata;
+}
+
+//! @brief Provides static metadata for the ProductionModel enumeration type.
+const ProductionModelType &getProductionModelType()
+{
+    static const ProductionModelType metadata({
+        { ProductionModel::A305, "A305", "A305", "The original Arthur-based Archimedes with 512 Kb RAM and no HD." },
+        { ProductionModel::A310, "A310", "A310", "The original Arthur-based Archimedes with 1 Mb RAM and no HD." },
+        { ProductionModel::A410, "A410", "A410", "The original Arthur-based Archimedes with 1 Mb RAM and an ST506 HD." },
+        { ProductionModel::A420, "A420", "A420", "The original Arthur-based Archimedes with 2 Mb RAM and an ST506 HD." },
+        { ProductionModel::A440, "A440", "A440", "The original Arthur-based Archimedes with 4 Mb RAM and an ST506 HD." },
+        { ProductionModel::A410_1, "A410_1", "A410/1", "A RiscOS 2-based Archimedes with 1 Mb RAM and an ST506 HD." },
+        { ProductionModel::A420_1, "A420_1", "A420/1", "A RiscOS 2-based Archimedes with 2 Mb RAM and an ST506 HD." },
+        { ProductionModel::A440_1, "A440_1", "A440/1", "A RiscOS 2-based Archimedes with 4 Mb RAM and an ST506 HD." },
+        { ProductionModel::A3000, "A3000", "A3000", "A RiscOS 2-based Archimedes with 1 Mb RAM and no HD." },
+        { ProductionModel::R140, "R140", "R140", "The original RISC iX Unix workstation with 4 MB RAM and an ST506 HD." },
+        { ProductionModel::A540, "A540", "A540", "An ARM 3-based Archimedes with SCSI HD and RAM upgradable to 16 MB" },
+        { ProductionModel::R225, "R225", "R225", "An ARM 3-based RISC iX Unix workstation with built in Ethernet." },
+        { ProductionModel::R260, "R260", "R260", "An experimental ARM 3-based RISC iX Unix workstation with built in Ethernet." },
+        { ProductionModel::A5000, "A5000", "A5000", "An ARM 3-based RiscOS 3.00 workstation built in IDE HD." },
+        { ProductionModel::A4, "A4", "A4 Portable", "An ARM 3-based RiscOS 3.00 laptop with 16-colour grey-scale LCD screen." },
+        { ProductionModel::A3010, "A3010", "A3010", "An ARM 250 RiscOS 3.10-based desktop with joystick ports." },
+        { ProductionModel::A3020, "A3020", "A3020", "An ARM 250 RiscOS 3.10-based desktop with built in Econet." },
+        { ProductionModel::A4000, "A4000", "A4000", "An ARM 250 RiscOS 3.10-based desktop with built in Econet and IDE HD." },
+        { ProductionModel::A5000_Alpha, "A5000_Alpha", "A5000 Alpha", "A 33 MHz ARM 3-based RiscOS 3.10 workstation built in IDE HD." },
+        { ProductionModel::RiscPC_600, "RiscPC_600", "RiscPC 600", "A 30 MHz ARM610-based workstation with RiscOS 3.5 and built in IDE HD." },
+        { ProductionModel::RiscPC_700, "RiscPC_700", "RiscPC 700", "A 40 MHz ARM710-based workstation with RiscOS 3.6 and built in IDE HD." },
+        { ProductionModel::A7000, "A7000", "A7000", "A 32 MHz ARM7500 SoC-based workstation with RiscOS 3.6." },
+        { ProductionModel::A7000_Plus, "A7000_Plus", "A7000+", "A 48 MHz ARM7500FE SoC-based workstation with RiscOS 3.71" },
+        { ProductionModel::RiscPC_StrongARM, "RiscPC_StrongARM", "RiscPC StrongARM", "A RiscPC upgraded with a 233 MHz StrongARM processor running RiscOS 3.70." },
+        { ProductionModel::RiscPC_StringARM_J233, "RiscPC_StringARM_J233", "RiscPC StringARM J233", "A RiscPC upgraded with a 233 MHz StrongARM processor running RiscOS 3.71." },
     });
 
     return metadata;

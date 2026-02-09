@@ -2,7 +2,7 @@
 //! @brief The declaration of an object defining the configuration of a system
 //! to emulate.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2023-2024
+//! @date 2023-2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -46,6 +46,39 @@ enum class SystemModel : uint8_t
 };
 
 using SystemModelType = Ag::EnumInfo<SystemModel>;
+
+//! @brief An enumeration type expressing production models of the Archimedes,
+//! A-Series and RiscPC hardware used to create default configurations.
+enum class ProductionModel : uint8_t
+{
+    A305,
+    A310,
+    A410,
+    A420,
+    A440,
+    A410_1,
+    A420_1,
+    A440_1,
+    A3000,
+    R140,
+    A540,
+    R225,
+    R260,
+    A5000,
+    A4,
+    A3010,
+    A3020,
+    A4000,
+    A5000_Alpha,
+    RiscPC_600,
+    RiscPC_700,
+    A7000,
+    A7000_Plus,
+    RiscPC_StrongARM,
+    RiscPC_StringARM_J233,
+};
+
+using ProductionModelType = Ag::EnumInfo<ProductionModel>;
 
 //! @brief Defines the processor core to be emulated.
 enum class ProcessorModel : uint8_t
@@ -188,6 +221,7 @@ public:
     static bool isValidMemcRAMSize(uint32_t ramSizeKb);
     static bool isValidRiscPCRAMSize(uint32_t ramSizeKb);
     static void setRomImageBasePath(const Ag::Fs::Path &basePath);
+    static Options makeProductionModel(ProductionModel model);
 private:
     // Internal Types
 
@@ -213,15 +247,12 @@ private:
 // Function Declarations
 ////////////////////////////////////////////////////////////////////////////////
 const SystemModelType &getSystemModelType();
+const ProductionModelType &getProductionModelType();
 const ProcessorModelType &getProcessorModelType();
 const SystemROMPresetType &getSystemROMPresetType();
 const DisplayInterfaceType &getDisplayInterfaceType();
 const HDInterfaceType &getHDInterfaceType();
 const JoystickInterfaceType &getJoystickInterfaceType();
-
-////////////////////////////////////////////////////////////////////////////////
-// Templates
-////////////////////////////////////////////////////////////////////////////////
 
 }} // namespace Mo::Arm
 
