@@ -133,6 +133,7 @@ ag_add_test_app(ArmEmu_Tests    TEST_LIB ArmEmu
                                          Test/Test_ArmSystemBuilder.cpp
                                          Test/Test_VIDC10.cpp
                                          Test/Test_Display.cpp
+                                         Test/Test_KeyboardController.cpp
                                          Test/Test_Main.cpp)
 
 target_include_directories(ArmEmu_Tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")

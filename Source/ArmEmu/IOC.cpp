@@ -412,6 +412,16 @@ void IOC::writeKartByte(const uint8_t value)
     _synchronisedData->RxQueue.enqueue(value);
 }
 
+//! @brief Attempts to dequeue a byte from the KART receive queue.
+//! @param[out] byte Receives the dequeued byte if successful.
+//! @returns true if a byte was dequeued, false if the queue was empty.
+//! @note This is intended for use in test harnesses only. In normal operation,
+//! the KART timer callback dequeues bytes from this queue.
+bool IOC::tryReadKartRxByte(uint8_t &byte)
+{
+    return _synchronisedData->RxQueue.try_dequeue(byte);
+}
+
 //! @brief Removes all bytes from the KART receive queue.
 void IOC::flushKart()
 {

@@ -157,6 +157,7 @@ public:
     bool raiseVSyncIrq();
     void writeKart(const uint8_t *bytes, uint8_t size);
     void writeKartByte(const uint8_t value);
+    bool tryReadKartRxByte(uint8_t &byte);
     void flushKart();
 
     //void raiseIrq(uint8_t id);

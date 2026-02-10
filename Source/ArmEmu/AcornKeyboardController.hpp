@@ -3,7 +3,7 @@
 //! controller, translating between key press and mouse movement and the
 //! internal KART protocol.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2024
+//! @date 2024-2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -15,6 +15,10 @@
 ////////////////////////////////////////////////////////////////////////////////
 // Dependent Header Files
 ////////////////////////////////////////////////////////////////////////////////
+#include <atomic>
+
+#include "readerwriterqueue.h"
+
 #include "Ag/Core/LinearSortedMap.hpp"
 
 #include "ArmEmu/IKeyboardController.hpp"
@@ -92,19 +96,37 @@ private:
         ReceivedHRST,
         ReceivedRAK1,
         Initialised,
-        SentKeyRow,
-        SentKeyColumn,
-
     };
 
+    //! @brief Represents a key or mouse button event queued for transmission.
+    struct KeyEvent
+    {
+        uint8_t ScanCode;
+        bool IsDown;
+    };
+
+    using KeyEventQueue = moodycamel::ReaderWriterQueue<KeyEvent>;
+
+    // Internal Constants
+
+    //! @brief The keyboard ID reported to the host via the KBID response.
+    //! Value 1 represents a standard UK A3000 keyboard.
+    static constexpr uint8_t KeyboardId = 1;
+
     // Internal Functions
+    uint8_t getStatusByte() const;
+    void sendPendingData();
+    void sendKeyEvent(const KeyEvent &event);
+    void sendMouseData();
 
     // Internal Fields
     Ag::String _name;
     Ag::String _description;
     ScanCodeMap _scanCodeMap;
+    KeyEventQueue _pendingKeyEvents;
     IOC *_ioController;
-    uint32_t _scanCodeBeingSent;
+    std::atomic<int32_t> _mouseDeltaX;
+    std::atomic<int32_t> _mouseDeltaY;
     ControllerState _state;
 };
 
