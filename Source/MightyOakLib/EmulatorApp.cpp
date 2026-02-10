@@ -15,6 +15,9 @@
 
 #include "MightyOakLib/CliOptions.hpp"
 #include "MightyOakLib/EmulatorApp.hpp"
+#include "MightyOakLib/AppContext.hpp"
+#include "MightyOakLib/AppState.hpp"
+#include "MightyOakLib/SessionRunningState.hpp"
 
 namespace Mo {
 
@@ -62,7 +65,7 @@ bool EmulatorApp::initialise(const Ag::Cli::ProgramArguments *args)
 
     Ag::String initError;
 
-    if (_sdlInitialiser.tryInitialise(initError))
+    if (_sdlInitialiser.tryInitialise(initError) == false)
     {
         reportError(initError.getUtf8Bytes());
         return false;
@@ -84,13 +87,30 @@ int EmulatorApp::run(const Ag::Cli::ProgramArguments *args)
     }
     else if (Ag::tryCast(args, options))
     {
+        // Create a context shared between application states.
+        AppContext sharedContext;
+
+        // Create resources.
+        sharedContext.initialise(*options);
+
+        AppState *currentState = nullptr;
+
         if (options->getCommand() == Ag::toScalar(AppCommand::RunSession))
         {
-            // TODO: Run emulator session.
-            const Arm::Options &sessionOptions = options->getEmulatedSystemConfig();
-
-            processResult = 0;
+            // Run an emulator session.
+            currentState = new SessionRunningState(&sharedContext);
         }
+
+        // Run the state machine until no successor state is produce.
+        while (currentState != nullptr)
+        {
+            AppState *successorState = currentState->run();
+
+            delete currentState;
+            currentState = successorState;
+        }
+
+        processResult = 0;
     }
 
     return processResult;

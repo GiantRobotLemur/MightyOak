@@ -1,5 +1,5 @@
 //! @file MightyOakLib/name_here.cpp
-//! @brief The definition of 
+//! @brief The definition of an object passed between states of the application.
 //! @author GiantRobotLemur@na-se.co.uk
 //! @date 2026
 //! @copyright This file is part of the Mighty Oak project which is released
@@ -10,7 +10,8 @@
 ////////////////////////////////////////////////////////////////////////////////
 // Header File Includes
 ////////////////////////////////////////////////////////////////////////////////
-#include "MightyOakLib/Xxx.hpp"
+#include "MightyOakLib/AppContext.hpp"
+#include "MightyOakLib/CliOptions.hpp"
 
 ////////////////////////////////////////////////////////////////////////////////
 // Macro Definitions
@@ -34,8 +35,44 @@ namespace {
 } // Anonymous namespace
 
 ////////////////////////////////////////////////////////////////////////////////
-// Xxx Member Definitions
+// AppContext Member Definitions
 ////////////////////////////////////////////////////////////////////////////////
+//! @brief Constructs an empty context to share between application states.
+AppContext::AppContext()
+{
+}
+
+//! @brief Gets the current emulator session, possibly nullptr.
+EmulatorSession *AppContext::getSession()
+{
+    return _currentSession.get();
+}
+
+//! @brief Gets the current emulator session, possibly nullptr.
+const EmulatorSession *AppContext::getSession() const
+{
+    return _currentSession.get();
+}
+
+//! @brief Gets the object representing the main application window.
+Ag::SDL3::Window &AppContext::getMainWindow()
+{
+    return _mainWindow;
+}
+
+//! @brief Gets the object representing the main application window.
+const Ag::SDL3::Window &AppContext::getMainWindow() const
+{
+    return _mainWindow;
+}
+
+//! @brief Creates the initial windows and device resources required by all
+//! application states.
+//! @param[in] appOptions The options parsed from the command line.
+void AppContext::initialise(const CliOptions &/*appOptions*/)
+{
+    _mainWindow.create("Mighty Oak", 640, 480, SDL_WINDOW_RESIZABLE);
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // Global Function Definitions

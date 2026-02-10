@@ -1,5 +1,6 @@
-//! @file MightyOakLib/name_here.cpp
-//! @brief The definition of 
+//! @file MightyOakLib/EmulatorSession.cpp
+//! @brief The definition of an object which holds the runtime state of the
+//! system being emulated.
 //! @author GiantRobotLemur@na-se.co.uk
 //! @date 2026
 //! @copyright This file is part of the Mighty Oak project which is released
@@ -10,7 +11,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 // Header File Includes
 ////////////////////////////////////////////////////////////////////////////////
-#include "MightyOakLib/Xxx.hpp"
+#include "MightyOakLib/EmulatorSession.hpp"
 
 ////////////////////////////////////////////////////////////////////////////////
 // Macro Definitions
@@ -34,8 +35,18 @@ namespace {
 } // Anonymous namespace
 
 ////////////////////////////////////////////////////////////////////////////////
-// Xxx Member Definitions
+// EmulatorSession Member Definitions
 ////////////////////////////////////////////////////////////////////////////////
+EmulatorSession::EmulatorSession(const Arm::Options &configuration) :
+    _configuration(configuration)
+{
+}
+
+//! @brief Returns the configuration of the system being emulated.
+const Arm::Options &EmulatorSession::getConfiguration() const
+{
+    return _configuration;
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // Global Function Definitions

@@ -1,5 +1,6 @@
-//! @file MightyOakLib/name_here.cpp
-//! @brief The definition of 
+//! @file MightyOakLib/SessionRunningState.cpp
+//! @brief The definition of an application state in which an emulated system
+//! is running.
 //! @author GiantRobotLemur@na-se.co.uk
 //! @date 2026
 //! @copyright This file is part of the Mighty Oak project which is released
@@ -10,7 +11,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 // Header File Includes
 ////////////////////////////////////////////////////////////////////////////////
-#include "MightyOakLib/Xxx.hpp"
+#include "MightyOakLib/SessionRunningState.hpp"
 
 ////////////////////////////////////////////////////////////////////////////////
 // Macro Definitions
@@ -34,8 +35,12 @@ namespace {
 } // Anonymous namespace
 
 ////////////////////////////////////////////////////////////////////////////////
-// Xxx Member Definitions
+// SessionRunningState Member Definitions
 ////////////////////////////////////////////////////////////////////////////////
+SessionRunningState::SessionRunningState(AppContext *sharedContext) :
+    AppState(sharedContext)
+{
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // Global Function Definitions

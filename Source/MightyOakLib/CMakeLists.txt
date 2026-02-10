@@ -10,6 +10,15 @@ ag_add_library(MightyOakLib FOLDER      ARM
                                         "EmulatorApp.cpp"
                                         "${MO_LIB_INC_DIR}/CliOptions.hpp"
                                         "CliOptions.cpp"
+                                        "${MO_LIB_INC_DIR}/EmulatorSession.hpp"
+                                        "EmulatorSession.cpp"
+                                        "${MO_LIB_INC_DIR}/AppState.hpp"
+                                        "AppState.cpp"
+                                        "${MO_LIB_INC_DIR}/AppContext.hpp"
+                                        "AppContext.cpp"
+                                        "${MO_LIB_INC_DIR}/SessionRunningState.hpp"
+                                        "SessionRunningState.cpp"
+
                             HEADERS     "${MO_INCLUDE_DIR}/MightyOakLib.hpp"
                             PUBLIC_LIBS ArmEmu Sdl3Tools)
 
@@ -23,15 +32,24 @@ list(APPEND DOC_SRCS "${CMAKE_CURRENT_SOURCE_DIR}"
                      "${MO_INCLUDE_DIR}/MightyOakLib.hpp"
                      "${MO_LIB_INC_DIR}")
 
-source_group(Framework FILES
-             "${MO_LIB_INC_DIR}/EmulatorApp.hpp"
-             "EmulatorApp.cpp"
-             "${MO_LIB_INC_DIR}/CliOptions.hpp"
-             "CliOptions.cpp"
+source_group(Framework  FILES
+                        "${MO_LIB_INC_DIR}/EmulatorApp.hpp"
+                        "EmulatorApp.cpp"
+                        "${MO_LIB_INC_DIR}/CliOptions.hpp"
+                        "CliOptions.cpp"
+                        "${MO_LIB_INC_DIR}/EmulatorSession.hpp"
+                        "EmulatorSession.cpp"
+                        "${MO_LIB_INC_DIR}/AppState.hpp"
+                        "AppState.cpp"
+                        "${MO_LIB_INC_DIR}/AppContext.hpp"
+                        "AppContext.cpp"
+                        "${MO_LIB_INC_DIR}/SessionRunningState.hpp"
+                        "SessionRunningState.cpp"
 )
 
-source_group(Build FILES
-             "PreCompiledHeader.hpp"
+source_group(Build  FILES
+                    "${MO_INCLUDE_DIR}/MightyOakLib.hpp"
+                    "PreCompiledHeader.hpp"
 )
 
 # Define the unit test harness.

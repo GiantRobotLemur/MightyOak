@@ -13,8 +13,16 @@
 ////////////////////////////////////////////////////////////////////////////////
 // Dependent Header Files
 ////////////////////////////////////////////////////////////////////////////////
+#include <Ag/Core.hpp>
+#include <Ag/Sdl3Tools.hpp>
+
 #include "MightyOakLib/CliOptions.hpp"
 #include "MightyOakLib/EmulatorApp.hpp"
+#include "MightyOakLib/EmulatorSession.hpp"
+#include "MightyOakLib/AppState.hpp"
+#include "MightyOakLib/AppContext.hpp"
+#include "MightyOakLib/SessionRunningState.hpp"
+
 
 #endif // Header guard
 ////////////////////////////////////////////////////////////////////////////////

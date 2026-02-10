@@ -17,6 +17,7 @@
 // C/CRT Header Files
 
 // C++/STL Header Files
+#include <memory>
 
 // 3rd Party Library Files
 #include <SDL3/SDL.h>
