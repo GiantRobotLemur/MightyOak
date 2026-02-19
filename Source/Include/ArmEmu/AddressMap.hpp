@@ -2,7 +2,7 @@
 //! @brief The declaration of an object which indexes IAddressRegion objects
 //! by the range of addresses they span.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2023-2024
+//! @date 2023-2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -101,10 +101,13 @@ struct IHardwareDevice
 
 //! @brief An alias for a pointer to an implementation of the
 //! IHardwareDevice interface.
-using IHardwreDevicePtr = IHardwareDevice *;
+using IHardwareDevicePtr = IHardwareDevice *;
 
 //! @brief An alias for a unique pointer to an IHardwareDevice implementation.
 using IHardwareDeviceUPtr = std::unique_ptr<IHardwareDevice>;
+
+//! @brief An alias for a collection of device objects.
+using IHardwareDeviceCollection = std::vector<IHardwareDevicePtr>;
 
 //! @brief An alias for a collection of unique pointers to IHardwareDevice
 //! implementations which will ensure that each instance is disposed of at
@@ -157,23 +160,20 @@ class ConnectionContext
 {
 public:
     // Construction/Destruction
-    ConnectionContext(SystemContextPtr interopContext,
-                      const HardwareDevicePool &devices,
-                      const AddressMap &readMap,
-                      const AddressMap &writeMap);
+    ConnectionContext(SystemContextPtr interopContext);
     ~ConnectionContext() = default;
 
     // Accessors
-    bool tryFindDevice(Ag::string_cref_t name, IHardwreDevicePtr &device) const;
+    bool tryFindDevice(Ag::string_cref_t name, IHardwareDevicePtr &device) const;
     SystemContextPtr getInteropContext() const;
 
     // Operations
+    void addDevice(IHardwareDevicePtr device);
 private:
     // Internal Fields
-    void addDevice(IHardwreDevicePtr device);
 
     // Internal Fields
-    std::unordered_map<Ag::String, IHardwreDevicePtr> _devicesByName;
+    std::unordered_map<Ag::String, IHardwareDevicePtr> _devicesByName;
     SystemContextPtr _interopContext;
 };
 

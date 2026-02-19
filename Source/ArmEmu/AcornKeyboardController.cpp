@@ -34,8 +34,6 @@ namespace {
 // Local Data
 ////////////////////////////////////////////////////////////////////////////////
 
-
-
 ////////////////////////////////////////////////////////////////////////////////
 // Local Functions
 ////////////////////////////////////////////////////////////////////////////////
@@ -100,7 +98,7 @@ void AcornKeyboardController::receiveKARTByte(uint8_t nextByte)
         if (nextByte == HRST)
         {
             _state = ControllerState::ReceivedHRST;
-            _ioController->writeKartByte(RAK1);
+            _ioController->writeKartByte(HRST);
             hasError = false;
         }
         break;
@@ -109,7 +107,7 @@ void AcornKeyboardController::receiveKARTByte(uint8_t nextByte)
         if (nextByte == RAK1)
         {
             _state = ControllerState::ReceivedRAK1;
-            _ioController->writeKartByte(RAK2);
+            _ioController->writeKartByte(RAK1);
             hasError = false;
         }
         break;
@@ -117,10 +115,9 @@ void AcornKeyboardController::receiveKARTByte(uint8_t nextByte)
     case ControllerState::ReceivedRAK1:
         if (nextByte == RAK2)
         {
-            // Handshake complete. Transition to Initialised and send
-            // an initial status byte to indicate readiness.
+            // Handshake complete. Transition to Initialised state.
             _state = ControllerState::Initialised;
-            _ioController->writeKartByte(getStatusByte());
+            _ioController->writeKartByte(RAK2);
             hasError = false;
         }
         break;
@@ -159,7 +156,7 @@ void AcornKeyboardController::receiveKARTByte(uint8_t nextByte)
                  nextByte == MACK || nextByte == SMAK ||
                  nextByte == BACK)
         {
-            // Host acknowledgment. Send any pending key/mouse data
+            // Host acknowledgement. Send any pending key/mouse data
             // or a status byte.
             sendPendingData();
         }
@@ -200,7 +197,7 @@ Ag::string_cref_t AcornKeyboardController::getDescription() const
 // Inherited from IHardwareDevice.
 void AcornKeyboardController::connect(const ConnectionContext &context)
 {
-    IHardwreDevicePtr iocDevice;
+    IHardwareDevicePtr iocDevice;
 
     if (context.tryFindDevice("IOC", iocDevice))
     {

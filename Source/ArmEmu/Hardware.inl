@@ -2,7 +2,7 @@
 //! @brief The declaration of an example of an implementation of a hardware layer underlying
 //! register files and data transfer.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2023-2024
+//! @date 2023-2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -264,10 +264,24 @@ class GenericHardware
     //! @brief Create a map of all writeable memory regions in the system,
     //! including ranges of addresses with fixed decoding logic.
     AddressMap createMasterWriteMap();
+
+    ///////////////////////////////////////////////////////////////////////////
+    // Integral Hardware Support
+    ///////////////////////////////////////////////////////////////////////////
+
+    //! @brief Called to allow a hardware platform to register devices which
+    //! will need to be connected to other devices.
+    //! @param[in] devices The collection of devices to add to, duplicates are
+    //! allowed.
+    void addIntegralHardware(IHardwareDeviceCollection &devices);
 };
 
 //! @brief An implementation of the common interrupt management requirements of
 //! GenericHardware.
+//! @remarks This manages the interrupt lines to the emulated CPU (IRQ and FIRQ),
+//! plus a couple of extra ones (Host and Debug) to facilitate interruptions from
+//! the host app (Host interrupts) and breakpoints encountered in code (Debug
+//! interrupts).
 class BasicIrqManagerHardware
 {
 protected:
@@ -322,7 +336,7 @@ public:
     //! IrqState structure.
     void updateIrqMask(uint8_t mask, uint8_t significantBits) noexcept
     {
-        _irqMask &= ~mask;
+        _irqMask &= ~significantBits;
         _irqMask |= significantBits & mask;
     }
 
@@ -398,6 +412,13 @@ public:
     //! @brief Create a map of all writeable memory regions in the system,
     //! including ranges of addresses with fixed decoding logic.
     AddressMap createMasterWriteMap() { return _masterWriteMap; }
+
+    //! @brief Called to allow a hardware platform to register devices which
+    //! will need to be connected to other devices.
+    //! @param[in] devices The collection of devices to add to, duplicates are
+    //! allowed.
+    //! @note The base implementation does nothing.
+    void addIntegralHardware(IHardwareDeviceCollection &/*devices*/) {}
 };
 
 }} // namespace Mo::Arm

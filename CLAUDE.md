@@ -50,7 +50,7 @@ Supported platforms: Visual Studio 2022 x64 (Windows), gcc 11 x64 (Linux).
 
 ### Major Components
 
-**AsmTools** (`Source/AsmTools/`) — Standalone ARM assembly/disassembly library supporting ARMv2–ARMv5 and partial FPA. Contains a full lexer, parser, expression evaluator, symbol table, and object code builder. Produces two CLI tools: `AAsm` (assembler) and `ADisasm` (disassembler). Public API: `Source/Include/AsmTools.hpp`.
+**AsmTools** (`Source/AsmTools/`) — Standalone ARM assembly/disassembly library supporting ARMv2–ARMv5 and partial FPA. Contains a full lexer, parser, expression evaluator, symbol table, and object code builder. Produces two CLI tools: `AAsm` (assembler) and `ADisasm` (disassembler). Public API: `Source/Include/AsmTools.hpp`. See [`AAsm_Syntax_Reference.md`](AAsm_Syntax_Reference.md) for the complete assembly language syntax accepted by AAsm.
 
 **ArmEmu** (`Source/ArmEmu/`) — ARM processor and hardware emulator. Emulates ARM CPU core plus Archimedes hardware: MEMC (memory controller), VIDC10 (video), IOC (I/O), and keyboard controller. Public API: `Source/Include/ArmEmu.hpp`.
 
@@ -87,3 +87,4 @@ Optional x64 MASM assembly optimizations exist in `AluOperations_Win32_x64.asm` 
 - Test files follow the pattern `Test_*.cpp` using Google Test
 - Do not automatically commit changes
 - Do not ask to commit changes
+- Keep Overview.md up to date with a description of the architecture, coding standards, key patterns and areas of tech debt.

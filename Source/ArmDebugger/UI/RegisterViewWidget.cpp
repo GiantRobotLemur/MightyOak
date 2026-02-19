@@ -2,7 +2,7 @@
 //! @brief The definition of a widget which displays the current status of the
 //! processor registers.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2024
+//! @date 2024-2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -74,8 +74,8 @@ RegisterViewWidget::RegisterViewWidget(QWidget *ownerWidget) :
     _psrBits.emplace_back(30, _ui._zLabel, _ui._zCheckBox);
     _psrBits.emplace_back(29, _ui._cLabel, _ui._cCheckBox);
     _psrBits.emplace_back(28, _ui._vLabel, _ui._vCheckBox);
-    _psrBits.emplace_back(26, _ui._iLabel, _ui._iCheckBox);
-    _psrBits.emplace_back(25, _ui._fLabel, _ui._fCheckBox);
+    _psrBits.emplace_back(27, _ui._iLabel, _ui._iCheckBox);
+    _psrBits.emplace_back(26, _ui._fLabel, _ui._fCheckBox);
 
     if (auto *app = qobject_cast<DebuggerApp *>(QCoreApplication::instance()))
     {
@@ -102,8 +102,8 @@ void RegisterViewWidget::onSessionStarted(const Arm::Options &options,
 {
     // Define the location of the Interrupt and Fast interrupt disable
     // flags in the PSR.
-    uint8_t iFlag = 26;
-    uint8_t fFlag = 25;
+    uint8_t iFlag = 27;
+    uint8_t fFlag = 26;
 
     if (options.getProcessorVariant() >= Arm::ProcessorModel::ARM610)
     {

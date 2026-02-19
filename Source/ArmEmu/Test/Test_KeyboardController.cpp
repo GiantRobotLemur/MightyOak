@@ -49,8 +49,10 @@ protected:
         ioReadMap.tryInsert(0x3200000, &_memc.getIOC());
         ioWriteMap.tryInsert(0x3200000, &_memc.getIOC());
 
-        HardwareDevicePool devices;
-        ConnectionContext context(nullptr, devices, ioReadMap, ioWriteMap);
+        ConnectionContext context(nullptr);
+        context.addDevice(&_memc.getIOC());
+        context.addDevice(&_keyboard);
+
         _keyboard.connect(context);
     }
 
@@ -94,20 +96,20 @@ TEST_F(KeyboardControllerTest, HandshakeStep1_HRST)
 
     auto response = drainRxQueue();
     ASSERT_EQ(response.size(), 1u);
-    EXPECT_EQ(response[0], AcornKeyboardController::RAK1);
+    EXPECT_EQ(response[0], AcornKeyboardController::HRST);
 }
 
 TEST_F(KeyboardControllerTest, HandshakeStep2_RAK1)
 {
     _keyboard.receiveKARTByte(AcornKeyboardController::HRST);
-    drainRxQueue(); // consume RAK1
+    drainRxQueue(); // consume HRST
 
-    // Send RAK1, expect RAK2 response.
+    // Send RAK1, expect RAK1 response.
     _keyboard.receiveKARTByte(AcornKeyboardController::RAK1);
 
     auto response = drainRxQueue();
     ASSERT_EQ(response.size(), 1u);
-    EXPECT_EQ(response[0], AcornKeyboardController::RAK2);
+    EXPECT_EQ(response[0], AcornKeyboardController::RAK1);
 }
 
 TEST_F(KeyboardControllerTest, HandshakeStep3_RAK2_Completes)
@@ -124,7 +126,7 @@ TEST_F(KeyboardControllerTest, HandshakeStep3_RAK2_Completes)
 
     auto response = drainRxQueue();
     ASSERT_EQ(response.size(), 1u);
-    EXPECT_EQ(response[0], AcornKeyboardController::NACK);
+    EXPECT_EQ(response[0], AcornKeyboardController::RAK2);
 }
 
 TEST_F(KeyboardControllerTest, HandshakeInvalidByte_ResetsProtocol)
@@ -489,17 +491,17 @@ TEST_F(KeyboardControllerTest, FullBootSequence)
     _keyboard.receiveKARTByte(AcornKeyboardController::HRST);
     auto r1 = drainRxQueue();
     ASSERT_EQ(r1.size(), 1u);
-    EXPECT_EQ(r1[0], AcornKeyboardController::RAK1);
+    EXPECT_EQ(r1[0], AcornKeyboardController::HRST);
 
     _keyboard.receiveKARTByte(AcornKeyboardController::RAK1);
     auto r2 = drainRxQueue();
     ASSERT_EQ(r2.size(), 1u);
-    EXPECT_EQ(r2[0], AcornKeyboardController::RAK2);
+    EXPECT_EQ(r2[0], AcornKeyboardController::RAK1);
 
     _keyboard.receiveKARTByte(AcornKeyboardController::RAK2);
     auto r3 = drainRxQueue();
     ASSERT_EQ(r3.size(), 1u);
-    EXPECT_EQ(r3[0], AcornKeyboardController::NACK);
+    EXPECT_EQ(r3[0], AcornKeyboardController::RAK2);
 
     // 2. Request keyboard ID.
     _keyboard.receiveKARTByte(AcornKeyboardController::RQID);

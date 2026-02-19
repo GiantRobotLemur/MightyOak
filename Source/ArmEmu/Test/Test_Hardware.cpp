@@ -2,7 +2,7 @@
 //! @brief The definition of unit tests of the hardware layer of an emulated
 //! ARM-based system.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2023
+//! @date 2023-2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -97,8 +97,8 @@ GTEST_TEST(BasicHardware, SetStates)
                                        IrqState::HostPending);
 
     // Mask host debug IRQs, unmask guest IRQs and verify.
-    specimen.updateIrqMask(IrqState::DebugPending | IrqState::IrqPending,
-                           IrqState::DebugPending);
+    specimen.updateIrqMask(IrqState::DebugPending,
+                           IrqState::DebugPending | IrqState::IrqPending);
     EXPECT_EQ(specimen.getIrqStatus(), IrqState::HostPending | IrqState::IrqPending);
 
     // Handle guest IRQ and verify.
@@ -106,7 +106,7 @@ GTEST_TEST(BasicHardware, SetStates)
     EXPECT_EQ(specimen.getIrqStatus(), IrqState::HostPending);
 
     // Unmask all guest IRQs and verify.
-    specimen.updateIrqMask(IrqState::GuestIrqsMask, 0u);
+    specimen.updateIrqMask(0u, IrqState::GuestIrqsMask);
     EXPECT_EQ(specimen.getIrqStatus(), IrqState::HostPending |
                                        IrqState::FastIrqPending);
 }

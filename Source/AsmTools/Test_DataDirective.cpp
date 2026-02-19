@@ -1,7 +1,7 @@
 //! @file Test_DataDirective.cpp
 //! @brief The definition of unit tests for the assembly of data directives.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2022-2023
+//! @date 2022-2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -138,6 +138,20 @@ GTEST_TEST(DataDirective, AlignValue)
     EXPECT_EQ(codeWords[1], 0x00000000u);
     EXPECT_EQ(codeWords[2], 0x00000000u);
     EXPECT_EQ(codeWords[3], 0x00000000u);
+}
+
+GTEST_TEST(DataDirective, UseSymbolicConstant)
+{
+    Messages log;
+    ObjectCode code = assembleText(".myLabel 42\nEQUB myLabel",
+                                   getDefaultOptions(), log);
+
+    ASSERT_FALSE(code.isEmpty());
+    ASSERT_EQ(code.getCodeSize(), 1u);
+    EXPECT_FALSE(log.hasErrors());
+    const uint8_t *codeWords = reinterpret_cast<const uint8_t *>(code.getCode());
+
+    EXPECT_EQ(codeWords[0], 42u);
 }
 
 } // Anonymous namespace

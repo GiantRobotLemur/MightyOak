@@ -33,7 +33,7 @@ if (${Qt6_FOUND})
     set(AG_CONFIG_QT ON CACHE "BOOL" "Use Qt" FORCE)
     message(STATUS "Qt6: Found (Version ${Qt6_VERSION})")
 else()
-    set(AG_CONFIG_QT ON CACHE "BOOL" "Use Qt" FORCE)
+    set(AG_CONFIG_QT OFF CACHE "BOOL" "Use Qt" FORCE)
     message(STATUS "Qt6: Not Found (Add Qt6 path to CMAKE_PREFIX_PATH)")
 endif()
 

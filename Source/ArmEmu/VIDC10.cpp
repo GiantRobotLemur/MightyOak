@@ -47,9 +47,8 @@ VIDC10::VIDC10(MemcHardware &parent) :
     std::memset(_stereoPositions, 0, sizeof(_stereoPositions));
     std::memset(_hRegs, 0, sizeof(_hRegs));
     std::memset(_vRegs, 0, sizeof(_vRegs));
-    Ag::zeroFill(_vSyncTask);
-    _vSyncTask.Task = &VIDC10::onVSync;
-    _vSyncTask.Context = reinterpret_cast<uintptr_t>(this);
+
+    _vSyncTask.defineTask(&onVSync, this);
 }
 
 // Accessors
@@ -243,8 +242,7 @@ void VIDC10::scheduleVSync()
 
     if (period > 0)
     {
-        _vSyncTask.At = _context->getMasterClockTicks() + period;
-        _context->scheduleTask(&_vSyncTask);
+        _context->scheduleTaskDeltaTicks(&_vSyncTask, period);
         _vSyncActive = true;
     }
 }
@@ -267,8 +265,7 @@ void VIDC10::onVSync(SystemContext &guestContext, uintptr_t taskContext)
 
         if (period > 0)
         {
-            vidc->_vSyncTask.At = guestContext.getMasterClockTicks() + period;
-            guestContext.scheduleTask(&vidc->_vSyncTask);
+            guestContext.scheduleTaskDeltaTicks(&vidc->_vSyncTask, period);
         }
     }
 }

@@ -2,7 +2,7 @@
 //! @brief The declaration of a set of template components which manage the
 //! emulated execution of ARM or Thumb instructions.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2023-2024
+//! @date 2023-2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -47,6 +47,13 @@ private:
     SystemContext &_context;
     PrimaryPipeline _pipeline;
 
+    // Internal Functions
+    static void onMaxCyclesElapsed(SystemContext &guestContext,
+                                   uintptr_t /*taskContext*/)
+    {
+        guestContext.getSystem()->raiseHostInterrupt();
+    }
+
 public:
     // Construction/Destruction
     //! @brief Constructs an object which runs an instruction pipeline in
@@ -84,10 +91,11 @@ public:
 
     //! @brief Executes instructions until a host or debug interrupt is raised or
     //! after the first run if in single step mode.
-    //! @param[in] singleStep True to only run the pipeline once, false to run
-    //! until a host or debug interrupt is triggered.
+    //! @param[in] maxCycles The maximum number of cycles to execute before
+    //! returning, negative for infinite, 0 for single step and a positive
+    //! value for a cycle limited run.
     //! @returns The count of simulated CPU cycles executed before exit.
-    ExecutionMetrics runPipeline(bool singleStep)
+    ExecutionMetrics runPipeline(int32_t maxCycles)
     {
         ExecutionMetrics metrics;
         uint64_t startTicks = _context.getCPUClockTicks();
@@ -95,10 +103,23 @@ public:
         // Ensure the pipeline only runs once in single-step mode.
         bool runPipeline = true;
 
-        if (singleStep)
+        GuestTask raiseHostIrq;
+        GuestTask *limitTask = nullptr;
+
+        if (maxCycles < 0)
         {
+            // Single step mode.
             runPipeline = false;
             metrics.ExecResult = ExecutionMetrics::Result::SingleStep;
+        }
+        else if (maxCycles > 0)
+        {
+            // Schedule a task to raise a host interrupt after the
+            // maximum number of cycles have elapsed.
+            raiseHostIrq.defineTask(onMaxCyclesElapsed, nullptr);
+            limitTask = &raiseHostIrq;
+
+            _context.scheduleTaskDeltaCycles(limitTask, maxCycles);
         }
 
         _pipeline.flushPipeline();
@@ -138,6 +159,9 @@ public:
                     // A normal interrupt has been signalled.
                     result = _regs.handleIrq();
                 }
+
+                // Ensure the results are properly applied to the pipeline.
+                _pipeline.processNonExecResult(result);
             }
             else // if (pendingIrqs == 0)
             {
@@ -160,6 +184,12 @@ public:
         // Ensure the PC reflects the next instruction to EXECUTE, not the
         // next one to FETCH.
         _pipeline.unflushPipeline();
+
+        if (limitTask != nullptr)
+        {
+            // Ensure the time limit task doesn't linger.
+            _context.unscheduleTask(limitTask);
+        }
 
         return metrics;
     }

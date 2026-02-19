@@ -171,6 +171,8 @@ void MemcHardware::writeMEMC(uint32_t offset, uint32_t value)
             _videoEndAddr = offset & 0x1FFFC;
             break;
         case 3: // Cinit
+            _cursorInitAddr = offset & 0x1FFFC;
+            break;
         case 4: // Sstart
         case 5: // SendN
         case 6: // Sptr
@@ -542,6 +544,7 @@ MemcHardware::MemcHardware(const Options &options,
     _videoInitAddr(0),
     _videoStartAddr(0),
     _videoEndAddr(0),
+    _cursorInitAddr(0),
     _physicalRamBlock("Physical RAM", "The system RAM without any logical address mapping"),
     _lowRomBlock("System ROM", "The low ROM area, usually containing the operating system."),
     _highRomBlock("Extension ROM", "The high ROM area, usually containing extensions ROMs.")
@@ -641,6 +644,11 @@ uint32_t MemcHardware::getVideoEndAddr() const
     return _videoEndAddr;
 }
 
+uint32_t MemcHardware::getCursorInitAddr() const
+{
+    return _cursorInitAddr;
+}
+
 const uint8_t *MemcHardware::getRamData() const
 {
     return _ram.data();
@@ -727,6 +735,7 @@ void MemcHardware::reset()
     _videoInitAddr = 0;
     _videoStartAddr = 0;
     _videoEndAddr = 0;
+    _cursorInitAddr = 0;
 
     // Generate a set of mappings which map logical addresses from 0x0000
     // to physical addresses 0x3400000 where the low ROM is positioned.
@@ -1006,14 +1015,23 @@ AddressMap MemcHardware::createMasterReadMap()
 AddressMap MemcHardware::createMasterWriteMap()
 {
     AddressMap masterWriteAddrMap = _writeAddrDecoder;
+    bool isOK = true;
 
-    if ((_physicalRamBlock.getSize() > 0) &&
-        !masterWriteAddrMap.tryInsert(MEMC::PhysRamStart, &_physicalRamBlock))
+    if (_physicalRamBlock.getSize() > 0)
+        isOK = masterWriteAddrMap.tryInsert(MEMC::PhysRamStart, &_physicalRamBlock);
+
+    if (!isOK)
     {
         throw Ag::OperationException("Fixed address map regions overlap.");
     }
 
     return masterWriteAddrMap;
+}
+
+// Based on GenericHardware::addIntegralHardware().
+void MemcHardware::addIntegralHardware(IHardwareDeviceCollection &devices)
+{
+    devices.push_back(&_keyboard);
 }
 
 }} // namespace Mo::Arm

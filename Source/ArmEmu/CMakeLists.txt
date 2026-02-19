@@ -124,6 +124,7 @@ ag_add_test_app(ArmEmu_Tests    TEST_LIB ArmEmu
                                          Test/Test_Hardware.cpp
                                          Test/Test_MemcHardware.cpp
                                          Test/Test_MemcSystem.cpp
+                                         Test/Test_MemcRomBoot.cpp
                                          Test/Test_AluOperations.cpp
                                          Test/Test_ALU.cpp
                                          Test/Test_DataTransfer.cpp
@@ -186,4 +187,8 @@ add_custom_command(OUTPUT "${MemcTestRomImagePath}"
 
 # Embed the ARM machine code in the program source code.
 ag_add_static_data(EmuPerf_Test "MemcTestRom.hpp" BINARY
+                   SOURCES "${MemcTestRomImagePath}")
+
+# Embed the same MEMC test ROM in the unit test executable.
+ag_add_static_data(ArmEmu_Tests "MemcTestRom.hpp" BINARY
                    SOURCES "${MemcTestRomImagePath}")
