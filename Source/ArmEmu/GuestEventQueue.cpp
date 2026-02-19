@@ -2,7 +2,7 @@
 //! @brief The definition of an object which manages messages marshalled out
 //! of the emulator thread and into an observer thread.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2023-2024
+//! @date 2023-2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -17,18 +17,14 @@ namespace Mo {
 namespace Arm {
 
 ////////////////////////////////////////////////////////////////////////////////
-// GuestEvent Member Definitions
+// BaseGuestEvent Member Definitions
 ////////////////////////////////////////////////////////////////////////////////
 //! @brief Constructs an empty guest event.
-GuestEvent::GuestEvent() :
+BaseGuestEvent::BaseGuestEvent() :
     SourceID(0),
     Data1(0),
     Data2(0),
     Type(0)
-#if INTPTR_MAX > 0xFFFFFFFF
-    // Only pad on 64-bit architectures.
-  , Padding(0)
-#endif
 {
 }
 
@@ -37,16 +33,12 @@ GuestEvent::GuestEvent() :
 //! @param type The type of the event.
 //! @param data1 The first event-type-specific parameter.
 //! @param data2 The second event-type-specific parameter.
-GuestEvent::GuestEvent(uintptr_t sourceID, int32_t type,
-                       uintptr_t data1, uintptr_t data2) :
+BaseGuestEvent::BaseGuestEvent(uintptr_t sourceID, int32_t type,
+                               uintptr_t data1, uintptr_t data2) :
     SourceID(sourceID),
     Data1(data1),
     Data2(data2),
     Type(type)
-#if INTPTR_MAX > 0xFFFFFFFF
-    // Only pad on 64-bit architectures.
-    , Padding(0)
-#endif
 {
 }
 

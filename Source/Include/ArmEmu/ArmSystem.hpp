@@ -20,6 +20,7 @@
 #include "Ag/Core/EnumInfo.hpp"
 #include "ArmEmu/AddressMap.hpp"
 #include "ArmEmu/ExecutionMetrics.hpp"
+#include "ArmEmu/GuestEventQueue.hpp"
 
 //! @brief Contains all source code elements of the Mighty Oak application.
 namespace Mo {
@@ -119,8 +120,6 @@ enum class MemoryAccess : uint8_t
 ////////////////////////////////////////////////////////////////////////////////
 // Class Declarations
 ////////////////////////////////////////////////////////////////////////////////
-struct GuestEvent;
-
 //! @brief An abstract interface to a component which emulates a 32-bit ARM
 //! processor core and associated devices.
 class IArmSystem

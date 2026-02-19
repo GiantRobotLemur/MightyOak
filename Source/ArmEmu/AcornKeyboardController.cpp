@@ -18,21 +18,10 @@
 #include "AcornKeyboardController.hpp"
 #include "ArmEmu/IOC.hpp"
 
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
-
 namespace Mo {
 namespace Arm {
 
 namespace {
-////////////////////////////////////////////////////////////////////////////////
-// Local Data Types
-////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////
-// Local Data
-////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////
 // Local Functions
@@ -77,6 +66,7 @@ AcornKeyboardController::AcornKeyboardController() :
     _ioController(nullptr),
     _mouseDeltaX(0),
     _mouseDeltaY(0),
+    _pendingKeyEvents(Ag::AlignmentTraits<KeyEventQueue>::create()),
     _state(ControllerState::PreReset)
 {
 }
@@ -215,7 +205,7 @@ void AcornKeyboardController::keyDown(uint32_t hostScanCode)
         KeyEvent event;
         event.ScanCode = static_cast<uint8_t>(guestScanCode);
         event.IsDown = true;
-        _pendingKeyEvents.enqueue(event);
+        _pendingKeyEvents->enqueue(event);
     }
 }
 
@@ -229,7 +219,7 @@ void AcornKeyboardController::keyUp(uint32_t hostScanCode)
         KeyEvent event;
         event.ScanCode = static_cast<uint8_t>(guestScanCode);
         event.IsDown = false;
-        _pendingKeyEvents.enqueue(event);
+        _pendingKeyEvents->enqueue(event);
     }
 }
 
@@ -243,7 +233,7 @@ void AcornKeyboardController::mouseButtonDown(AcornKeyboardController::MouseButt
         KeyEvent event;
         event.ScanCode = static_cast<uint8_t>(guestScanCode);
         event.IsDown = true;
-        _pendingKeyEvents.enqueue(event);
+        _pendingKeyEvents->enqueue(event);
     }
 }
 
@@ -257,7 +247,7 @@ void AcornKeyboardController::mouseButtonUp(AcornKeyboardController::MouseButton
         KeyEvent event;
         event.ScanCode = static_cast<uint8_t>(guestScanCode);
         event.IsDown = false;
-        _pendingKeyEvents.enqueue(event);
+        _pendingKeyEvents->enqueue(event);
     }
 }
 
@@ -286,7 +276,7 @@ void AcornKeyboardController::setKeyMapping(const ScanCodeMapping *mappings, siz
 //! @returns One of SACK, NACK, MACK, or SMAK.
 uint8_t AcornKeyboardController::getStatusByte() const
 {
-    bool hasKeyData = _pendingKeyEvents.peek() != nullptr;
+    bool hasKeyData = _pendingKeyEvents->peek() != nullptr;
     bool hasMouseData = (_mouseDeltaX.load(std::memory_order_relaxed) != 0) ||
                         (_mouseDeltaY.load(std::memory_order_relaxed) != 0);
 
@@ -306,7 +296,7 @@ void AcornKeyboardController::sendPendingData()
 {
     KeyEvent event;
 
-    if (_pendingKeyEvents.try_dequeue(event))
+    if (_pendingKeyEvents->try_dequeue(event))
     {
         // Send the key event data, then a status byte indicating
         // whether more data is available.
@@ -352,10 +342,6 @@ void AcornKeyboardController::sendMouseData()
     _ioController->writeKartByte(static_cast<uint8_t>(dx) & MDAT_Mask);
     _ioController->writeKartByte(static_cast<uint8_t>(dy) & MDAT_Mask);
 }
-
-////////////////////////////////////////////////////////////////////////////////
-// Global Function Definitions
-////////////////////////////////////////////////////////////////////////////////
 
 }} // namespace Mo::Arm
 ////////////////////////////////////////////////////////////////////////////////

@@ -19,16 +19,13 @@
 
 #include "readerwriterqueue.h"
 
+#include "Ag/Core/Memory.hpp"
 #include "Ag/Core/LinearSortedMap.hpp"
 
 #include "ArmEmu/IKeyboardController.hpp"
 
 namespace Mo {
 namespace Arm {
-
-////////////////////////////////////////////////////////////////////////////////
-// Data Type Declarations
-////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////
 // Class Declarations
@@ -72,8 +69,6 @@ public:
     AcornKeyboardController();
     virtual ~AcornKeyboardController() = default;
 
-    // Accessors
-
     // Operations
     void receiveKARTByte(uint8_t nextByte);
 
@@ -106,6 +101,7 @@ private:
     };
 
     using KeyEventQueue = moodycamel::ReaderWriterQueue<KeyEvent>;
+    using KeyEventQueueUPtr = Ag::AlignmentTraits<KeyEventQueue>::UPtr;
 
     // Internal Constants
 
@@ -122,21 +118,13 @@ private:
     // Internal Fields
     Ag::String _name;
     Ag::String _description;
-    ScanCodeMap _scanCodeMap;
-    KeyEventQueue _pendingKeyEvents;
     IOC *_ioController;
     std::atomic<int32_t> _mouseDeltaX;
     std::atomic<int32_t> _mouseDeltaY;
+    ScanCodeMap _scanCodeMap;
+    KeyEventQueueUPtr _pendingKeyEvents;
     ControllerState _state;
 };
-
-////////////////////////////////////////////////////////////////////////////////
-// Function Declarations
-////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////
-// Templates
-////////////////////////////////////////////////////////////////////////////////
 
 }} // namespace Mo::Arm
 

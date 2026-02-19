@@ -88,7 +88,8 @@ class SystemContext
 {
 public:
     // Construction/Destruction
-    SystemContext(const Options &sysConfig, GuestEventQueue &eventQueue,
+    SystemContext(const Options &sysConfig,
+                  GuestEventQueue &eventQueue,
                   IArmSystem *parentSystem);
     ~SystemContext() = default;
 
@@ -97,7 +98,6 @@ public:
     uint64_t getCPUClockTicks() const;
     uint64_t getMasterClockTicks() const;
     uint64_t getMasterClockFrequency() const;
-    //int getMasterClockTicksPerCpuCyclePow2() const;
 
     // Operations
     uint32_t getFuzz();

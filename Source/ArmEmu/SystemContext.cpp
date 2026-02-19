@@ -216,13 +216,6 @@ uint64_t SystemContext::getMasterClockFrequency() const
     return _masterFreq;
 }
 
-////! @brief Gets the count of master clock ticks per simulated CPU cycle, which
-////! is expressed as a power of 2.
-//int SystemContext::getMasterClockTicksPerCpuCyclePow2() const
-//{
-//    return _cpuClockShift;
-//}
-
 //! @brief Gets random data to report by reads to assigned regions of memory.
 //! @return A random 32-bit value which changes after each call.
 uint32_t SystemContext::getFuzz()
