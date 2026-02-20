@@ -2,7 +2,7 @@
 //! @brief The declaration of templates representing the state of an emulated
 //! processor via its register values.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2023
+//! @date 2023-2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -119,6 +119,12 @@ public:
     //! @brief Copies the contents of CPSR to SPSR.
     //! @note 32-bit modes only.
     void savePSR() noexcept;
+
+    //! @brief Gets the saved Program Status Register.
+    uint32_t getSPSR() const noexcept;
+
+    //! @brief Updates the Saved Program Status Register value.
+    void setSPSR(uint32_t value) noexcept;
 
     //! @brief Updates only the status flag values in the PSR.
     //! @param[in] flags The new status flags in the low nibble.

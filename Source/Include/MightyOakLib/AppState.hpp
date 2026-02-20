@@ -1,0 +1,86 @@
+//! @file MightyOakLib/AppState.hpp
+//! @brief The declaration of a base class for implementations which perform
+//! application state-specific behaviour.
+//! @author GiantRobotLemur@na-se.co.uk
+//! @date 2026
+//! @copyright This file is part of the Mighty Oak project which is released
+//! under LGPL 3 license. See LICENSE file at the repository root or go to
+//! https://github.com/GiantRobotLemur/MightyOak for full license details.
+////////////////////////////////////////////////////////////////////////////////
+
+#ifndef __MIGHTY_OAK_LIB_APP_STATE_HPP__
+#define __MIGHTY_OAK_LIB_APP_STATE_HPP__
+
+////////////////////////////////////////////////////////////////////////////////
+// Dependent Header Files
+////////////////////////////////////////////////////////////////////////////////
+#include <memory>
+
+#include "EmulatorSession.hpp"
+
+////////////////////////////////////////////////////////////////////////////////
+// Macro Definitions
+////////////////////////////////////////////////////////////////////////////////
+
+namespace Mo {
+
+////////////////////////////////////////////////////////////////////////////////
+// Data Type Declarations
+////////////////////////////////////////////////////////////////////////////////
+
+////////////////////////////////////////////////////////////////////////////////
+// Class Declarations
+////////////////////////////////////////////////////////////////////////////////
+class AppContext;
+
+//! @brief A base class for implementations which perform application
+//! state-specific behaviour.
+class AppState
+{
+protected:
+    // Construction/Destruction
+    AppState(AppContext *sharedContext);
+public:
+    virtual ~AppState() = default;
+
+    // Accessors
+    //! @brief Gets whether the run() member function is active.
+    bool isRunning() const;
+
+    AppContext *getContext();
+    const AppContext *getContext() const;
+
+    // Operations
+    AppState *run();
+
+    // Overrides
+protected:
+    virtual std::unique_ptr<Ag::SDL3::EventProcessor> configure();
+    virtual AppState *runInternal();
+
+    // Internal Types
+
+    // Internal Functions
+    Ag::SDL3::EventProcessor *getEventProcessor();
+    const Ag::SDL3::EventProcessor *getEventProcessor() const;
+
+private:
+    static bool onWindowClose(uintptr_t context, SDL_Event *info);
+
+    // Internal Fields
+    AppContext *_sharedContext;
+    std::unique_ptr<Ag::SDL3::EventProcessor> _eventProcessor;
+};
+
+////////////////////////////////////////////////////////////////////////////////
+// Function Declarations
+////////////////////////////////////////////////////////////////////////////////
+
+////////////////////////////////////////////////////////////////////////////////
+// Templates
+////////////////////////////////////////////////////////////////////////////////
+
+} // namespace Mo
+
+#endif // Header guard
+////////////////////////////////////////////////////////////////////////////////

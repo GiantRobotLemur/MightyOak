@@ -2,7 +2,7 @@
 //! @brief The declaration of an implementation of the register file of an
 //! ARMv2 processor.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2023
+//! @date 2023-2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -90,7 +90,7 @@ private:
                 std::copy_n(_userModeRegBank, 7, _coreRegisters + 8);
                 break;
 
-            case ProcessorMode::Irq32:
+            case ProcessorMode::Irq26:
                 // Copy R8-R12 from the User bank and R13-R14 from IRQ bank.
                 std::copy_n(_userModeRegBank, 5, _coreRegisters + 8);
                 std::copy_n(_irqModeRegBank, 2, _coreRegisters + 13);
@@ -198,6 +198,16 @@ public:
     void savePSR() // noexcept
     {
         throw Ag::NotSupportedException("Saving PSR on an ARMv2.");
+    }
+
+    uint32_t getSPSR() const // noexcept
+    {
+        throw Ag::NotSupportedException("SPSR register on an ARMv2.");
+    }
+
+    void setSPSR(uint32_t /*value*/) // noexcept
+    {
+        throw Ag::NotSupportedException("SPSR register on an ARMv2.");
     }
 
     void setStatusFlags(uint8_t flags) noexcept

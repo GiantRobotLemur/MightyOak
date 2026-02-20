@@ -2,7 +2,7 @@
 //! @brief The definition of an object which emulates the hardware of a
 //! MEMC-based system.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2023-2024
+//! @date 2023-2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -151,62 +151,10 @@ void MemcHardware::writeMEMC(uint32_t offset, uint32_t value)
 
     if (offset < 0x3600000)
     {
-        // Its a write to the VIDC area. The address is not significant,
-        // the identifier of the register written to is in buts 24-32, but
-        // bits 24-25 should always be zero.
-        // For ease of decoding, we omit the two least significant bits.
-        uint8_t vidcRegisterId = Ag::Bin::extractBits<uint8_t, 26, 6>(value);
-
-        if (vidcRegisterId < 20) // 0x00 - 0x4C
-        {
-            // Write to a palette register.
-            // 0-15 - video palette.
-            // 16 - border
-            // 17-19 - cursor
-            //uint16_t physicalColour = Ag::Bin::extractBits<uint16_t, 0, 13>(value);
-        }
-        else if (vidcRegisterId < 24) // 0x50 - ox5C
-        {
-            // Reserved.
-        }
-        else if (vidcRegisterId < 32) // 0x60 - 0x7C
-        {
-            // 24-31 - Stereo image registers
-            //uint8_t stereoPosition = Ag::Bin::extractBits<uint8_t, 0, 3>(value);
-        }
-        else
-        {
-            switch (vidcRegisterId)
-            {
-            case 32: // 0x80 - Horizontal cycle register.
-            case 33: // 0x84 - Horizontal sync width register.
-            case 34: // 0x88 - Horizontal border start register.
-            case 35: // 0x8C - Horizontal display start register.
-            case 36: // 0x90 - Horizontal display end register.
-            case 37: // 0x94 - Horizontal border end register.
-            case 38: // 0x98 - Horizontal cursor start register.
-            case 39: // 0x9C - Horizontal interlace register.
-            case 40: // 0xA0 - Vertical cycle register.
-            case 41: // 0xA4 - Vertical sync width register.
-            case 42: // 0xA8 - Vertical border start register.
-            case 43: // 0xAC - Vertical display start register.
-            case 44: // 0xB0 - Vertical display end register.
-            case 45: // 0xB4 - Vertical border end register.
-            case 46: // 0xB8 - Vertical cursor start register.
-            case 47: // 0xBC - Vertical cursor end register.
-                // uint16_t data = Ag::Bin::extractBits<uint16_t, 14, 10>(value);
-
-            case 48: // 0xC0 - Sound frequency register.
-                // Theoretically 9 bits, but bit 8 is for testing only.
-                // uint8_t data = static_cast<uint8_t>(value);
-
-            case 56: // 0xE0 - VIDC Control Register
-                // Theoretically 16 bits, but only the least significant
-                // 8 bits are useful outside of testing.
-                // uint8_t data = static_cast<uint8_t>(value);
-                break;
-            }
-        }
+        // It's a write to the VIDC area. The address is not significant;
+        // the register ID and data are both encoded in the data word.
+        // Forward the raw value to the VIDC10 for decoding and storage.
+        _vidc.writeRegister(value);
     }
     else if ((offset & 0x3E00000) == 0x3600000)
     {
@@ -214,9 +162,17 @@ void MemcHardware::writeMEMC(uint32_t offset, uint32_t value)
         switch (Ag::Bin::extractBits<uint8_t, 17, 3>(offset))
         {
         case 0: // Vinit
+            _videoInitAddr = offset & 0x1FFFC;
+            break;
         case 1: // Vstart
+            _videoStartAddr = offset & 0x1FFFC;
+            break;
         case 2: // Vend
+            _videoEndAddr = offset & 0x1FFFC;
+            break;
         case 3: // Cinit
+            _cursorInitAddr = offset & 0x1FFFC;
+            break;
         case 4: // Sstart
         case 5: // SendN
         case 6: // Sptr
@@ -585,6 +541,10 @@ MemcHardware::MemcHardware(const Options &options,
     _osMode(false),
     _videoDMAEnabled(false),
     _soundDMAEnabled(false),
+    _videoInitAddr(0),
+    _videoStartAddr(0),
+    _videoEndAddr(0),
+    _cursorInitAddr(0),
     _physicalRamBlock("Physical RAM", "The system RAM without any logical address mapping"),
     _lowRomBlock("System ROM", "The low ROM area, usually containing the operating system."),
     _highRomBlock("Extension ROM", "The high ROM area, usually containing extensions ROMs.")
@@ -663,6 +623,61 @@ MemcHardware::MemcHardware(const Options &options,
                                     static_cast<uint32_t>(_highRom.size()));
 }
 
+// Accessors
+IOC &MemcHardware::getIOC()
+{
+    return _ioc;
+}
+
+uint32_t MemcHardware::getVideoInitAddr() const
+{
+    return _videoInitAddr;
+}
+
+uint32_t MemcHardware::getVideoStartAddr() const
+{
+    return _videoStartAddr;
+}
+
+uint32_t MemcHardware::getVideoEndAddr() const
+{
+    return _videoEndAddr;
+}
+
+uint32_t MemcHardware::getCursorInitAddr() const
+{
+    return _cursorInitAddr;
+}
+
+const uint8_t *MemcHardware::getRamData() const
+{
+    return _ram.data();
+}
+
+uint32_t MemcHardware::getRamSize() const
+{
+    return static_cast<uint32_t>(_ram.size());
+}
+
+const VIDC10 &MemcHardware::getVIDC() const
+{
+    return _vidc;
+}
+
+bool MemcHardware::isVideoDMAEnabled() const
+{
+    return _videoDMAEnabled;
+}
+
+// Operations
+void MemcHardware::raiseVSyncIrq()
+{
+    // VSync is IOC IRQ A bit 3 (the IR latched interrupt).
+    // This is a latched interrupt - once set, it stays set until the
+    // OS explicitly clears it by writing to IRQ Clear register A.
+    setGuestIrq(_ioc.raiseVSyncIrq());
+}
+
 //! @brief Replaces the low ROM with a block of data.
 //! @param[in] romBytes The bytes of the ROM image, up to 4 MB.
 //! @param[in] byteCount The count of bytes romBytes.
@@ -717,6 +732,10 @@ void MemcHardware::reset()
     // asserted. Video/Cursor operations are unaffected by RESET.
     // _videoDMAEnabled = false;
     _soundDMAEnabled = false;
+    _videoInitAddr = 0;
+    _videoStartAddr = 0;
+    _videoEndAddr = 0;
+    _cursorInitAddr = 0;
 
     // Generate a set of mappings which map logical addresses from 0x0000
     // to physical addresses 0x3400000 where the low ROM is positioned.
@@ -996,14 +1015,23 @@ AddressMap MemcHardware::createMasterReadMap()
 AddressMap MemcHardware::createMasterWriteMap()
 {
     AddressMap masterWriteAddrMap = _writeAddrDecoder;
+    bool isOK = true;
 
-    if ((_physicalRamBlock.getSize() > 0) &&
-        !masterWriteAddrMap.tryInsert(MEMC::PhysRamStart, &_physicalRamBlock))
+    if (_physicalRamBlock.getSize() > 0)
+        isOK = masterWriteAddrMap.tryInsert(MEMC::PhysRamStart, &_physicalRamBlock);
+
+    if (!isOK)
     {
         throw Ag::OperationException("Fixed address map regions overlap.");
     }
 
     return masterWriteAddrMap;
+}
+
+// Based on GenericHardware::addIntegralHardware().
+void MemcHardware::addIntegralHardware(IHardwareDeviceCollection &devices)
+{
+    devices.push_back(&_keyboard);
 }
 
 }} // namespace Mo::Arm

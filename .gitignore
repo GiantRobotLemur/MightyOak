@@ -35,3 +35,7 @@
 .vs
 .vscode
 build*
+
+# Local Claude Code artefacts
+CLAUDE.local.md
+.claude/settings.local.json

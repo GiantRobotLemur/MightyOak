@@ -2,7 +2,7 @@
 //! @brief The definition of an entry point to assemble a 32-bit ARM machine
 //! code instruction.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2021-2023
+//! @date 2021-2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -968,7 +968,7 @@ bool assembleInstruction(AssemblyParams &params)
         }
         else
         {
-        // Encode the op code.
+            // Encode the op code.
             params.encodeBits((params.Mnemonic == InstructionMnemonic::Bl) ? 11u : 10u,
                               4, 24);
 
@@ -991,7 +991,6 @@ bool assembleInstruction(AssemblyParams &params)
             params.completeInstruction();
         }
         break;
-
 
     case OperationClass::CoreMultiply: {
         const auto &info = params.Params->CoreMulOp;

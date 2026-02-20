@@ -1,7 +1,7 @@
 //! @file ArmEmu/ArmSystem.hpp
 //! @brief The declaration of an object representing an emulated ARM-based system.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2023-2024
+//! @date 2023-2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -20,6 +20,7 @@
 #include "Ag/Core/EnumInfo.hpp"
 #include "ArmEmu/AddressMap.hpp"
 #include "ArmEmu/ExecutionMetrics.hpp"
+#include "ArmEmu/GuestEventQueue.hpp"
 
 //! @brief Contains all source code elements of the Mighty Oak application.
 namespace Mo {
@@ -119,8 +120,6 @@ enum class MemoryAccess : uint8_t
 ////////////////////////////////////////////////////////////////////////////////
 // Class Declarations
 ////////////////////////////////////////////////////////////////////////////////
-struct GuestEvent;
-
 //! @brief An abstract interface to a component which emulates a 32-bit ARM
 //! processor core and associated devices.
 class IArmSystem
@@ -174,6 +173,15 @@ public:
     //! @return Metrics summarising how many instructions were executed
     //! (theoretically 1) and how many simulated processor cycles they took.
     virtual ExecutionMetrics runSingleStep() = 0;
+
+    //! @brief Runs the processor until a specific number of cycles have been
+    //! consumed or a host or debug interrupt occurs.
+    //! @param[in] maxCycles The maximum number of CPU cycles to simulate,
+    //! negative for single step and 0 to run until a host or debug interrupt
+    //! are raised.
+    //! @return Metrics summarising how many instructions were executed and
+    //! how many simulated processor cycles they took.
+    virtual ExecutionMetrics runLimited(int32_t maxCycles) = 0;
 
     //! @brief Raises an external interrupt to force a call to run() to
     //! return.

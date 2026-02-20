@@ -2,17 +2,78 @@
 ; A ROM image to test an ARM-based system running on MEMC/IOC/VIDC hardware
 ; as part of the MightyOak project
 
-; HW Vector table 8 entries + 8 routine addresses.
-.OS_Workspace   0x8000      ; 32 KB
-.SVC_StackTop   0x8000      ; 32 KB
-.FIRQ_StackTop  0x7000      ; 28 KB
-.IRQ_StackTop   0x6000      ; 24 KB
-.USR_StackTop   0x5000      ; 20 KB
-.USR_StackBase  0x4000      ; 16 KB
+; RAM Layout:
+; 0x0000000 - HW Vector Table (8 entries = 32 bytes)
+; 0x0000020 - HW Vector handler addresses (8 entries = 32 bytes)
+.HW_IRQ_Handlers    0x0020
+; 0x0000040 - IRQ handler table (16 entries = 64 bytes)
+.IRQ_Handlers       0x0040
+; 0x0000080 - FIRQ handler table (8 entries = 32 bytes)
+.FIRQ_Handlers      0x0080
+; 0x00000A0 - KRT Tx Buffer - 32 bytes
+.KRT_TxBuffer       0x00A0
+; 0x00000C0 - KRT Rx Buffer - 32 bytes
+.KRT_RxBuffer       0x00C0
+; ...
+.OS_Workspace       0x8000      ; ? KB
+.SVC_StackTop       0x8000      ; 32 KB
+.FIRQ_StackTop      0x7000      ; 28 KB
+.IRQ_StackTop       0x6000      ; 24 KB
+.USR_StackTop       0x5000      ; 20 KB
+.USR_StackBase      0x4000      ; 16 KB
+
+; 0x0004000 - Bottom of user mode stack - 4 KB
+; 0x0005000 - Top of user mode stack, bottom of IRQ mode stack - 4 KB
+; 0x0006000 - Top of IRQ mode stack, bottom of FIRQ mode stack - 4 KB
+; 0x0007000 - Top of FIRQ mode stack, bottom of SVC mode stack - 4 KB
+; 0x0008000 - Top of SVC mode stack, start of OS Workspace.
 
 ; Define offsets within OS_Workspace
-.OS_RamSize     0           ; Detected physical RAM size in bytes
-.OS_SysCtrlID   4           ; Value of CP15->CR0, or a made up value if not present.
+.OS_BootState   0           ; Stores the current state of the boot process.
+.OS_RamSize     4           ; Detected physical RAM size in bytes
+.OS_SysCtrlID   8           ; Value of CP15->CR0, or a made up value if not present.
+.OS_KRT_TxHead  12          ; Write index into KRT Tx circular buffer
+.OS_KRT_TxTail  16          ; Read index into KRT Tx circular buffer
+.OS_KRT_RxHead  20          ; Write index into KRT Rx circular buffer
+.OS_KRT_RxTail  24          ; Read index into KRT Rx circular buffer
+
+.BOOT_Started       0       ; The boot-up process has started
+.BOOT_MemDetected   1       ; OS workspace set up, RAM size detected.
+.BOOT_StacksInit    2       ; The various processor mode stacks are set.
+.BOOT_HwVectorsSet  3       ; Hardware vectors initialised in RAM.
+.BOOT_CPUDetected   4       ; CPU detection complete.
+.BOOT_IOCInit       5       ; IOC initialisation complete.
+.BOOT_KARTInit      6       ; KART initialisation complete.
+.BOOT_KbdInit       7       ; Keyboard initialisation complete.
+
+.BOOT_Completed     100     ; The last state before halting.
+
+; IOC-based definitions.
+.IOC_BaseAddr       0x3200000
+.IOC_CONTROL        0x00
+.IOC_KART_TX        0x04
+.IOC_KART_RX        0x04
+.IOC_IRQ_STATUS_A   0x10
+.IOC_IRQ_REQUEST_A  0x14
+.IOC_IRQ_CLEAR_A    0x14
+.IOC_IRQ_MASK_A     0x18
+.IOC_IRQ_STATUS_B   0x20
+.IOC_IRQ_REQUEST_B  0x24
+.IOC_IRQ_MASK_B     0x28
+.IOC_FIRQ_STATUS    0x30
+.IOC_FIRQ_REQUEST   0x34
+.IOC_FIRQ_MASK      0x38
+
+.IOC_T0_LATCH_LO    0x40
+.IOC_T0_LATCH_HI    0x44
+.IOC_T0_GO          0x48
+.IOC_T0_LATCH       0x4C
+
+; T3 is used to control the KART baud rate.
+.IOC_T3_LATCH_LO    0x70
+.IOC_T3_LATCH_HI    0x74
+.IOC_T3_GO          0x78
+.IOC_T3_LATCH       0x7C
 
 ; At power-on, the low ROM is mapped to address 0x00000000, so the start of
 ; the ROM image needs to be the hardware vector table.
@@ -45,9 +106,10 @@ B Initial_HandleIrq
 ; Running in SVC mode, IRQs and FIRQs are disabled.
 .Initial_Reset
     ADR R0,Reset_MEMC                   ; Calculate the address of the ROM entry point.
-    ADD R0,R0,#0x3400000                ; Add the Low ROM base address.
-    MOV PC,R0                           ; Jump to the same code running at the
-                                        ;   ROM's native location.
+    ADD R0,R0,#0x03400000 OR 0x0C000000 ; Add the Low ROM base address plus PSR bits to disable IRQs.
+    ORR R0,R0,#3                        ; Ensure we remain in SVC mode.
+    MOVS PC,0                           ; Jump to the same code running at the
+                                        ;   ROM's native location and update the PSR.
 
 .Reset_MEMC
 ; MEMC - Effect of Reset - ARM Family Data Manual Page 4-9 (193)
@@ -89,8 +151,8 @@ B Initial_HandleIrq
     B Reset_MEMC_SizeLoop               ; Start memory size detection.
 
 .Reset_MEMC_Markers
-    EQUD 0xDEADBEEF
-    EQUD 0xCAFEBABE
+    EQUD 0xAA55AA55
+    EQUD 0x55AA55AA
 
 .Reset_MEMC_SizeLoop
     CMP R2,#0x1000000                   ; See if we have reached the 16 MB mark.
@@ -147,31 +209,42 @@ B Initial_HandleIrq
 .Init_Hardware_Vectors
 ; The addresses 0x000000 - 0x100000 are now identity mapped.
 ; Set up independent stacks for the various operating modes.
-    MOV R12,#OS_Workspace               ; Set up workspace at the the 32 KB mark.
-    STR R11,[R12]                       ; Store the RAM size
+    MOV R12,#OS_Workspace               ; Set up workspace at the 32 KB mark.
+    MOV R0,#BOOT_MemDetected            ; Set the current boot state
+    STR R11,[R12,#OS_RamSize]           ; Store the RAM size
+    STR R0,[R12,#OS_BootState]          ; Store the boot state
+    MOV R2,R12                          ; Take a copy of the workspace to
+                                        ;   install in other register banks.
 
     MOV R13,#SVC_StackTop               ; Set up the supervisor (current) mode stack.
     SUB R13,R13,#4                      ; Create a full-descending supervisor stack.
 
-    TEQP PC,#1                          ; Switch to FIRQ mode
+    MOV R0,PC                           ; Get the PSR bits
+    TEQP R0,#2                          ; Switch to FIRQ mode
     MOV R0,R0                           ; Non-op after mode change.
     MOV R13,#FIRQ_StackTop              ; Initialise the FIRQ stack.
     SUB R13,R13,#4
+    MOV R12,R2                          ; Give FIRQ mode access to OS_Workspace
 
-    TEQP PC,#2                          ; Switch to IRQ mode.
+    MOV R0,PC                           ; Get the PSR bits
+    TEQP R0,#3                          ; Switch to IRQ mode.
     MOV R0,R0                           ; Non-op after mode change.
     MOV R13,#IRQ_StackTop               ; Initialise the IRQ stack.
     SUB R13,R13,#4
 
     ; Initialise the user mode stack pointer without switching to user mode.
-    TEQP PC,#3                          ; Switch back to SVC mode.
+    MOV R0,PC                           ; Gest the PSR bits
+    TEQP R0,#1                          ; Switch back to SVC mode.
     MOV R0,#USR_StackTop                ; Calculate the top of the user mode stack.
     SUB R0,R0,#4
     STMFD SP!,{R0}                      ; Store the user stack pointer on the SVC stack.
     LDMIA SP,{SP}^                      ; Load the user mode SP into the user
-                                        ;   register bank. We can't user write-back.
+                                        ;   register bank. We can't use write-back.
     MOV R0,R0                           ; A non-op due to register banking issues.
     ADD SP,SP,#4                        ; Restore the SVC stack.
+
+    MOV R0,#BOOT_StacksInit             ; Set the current boot state
+    STR R0,[R12,#OS_BootState]          ; Store the boot state
 
 ; We need to write instructions into the RAM-based hardware vectors to handle
 ; exceptions and interrupts.
@@ -207,11 +280,36 @@ B Initial_HandleIrq
     ADR R1,Do_HandleFirq
     BL Write_HW_Vector
 
+    MOV R0,#BOOT_HwVectorsSet           ; Set the current boot state
+    STR R0,[R12,#OS_BootState]          ; Store the boot state
+
+    ; Initialise interrupt handlers
+    MOV R11,#IRQ_Handlers
+    MOV R0,#0
+    ADR R1,DefaultIrqHandler            ; Set handlers to the default
+.FillIrqHandlerLoop
+    STR R1,[R11,R0,LSL#2]               ; Store the handler
+    ADD R0,R0,#1                        ; Increment the index
+    CMP R0,#16                          ; Check against the limit
+    BLT FillIrqHandlerLoop
+
+    ; Initialise fast interrupt handlers
+    MOV R11,#FIRQ_Handlers              ; Initialise to set FIRQ handlers
+    MOV R0,#0
+.FillFirqHandlerLoop
+    STR R1,[R11,R0,LSL#2]               ; Store the handler
+    ADD R0,R0,#1                        ; Increment the index
+    CMP R0,#8                           ; Check against the limit
+    BLT FillFirqHandlerLoop
+
     B Detect_CPU
 
 ; Writes a branch instruction into a hardware vector encoding
 ; LDR PC,[PC,#24] to perform a full 32-bit branch via an address
-; stored after the hardware vector table.
+; stored after the hardware vector table. This is because a branch
+; instruction only has a range if +/- 32MB, which is too far from
+; the base of the logical address space to the low ROM (~52 MB)
+;
 ; The new vector address will be stored at the vector location + 32
 ; Entry:    R0 = HW Vector Number
 ;           R1 = Handler address
@@ -231,10 +329,10 @@ B Initial_HandleIrq
 .Detect_CPU
     MOVS R5,PC                          ; Get a copy of the PSR.
     AND R5,R5,#0xFC000003               ; Mask out PC bits.
-    ADR R4,Reset_IOC                    ; Set a new target PC
+    ADRL R4,Reset_IOC                   ; Set a new target PC
     ORR R4,R4,R5                        ; Merge in the saved PSR bits.
     STMFD SP!,{R4}                      ; Save the branch target for later re-use.
-    
+
     MOV R0,#1                           ; Overwrite the Undefined instruction
     ADR R1,DetectCPU_NoCP15             ;   hardware vector before reading CP15
     BL Write_HW_Vector
@@ -270,6 +368,9 @@ B Initial_HandleIrq
     ADR R1,Do_HandleUndefInstruction
     BL Write_HW_Vector
 
+    MOV R0,#BOOT_CPUDetected            ; Set the current boot state
+    STR R0,[R12,#OS_BootState]          ; Store the boot state
+
     LDMFD SP!,{PC}^                     ; Branch to Reset_IOC and restore PSR flags.
 
 .Do_HandleReset
@@ -297,32 +398,163 @@ B Initial_HandleIrq
     B Do_HandleAddressException         ; Infinite loop.
 
 .Do_HandleIrq
+    ; TODO : Figure out which IRQ was triggered and branch to handler from the table.
+    STMFD SP!,{R0-R4,R14}               ; Store some registers to process the
+                                        ;   interrupt transparently.
+    ; IRQs are mapped to specific HW, 0-7 on IOC IRQ A registers and 8-15 on IOC IRQ B registers
+    ; See RiscOS PRM 1-121.
+    ;
+    ; Archimedes hardware:
+    ; 0  - IRQ A0 - Printer Busy
+    ; 1  - IRQ A1 - Serial port Ring Indicator
+    ; 2  - IRQ A2 - Printer Ack
+    ; 3  - IRQ A3 - VSync pulse
+    ; 4  - IRQ A4 - Power on reset
+    ; 5  - IRQ A5 - Timer 0
+    ; 6  - IRQ A6 - Timer 1
+    ; 7  - IRQ A7 - Not connected
+    ; 8  - IRQ B0 - Expansion card FIRQ downgrade
+    ; 9  - IRQ B1 - Sound buffer change
+    ; 10 - IRQ B2 - Serial port controller
+    ; 11 - IRQ B3 - HD controller
+    ; 12 - IRQ B4 - FD controller
+    ; 13 - IRQ B5 - Expansion card
+    ; 14 - IRQ B6 - KRT Tx complete
+    ; 15 - IRQ B7 - KRT Rx complete
+    ;
+    ; A-Series hardware:
+    ; 0  - IRQ A0 - 82c710/711 Parallel port
+    ; 1  - IRQ A1 - Low battery warning
+    ; 2  - IRQ A2 - FD index pulse
+    ; 3  - IRQ A3 - VSync pulse
+    ; 4  - IRQ A4 - Power on reset
+    ; 5  - IRQ A5 - Timer 0
+    ; 6  - IRQ A6 - Timer 1
+    ; 7  - IRQ A7 - Not connected
+    ; 8  - IRQ B0 - Expansion card FIRQ downgrade
+    ; 9  - IRQ B1 - Sound buffer change
+    ; 10 - IRQ B2 - 82c710/711 Serial port - FIRQ 4
+    ; 11 - IRQ B3 - 82c710/711 IDE controller
+    ; 12 - IRQ B4 - 82c710/711 FD controller
+    ; 13 - IRQ B5 - Expansion card
+    ; 14 - IRQ B6 - KRT Tx complete
+    ; 15 - IRQ B7 - KRT Rx complete
+.DetectIRQsPending
+    MOV R4,#IOC_BaseAddr
+    LDRB R0,[R4,#IOC_IRQ_REQUEST_A]     ; See which IRQs are requested from register A.
+    LDRB R1,[R4,#IOC_IRQ_REQUEST_B]     ; See which IRQs are requested from register B.
+    ORRS R1,R0,R1,LSL #8                ; Combine the request registers
+    BEQ FinishIrq                       ; If the result was zero, exit.
+    MOV R0,#0                           ; Init scanning which IRQs are pending
+    MOV R2,#1                           ; Init the mask to test.
+    ADR R14,ScanNextIRQ                 ; Set the return address from any handler executed
+
+.ScanPendingIrqsLoop
+    TST R1,R2,LSL R0                    ; Test to see if the bit is set.
+    MOVNE R4,#IRQ_Handlers              ;   Get the address of the IRQ handler table
+    LDRNE PC,[R4,R0,LSL #2]             ;   Run the handler address at the address
+                                        ;     having already set the return to ScanNextIRQ.
+
+.ScanNextIRQ
+    MOV R4,R2,LSL R0                    ; Get the bit mask for the IRQ
+    ANDS R4,R4,#0x7C                    ; See if the IRQ needs clearing in IOC
+    MOVNE R3,#IOC_BaseAddr              ;   If the bit remains set,
+    STRNEB R4,[R3,#IOC_IRQ_CLEAR_A]     ;   write it to the IOC IRQ clear register.
+
+    BICS R1,R1,R2,LSL R0                ; Clear the bit
+    BEQ DetectIRQsPending               ; If no more bit set, try again.
+    ADD R0,R0,#1                        ; Increment the IRQ being tested
+    B ScanPendingIrqsLoop               ; Check for more outstanding IRQs
+
+.DefaultIrqHandler
+    MOV PC,R14                          ; Simply return.
+
+.FinishIrq
+    LDMFD SP!,{R0-R4,R14}               ; Restore saved registers before resuming
+    SUBS PC,R14,#4                      ;    the interrupted code.
+
     BKPT 106                            ; Break point to stop execution.
     B Do_HandleIrq                      ; Infinite loop.
 
 .Do_HandleFirq
+    ; Figure out which FIRQ was triggered and branch to handler from the table.
+    ; I think normally only one is ever unmasked at once and the code is simply
+    ;   copied to the end of the HW vector table for maximum speed.
+    ;
+    ; FIRQs are mapped to specific HW.
+    ; See RiscOS PRM 1-121.
+    ;
+    ; Archimedes hardware: (From A0018017 - A540 Technical Reference Manual, Pg 1-8)
+    ; 0  - FD Data Request
+    ; 1  - FD Interrupt Request
+    ; 2  - Econet Interrupt Request
+    ; 3  - C3
+    ; 4  - C4
+    ; 5  - C5
+    ; 6  - Expansion card FIRQ
+    ; 7  - Not connected - used for force FIRQ from SW
+    ;
+    ; A-Series hardware: (From A0018033 - A5000 Technical Reference Manual, Pg 1-14)
+    ; 0  - FD Data Request
+    ; 1  - not used
+    ; 2  - Econet Interrupt Request
+    ; 3  - C3
+    ; 4  - Serial Line Interrupt
+    ; 5  - C5
+    ; 6  - Expansion card FIRQ
+    ; 7  - Not connected - used for force FIRQ from SW
+    STMFD SP!,{R0-R4,Link}              ; Store return and registers for working
+    MOV R4,#IOC_BaseAddr
+    LDRB R1,[R4,#IOC_FIRQ_REQUEST]      ; See which FIRQs are requested.
+    CMP R1,#0                           ; If no FIRQs are pending
+    BEQ FinishFirq                      ;    return to the previous running code.
+
+    MOV R0,#0                           ; Else, scan to see which FIRQs are requested.
+    MOV R2,#1
+
+.DetectFIRQsPending
+    TST R1,R2,LSL R0                    ; Test the FIRQ request bit
+    MOVNE R4,#FIRQ_Handlers             ;   Get the address of the IRQ handler table
+    ADRNE Link,NextFirq                 ; Set the return to continue the loop
+    LDRNE PC,[R4,R0,LSL #2]             ;   Run the handler address at the address
+                                        ;     having already set the return to ScanNextIRQ.
+.NextFirq
+    BICS R1,R1,R2,LSL R0                ; Clear the bit
+    BEQ DetectFIRQsPending              ; If no more bit set, try again.
+    ADD R0,R0,#1                        ; Increment the IRQ being tested
+    B ScanPendingIrqsLoop               ; Check for more outstanding IRQs
+
+.FinishFirq
+    LDMFD SP!,{R0-R4,Link}
+    SUBS PC,R14,#4                      ; Return to the previously running code.
+
     BKPT 107                            ; Break point to stop execution.
     B Do_HandleFirq                     ; Infinite loop.
 
 .Reset_IOC
-; RAM-based hardware vectors are are initialised and point to ROM-based
-; entry points.
-;
-; Initialise IOC to disable most interrupts, but enable keyboard I/O.
-.IOC_BaseAddr 0x3200000
-.Kart_TimerBaseAddr IOC_BaseAddr + 0x70
+    ; RAM-based hardware vectors are initialised and point to ROM-based
+    ; entry points.
+    ;
+    ; Initialise IOC to disable most interrupts, but enable keyboard I/O.
     MOV R0,#IOC_BaseAddr                ; Address the IOC ctrl register.
     MOV R1,#0xFF                        ; Set pins C0-C5 to be inputs.
-    STR R1,[R0]
+    STRB R1,[R0]
 
     MOV R1,#0                           ; Mask all interrupts
-    STR R1,[R0,#0x18]                   ; Write IRQ Mask A
-    STR R1,[R0,#0x28]                   ; Write IRQ Mask B
-    STR R1,[R0,#0x38]                   ; Write FIRQ Mask
-    
+    STRB R1,[R0,#IOC_IRQ_MASK_A]        ; Write IRQ Mask A
+    STRB R1,[R0,#IOC_IRQ_MASK_B]        ; Write IRQ Mask B
+    STRB R1,[R0,#IOC_FIRQ_MASK]         ; Write FIRQ Mask
+
     MOV R1,#0x7C                        ; Clear any pending interrupts,
                                         ;   including POR
-    STR R1,[R0,#0x14]
+    STRB R1,[R0,#IOC_IRQ_CLEAR_A]
+
+    ; Read request registers to clear pending IRQs
+    LDRB    R1, [R0,#IOC_IRQ_REQUEST_A]
+    LDRB    R1, [R0,#IOC_IRQ_REQUEST_B]
+
+    MOV R10,#BOOT_IOCInit               ; Set the current boot state
+    STR R10,[R12,#OS_BootState]         ; Store the boot state
 
     ; A3010/A3020/A4000 Technical Reference manual Page 1-13 (9)
     ;
@@ -350,26 +582,332 @@ B Initial_HandleIrq
     ; latch = 1.
     MOV R1,#1                           ; Set the counter 3 divisor (latch)
     MOV R2,#0                           ;   to 1.
-    STRB R1,[R0,#0x70]                  ; Write latch low
-    STRB R1,[R0,#0x74]                  ; Write latch high
-    STR R0,[R0,#0x78]                   ; Write a dummy value to the GO command
-    LDRB R3,[R0,#4]                     ; Read from the Serial Rx Data register
+    STRB R1,[R0,#IOC_T3_LATCH_LO]       ; Write latch low
+    STRB R2,[R0,#IOC_T3_LATCH_HI]       ; Write latch high
+    STR R0,[R0,#IOC_T3_GO]              ; Write a dummy value to the GO command
+    LDRB R3,[R0,#IOC_KART_RX]           ; Read from the Serial Rx Data register
                                         ;   to cancel any previous receive.
-    STRB R2,[R0,#4]                     ; Write to the Serial Tx Data register
+    STRB R2,[R0,#IOC_KART_TX]           ; Write to the Serial Tx Data register
                                         ;   to reset any previous sent.
 
-    ; Re-enable IOC interrupts 14 and 15 for KART ready to send/read
-    LDRB R1,[R0,#0x28]                  ; Read IRQ Mask B
-    BIC R1,R1,#0xC0                     ; Enable IRQs 14 and 15 for KART Tx/Rx
-    STRB R1,[R0,#0x28]                  ; Write IRQ Mask B
+    ; Initialise KART circular buffer head/tail pointers to 0
+    MOV     R1, #0
+    STR     R1, [R12, #OS_KRT_TxHead]
+    STR     R1, [R12, #OS_KRT_TxTail]
+    STR     R1, [R12, #OS_KRT_RxHead]
+    STR     R1, [R12, #OS_KRT_RxTail]
 
-    TEQP PC,#0x08000000                 ; Enable IRQs on the CPU.
-    
+    ; Install interrupt-driven KART handlers into the IRQ handler table
+    MOV     R1, #IRQ_Handlers
+    ADR     R2, Handle_KART_Tx
+    STR     R2, [R1, #14 * 4]           ; IRQ 14 = KART Tx complete
+    ADR     R2, Handle_KART_Rx
+    STR     R2, [R1, #15 * 4]           ; IRQ 15 = KART Rx complete
+
+    ; Enable IOC interrupt 15 for KART ready to read
+    LDRB R1,[R0,#IOC_IRQ_MASK_B]        ; Read IRQ Mask B
+    ORR R1,R1,#0x80                     ; Enable IRQs and 15 for KART Rx
+    STRB R1,[R0,#IOC_IRQ_MASK_B]        ; Write IRQ Mask B
+
+    MOV R10,#BOOT_KARTInit              ; Set the current boot state
+    STR R10,[R12,#OS_BootState]         ; Store the boot state
+
+    MOV R0,PC                           ; Get a copy of the PC + PSR
+    TEQP R0,#0x08000000                 ; Enable IRQs on the CPU but remain in
+                                        ; SVC mode.
+
     ; TODO: Setup another timer to run at 100Hz?
     ; Write handler for KART interrupts
     ; Write SWI handler for system functions
     ; Interface with Logging Device
     ; Map logical memory to high RAM so that low RAM
     ;   can be used for VIDC DMA.
-    
+
+; =============================================================
+; KEYBOARD INITIALISATION (KART)
+;
+; Three-phase handshake: HRST, RAK1, RAK2
+; =============================================================
+; ---- KART protocol bytes ----
+.KART_HRST          &FF
+.KART_RAK1          &FE
+.KART_RAK2          &FD
+.KART_RQID          &20
+.IRQ_KART_TX        1 << 6
+.IRQ_KART_RX        1 << 7
+.KRT_BufSize        32
+.KRT_BufMask        31
+
+.init_keyboard
+    BL      kart_flush_receive          ; Flush any input from the keyboard.
+
+    ; MOV     R1, #IOC_BaseAddr           ; Read the received byte to clear
+    ; LDRB    R0, [R1, #IOC_KART_RX]      ;   the Rx IRQ and flush Rx byte.
+
+    MOV     R0, #KART_HRST              ; Send HRST
+    BL      kart_buffered_send
+    TST     R0,R0                       ; Check for an error on send.
+    BNE     keyboard_fail
+
+    BL      kart_buffered_receive_wait  ; Wait for HRST echo
+    CMP     R0, #KART_HRST
+    BNE     keyboard_fail
+
+    MOV     R0, #KART_RAK1              ; Send RAK1
+    BL      kart_buffered_send
+    TST     R0,R0                       ; Check for an error on send.
+    BNE     keyboard_fail
+
+    BL      kart_buffered_receive_wait  ; Wait for RAK1 echo
+    CMP     R0, #KART_RAK1
+    BNE     keyboard_fail
+
+    MOV     R0, #KART_RAK2              ; Send RAK2
+    BL      kart_buffered_send
+    TST     R0,R0                       ; Check for an error on send.
+    BNE     keyboard_fail
+
+    BL      kart_buffered_receive_wait  ; Wait for RAK2 echo
+    CMP     R0, #KART_RAK2
+    BNE     keyboard_fail
+
+; Handshake complete
+    MOV R10,#BOOT_KbdInit               ; Set the current boot state
+    STR R10,[R12,#OS_BootState]         ; Store the boot state
+    B       halt                        ; Finish.
+
+.keyboard_fail
+    BKPT    1
+    B keyboard_fail
+
+; =============================================================
+; KART INTERRUPT HANDLERS
+;
+; These handlers are installed in the IRQ handler table during
+; KART initialisation. They implement interrupt-driven circular
+; buffers for keyboard transmit and receive, allowing bytes to
+; be queued without polling the IOC hardware registers.
+;
+; Buffer layout: 32-byte circular buffer with separate head
+; (write) and tail (read) indices. Empty when head == tail.
+; Full when (head + 1) & mask == tail.
+; =============================================================
+
+; -------------------------------------------------------------
+; Handle_KART_Tx - IRQ 14 handler
+;
+; Called when the KART transmitter is ready for a new byte.
+; Reads the next byte from the Tx circular buffer and sends it.
+; If the buffer is empty, disables the Tx interrupt to avoid
+; re-entering until new data is queued.
+;
+; Entry: Called from IRQ dispatch. R0-R4 are saved by caller.
+;        R14 = return address (ScanNextIRQ).
+; -------------------------------------------------------------
+.Handle_KART_Tx
+    STMFD   SP!,{R0-R4}                 ; Preserve state while servicing IRQ.
+    MOV     R0,#OS_Workspace
+    LDR     R2,[R0,#OS_KRT_TxHead]      ; Get Tx write index
+    LDR     R3,[R0,#OS_KRT_TxTail]      ; Get Tx read index
+    CMP     R2,R3                       ; Is the buffer empty?
+    BEQ     Handle_KART_Tx_Empty        ; Yes - disable Tx IRQ and return.
+
+    MOV     R1,#KRT_TxBuffer            ; Get the Tx buffer base address
+    LDRB    R4,[R1,R3]                  ; Read the byte at the tail
+    ADD     R3,R3,#1                    ; Advance the tail index
+    AND     R3,R3,#KRT_BufMask          ; Wrap around the circular buffer
+    STR     R3,[R0,#OS_KRT_TxTail]      ; Store updated tail index
+
+    MOV     R1,#IOC_BaseAddr
+    STRB    R4,[R1, #IOC_KART_TX]       ; Send the byte to the KART
+    LDMFD   SP!,{R0-R4}                 ; Restore state before exit.
+    MOV     PC,R14                      ; Return to IRQ dispatch
+
+.Handle_KART_Tx_Empty
+    ; No data to send - mask the Tx interrupt until new data is queued.
+    MOV     R1, #IOC_BaseAddr
+    LDRB    R2, [R1, #IOC_IRQ_MASK_B]
+    BIC     R2, R2, #IRQ_KART_TX        ; Clear the Tx IRQ enable bit
+    STRB    R2, [R1, #IOC_IRQ_MASK_B]
+    LDMFD   SP!,{R0-R4}                 ; Restore state before exit.
+    MOV     PC, R14                     ; Return to IRQ dispatch
+
+; -------------------------------------------------------------
+; Handle_KART_Rx - IRQ 15 handler
+;
+; Called when the KART has received a byte. Reads the byte from
+; the IOC receive register and stores it in the Rx circular
+; buffer. If the buffer is full, the byte is dropped.
+;
+; Entry: Called from IRQ dispatch. R0-R4 are saved by caller.
+;        R14 = return address (ScanNextIRQ).
+; -------------------------------------------------------------
+.Handle_KART_Rx
+    STMFD   SP!,{R0-R3}                 ; Preserve state while servicing IRQ.
+    MOV     R1,#IOC_BaseAddr
+    LDRB    R4,[R1,#IOC_KART_RX]        ; Read the received byte (clears IRQ)
+
+    MOV     R0,#OS_Workspace
+    LDR     R2,[R0, #OS_KRT_RxHead]     ; Get Rx write index
+    ADD     R3,R2,#1                    ; Calculate next head position
+    AND     R3,R3,#KRT_BufMask          ; Wrap around
+    LDR     R1,[R0,#OS_KRT_RxTail]      ; Get Rx read index
+    CMP     R3,R1                       ; Is the buffer full?
+    LDMEQFD   SP!,{R0-R3}                 ; Restore state before exit.
+    MOVEQ   PC,R14                      ; If full, drop the byte and return.
+
+    MOV     R1,#KRT_RxBuffer            ; Get the Rx buffer base address
+    STRB    R4,[R1,R2]                  ; Store the byte at the head position
+    STR     R3,[R0,#OS_KRT_RxHead]      ; Advance the head index
+    LDMFD   SP!,{R0-R3}                 ; Restore state before exit.
+    MOV     PC, R14                     ; Return to IRQ dispatch
+
+; =============================================================
+; BUFFERED KART SEND/RECEIVE ROUTINES
+;
+; These routines provide non-polling access to the KART via
+; the interrupt-driven circular buffers above.
+; =============================================================
+
+; -------------------------------------------------------------
+; kart_buffered_send - Queue a byte for transmission
+;
+; Writes a byte into the Tx circular buffer. If the transmitter
+; is idle (Tx IRQ was disabled by the handler after draining the
+; buffer), the first byte is dequeued and written directly to
+; IOC_KART_TX to kick off the transmission, then the Tx IRQ is
+; re-enabled so the handler can send any remaining bytes.
+; If a transmission is already in progress, the handler will
+; pick up the new byte automatically.
+;
+; Entry:  R0 = byte to send
+; Exit:   R0 = 0 on success, -1 if buffer full
+; Corrupts: none (R1-R4 saved/restored)
+; -------------------------------------------------------------
+.kart_buffered_send
+    STMFD   R13!, {R1-R4, R14}
+
+    MOV     R4, #OS_Workspace
+    LDR     R1, [R4, #OS_KRT_TxHead]   ; Get current Tx write index
+    ADD     R2, R1, #1                 ; Calculate next head position
+    AND     R2, R2, #KRT_BufMask       ; Wrap around
+    LDR     R3, [R4, #OS_KRT_TxTail]   ; Get current Tx read index
+    CMP     R2, R3                     ; Is the buffer full?
+    BEQ     kart_buf_send_full
+
+    MOV     R3, #KRT_TxBuffer          ; Get the Tx buffer base address
+    STRB    R0, [R3, R1]               ; Store the byte at the head position
+    STR     R2, [R4, #OS_KRT_TxHead]   ; Advance the head index
+
+    ; Check whether the transmitter is currently active
+    MOV     R3, #IOC_BaseAddr
+    LDRB    R1, [R3, #IOC_IRQ_MASK_B]
+    TST     R1, #IRQ_KART_TX           ; Is the Tx IRQ already enabled?
+    BNE     kart_buf_send_done         ; Yes - handler is active, will send it.
+
+    ; Transmitter is idle - dequeue the first byte and send it directly
+    ; to start a new transmission.
+    LDR     R2, [R4, #OS_KRT_TxTail]   ; Get current tail index
+    MOV     R1, #KRT_TxBuffer
+    LDRB    R1, [R1, R2]               ; Read the byte at the tail position
+    ADD     R2, R2, #1                 ; Advance the tail index
+    AND     R2, R2, #KRT_BufMask       ; Wrap around
+    STR     R2, [R4, #OS_KRT_TxTail]   ; Update tail
+
+    STRB    R1, [R3, #IOC_KART_TX]     ; Write byte to KART to start Tx
+
+    ; Enable the Tx interrupt so the handler sends remaining bytes
+    LDRB    R1, [R3, #IOC_IRQ_MASK_B]
+    ORR     R1, R1, #IRQ_KART_TX       ; Set the Tx IRQ enable bit
+    STRB    R1, [R3, #IOC_IRQ_MASK_B]
+
+.kart_buf_send_done
+    MOV     R0, #0                     ; Return success
+    LDMFD   R13!, {R1-R4, PC}
+
+.kart_buf_send_full
+    MVN     R0, #0                     ; Return -1: buffer full
+    LDMFD   R13!, {R1-R4, PC}
+
+; -------------------------------------------------------------
+; kart_buffered_receive - Read a byte from the receive buffer
+;
+; Returns the next byte from the Rx circular buffer without
+; waiting. Returns -1 if no data is available.
+;
+; Entry:  none
+; Exit:   R0 = received byte, or -1 if buffer empty
+; Corrupts: none (R1-R3 saved/restored)
+; -------------------------------------------------------------
+.kart_buffered_receive
+    STMFD   R13!, {R1-R3, R14}
+
+    MOV     R3, #OS_Workspace
+    LDR     R1, [R3, #OS_KRT_RxHead]   ; Get Rx write index
+    LDR     R2, [R3, #OS_KRT_RxTail]   ; Get Rx read index
+    CMP     R1, R2                     ; Is the buffer empty?
+    BEQ     kart_buf_recv_empty
+
+    MOV     R1, #KRT_RxBuffer          ; Get the Rx buffer base address
+    LDRB    R0, [R1, R2]               ; Read the byte at the tail position
+    ADD     R2, R2, #1                 ; Advance the tail index
+    AND     R2, R2, #KRT_BufMask       ; Wrap around
+    STR     R2, [R3, #OS_KRT_RxTail]   ; Store updated tail index
+
+    LDMFD   R13!, {R1-R3, PC}
+
+.kart_buf_recv_empty
+    MVN     R0, #0                     ; Return -1: buffer empty
+    LDMFD   R13!, {R1-R3, PC}
+
+; -------------------------------------------------------------
+; kart_buffered_receive_wait - Wait for and read a byte
+;
+; Blocks until a byte is available in the Rx circular buffer,
+; then returns it. This polls the buffer indices in RAM rather
+; than the IOC hardware registers directly.
+;
+; Entry:  none
+; Exit:   R0 = received byte
+; Corrupts: none (R1-R3 saved/restored)
+; -------------------------------------------------------------
+.kart_buffered_receive_wait
+    STMFD   R13!, {R1-R3, R14}
+
+    MOV     R3, #OS_Workspace
+.kart_buf_recv_wait_loop
+    LDR     R1, [R3, #OS_KRT_RxHead]   ; Get Rx write index
+    LDR     R2, [R3, #OS_KRT_RxTail]   ; Get Rx read index
+    CMP     R1, R2                     ; Is the buffer empty?
+    BEQ     kart_buf_recv_wait_loop    ; Yes - keep waiting for IRQ to fill it
+
+    MOV     R1, #KRT_RxBuffer          ; Get the Rx buffer base address
+    LDRB    R0, [R1, R2]               ; Read the byte at the tail position
+    ADD     R2, R2, #1                 ; Advance the tail index
+    AND     R2, R2, #KRT_BufMask       ; Wrap around
+    STR     R2, [R3, #OS_KRT_RxTail]   ; Store updated tail index
+
+    LDMFD   R13!, {R1-R3, PC}
+
+.kart_flush_receive
+    STMFD   R13!, {R0-R1, R14}
+
+    MOV     R1,#OS_Workspace
+    MOV     R0,#0
+    STR     R0,[R1,#OS_KRT_RxHead]      ; Set the Rx queue to an empty state.
+    STR     R0,[R1,#OS_KRT_TxTail]
+
+    ; Read the KART input byte to flush any pending IRQ.
+    MOV     R1,#IOC_BaseAddr
+    LDRB    R0,[R1,#IOC_KART_RX]
+    STR     R0,[R1,#IOC_T3_GO]          ; Write a dummy value to the GO command
+                                        ;    to restart the KART timer.
+
+    LDMFD   R13!, {R0-R1, PC}           ; Return
+
+.halt
+    MOV R10,#BOOT_Completed             ; Set the current boot state
+    STR R10,[R12,#OS_BootState]         ; Store the boot state
+
+    BKPT 0
     B $

@@ -2,7 +2,7 @@
 //! @brief The declaration of a template which uses traits to instantiate
 //! emulators for different system configurations.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2023-2024
+//! @date 2023-2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -57,22 +57,14 @@ private:
     //! @brief Performs shared initialisation tasks from the constructor.
     void initialise()
     {
-        // Connect all devices together and to inter-op services.
-        ConnectionContext connection(&_interop, _devices, _addrDecoderReadMap,
-                                     _addrDecoderWriteMap);
-
-        // Use a map to ensure that each device is only initialised once.
-        std::set<IHardwreDevicePtr> initialisedDevices;
+        // Gather all devices we know about.
+        IHardwareDeviceCollection allDevices;
+        allDevices.reserve(64);
 
         for (auto &devicePtr : _devices)
         {
-            auto insertResult = initialisedDevices.insert(devicePtr.get());
-
-            if (insertResult.second)
-            {
-                // The device was newly inserted, connect it.
-                devicePtr->connect(connection);
-            }
+            // The device was newly inserted, connect it.
+            allDevices.push_back(devicePtr.get());
         }
 
         for (uint8_t i = 0; i < 2; ++i)
@@ -81,14 +73,32 @@ private:
 
             for (auto &mapping : map.getMappings())
             {
-                auto insertResult = initialisedDevices.insert(mapping.Region);
-
-                if (insertResult.second)
-                {
-                    // The device was newly inserted, connect it.
-                    mapping.Region->connect(connection);
-                }
+                // The device was newly inserted, connect it.
+                allDevices.push_back(mapping.Region);
             }
+        }
+
+        // Register integral hardware which doesn't appear on the address maps.
+        _hardware.addIntegralHardware(allDevices);
+
+        // Ensure each entry in the list is unique.
+        std::sort(allDevices.begin(), allDevices.end());
+        auto last = std::unique(allDevices.begin(), allDevices.end());
+        allDevices.erase(last, allDevices.end());
+
+        // Connect all devices together and to inter-op services.
+        ConnectionContext connection(&_interop);
+
+        // Create an index of named devices.
+        for (IHardwareDevicePtr device : allDevices)
+        {
+            connection.addDevice(device);
+        }
+
+        // Allow all devices the change to connect to any other device.
+        for (IHardwareDevicePtr device : allDevices)
+        {
+            device->connect(connection);
         }
     }
 public:
@@ -131,15 +141,13 @@ public:
         _hardware(options, read, write),
         _registers(_hardware),
         _execUnit(_hardware, _registers, _interop),
+        _addrDecoderReadMap(_hardware.createMasterReadMap()),
+        _addrDecoderWriteMap(_hardware.createMasterWriteMap()),
         _devices(std::move(devices)),
         _isRunning(false)
     {
         // Perform shared initialisation.
         initialise();
-
-        // Initialise address maps after RAM and ROM.
-        _addrDecoderReadMap = _hardware.createMasterReadMap();
-        _addrDecoderWriteMap = _hardware.createMasterWriteMap();
 
         // Set the hardware and processor to the power-on state.
         reset();
@@ -178,8 +186,7 @@ public:
         switch (id)
         {
         case CoreRegister::SPSR:
-            // TODO: Create an interface for this, if possible.
-            result = _registers.getPSR();
+            result = _registers.getSPSR();
             break;
 
         case CoreRegister::CPSR:
@@ -258,13 +265,21 @@ public:
     virtual ExecutionMetrics run()  override
     {
         Ag::ValueScope<std::atomic_bool, bool> isRunning(_isRunning, true);
-        return _execUnit.runPipeline(false);
+
+        return _execUnit.runPipeline(0);
     }
 
     virtual ExecutionMetrics runSingleStep() override
     {
         Ag::ValueScope<std::atomic_bool, bool> isRunning(_isRunning, true);
-        return _execUnit.runPipeline(true);
+        return _execUnit.runPipeline(-1);
+    }
+
+    virtual ExecutionMetrics runLimited(int32_t maxCycles) override
+    {
+        Ag::ValueScope<std::atomic_bool, bool> isRunning(_isRunning, true);
+
+        return _execUnit.runPipeline(static_cast<int32_t>(maxCycles));
     }
 
     virtual void raiseHostInterrupt() override

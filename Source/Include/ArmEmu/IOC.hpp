@@ -2,7 +2,7 @@
 //! @brief The declaration of an object which emulates the function of the
 //! VL86C410 IOC part.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2023-2024
+//! @date 2023-2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -48,16 +48,16 @@ public:
     // Accessors
     bool getIrqPinState() const;
 
-    uint16_t getUnmaskedIrqState() const;
-    uint16_t getMaskedIrqState() const;
+    uint16_t getIrqState() const;
+    uint16_t getIrqRequestState() const;
     uint16_t getIrqMask() const;
     bool setIrqMaskLow(uint8_t mask);
     bool setIrqMaskHigh(uint8_t mask);
     bool setIrqState(uint8_t irq, bool state);
 
     bool getFirqPinState() const;
-    uint8_t getUnmaskedFirqState() const;
-    uint8_t getMaskedFirqState() const;
+    uint8_t getFirqState() const;
+    uint8_t getFirqRequestState() const;
     uint8_t getFirqMask() const;
     bool setFirqMask(uint8_t mask);
     bool setFirqState(uint8_t irq, bool state);
@@ -134,6 +134,9 @@ using IocSyncStatePtr = IocSyncStateTraits::UPtr;
 class IOC : public IMMIOBlock
 {
 public:
+    // Public Constants
+    static constexpr uint32_t BaseAddr = 0x3200000;
+
     // Construction/Destruction
     IOC() = delete;
     IOC(const IOC &) = delete;
@@ -154,8 +157,10 @@ public:
     void setFastHighInterrupt(uint8_t fhNo, bool state);
     void setFastLowInterrupt(bool state);
     void setControlPinInput(uint8_t ctrlLine, bool state);
+    bool raiseVSyncIrq();
     void writeKart(const uint8_t *bytes, uint8_t size);
     void writeKartByte(const uint8_t value);
+    bool tryReadKartRxByte(uint8_t &byte);
     void flushKart();
 
     //void raiseIrq(uint8_t id);

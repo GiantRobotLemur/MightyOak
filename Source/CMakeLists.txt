@@ -9,6 +9,8 @@ include_directories("${MO_INCLUDE_DIR}")
 # ARM Emulator Modules
 add_subdirectory(AsmTools)
 add_subdirectory(ArmEmu)
+add_subdirectory(MightyOakLib)
+add_subdirectory(EmulatorApp)
 
 if ("${Qt6_FOUND}")
     message("-- [Optional] Configuring ARM Debugger project")

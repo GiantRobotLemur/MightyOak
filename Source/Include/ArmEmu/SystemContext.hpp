@@ -2,7 +2,7 @@
 //! @brief The declaration of an object which shares information between
 //! internal components of an emulated system.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2023-2024
+//! @date 2023-2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -28,21 +28,58 @@ class SystemContext;
 class Options;
 
 //! @brief A description of a task scheduled and run on the emulator thread.
-struct GuestTask
+class GuestTask
 {
+public:
+    // Public Types
     using TaskFn = void (*)(SystemContext &guestContext, uintptr_t taskContext);
 
+private:
+    // Internal Fields
     //! @brief The system clock time at which the task should be executed.
-    uint64_t At;
+    //! @note This field is expected to be 0 for a scheduled task and
+    //! non-zero for an unscheduled task.
+    uint64_t _at;
+
+    //! @brief The next task in the queue, EndTask to indicate a scheduled
+    //! task as the end of the queue. Nullptr to indicate an unscheduled task.
+    GuestTask *_next;
 
     //! @brief The user-supplied context to pass to the task.
-    uintptr_t Context;
-
-    //! @brief The next task in the queue.
-    GuestTask *Next;
+    uintptr_t _context;
 
     //! @brief A pointer to the function to call to dispatch the task.
-    TaskFn Task;
+    TaskFn _task;
+
+public:
+    // Construction/Destruction
+    GuestTask();
+    ~GuestTask() = default;
+
+    // Accessors
+    //! @brief Determines if the task is in a scheduled state.
+    //! @retval true The task is in a system task queue.
+    //! @retval false The task is not currently scheduled to run.
+    constexpr bool isScheduled() const { return _at != 0; }
+
+    //! @brief Determines if the task should be executed.
+    //! @param[in] currentTime The current master clock time.
+    //! @retval true The task should be executed.
+    //! @retval false It is too soon to execute the task.
+    constexpr bool canExecute(uint64_t currentTime) const
+    {
+        return _at <= currentTime;
+    }
+
+    constexpr GuestTask *getNext() const { return _next; }
+
+    void defineTask(TaskFn task, uintptr_t context);
+    void defineTask(TaskFn task, const void *context);
+
+    // Operations
+    void schedule(GuestTask *&listHead, uint64_t time);
+    bool unschedule(GuestTask *&listHead);
+    void execute(SystemContext &sysContext);
 };
 
 //! @brief Represents an object used to perform communications between the
@@ -51,7 +88,8 @@ class SystemContext
 {
 public:
     // Construction/Destruction
-    SystemContext(const Options &sysConfig, GuestEventQueue &eventQueue,
+    SystemContext(const Options &sysConfig,
+                  GuestEventQueue &eventQueue,
                   IArmSystem *parentSystem);
     ~SystemContext() = default;
 
@@ -64,7 +102,9 @@ public:
     // Operations
     uint32_t getFuzz();
     void incrementCPUClock(uint32_t cycles);
-    void scheduleTask(GuestTask *task);
+    void scheduleTaskDeltaCycles(GuestTask *task, uint32_t cpuCycleDelta);
+    void scheduleTaskDeltaTicks(GuestTask *task, uint64_t masterTickDelta);
+    bool unscheduleTask(GuestTask *taskToRemove);
     bool postMessageToHost(uint32_t eventID, uintptr_t data1, uintptr_t data2);
 private:
     // Internal Constants

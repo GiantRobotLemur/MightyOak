@@ -2,7 +2,7 @@
 //! @brief The definition of the entry point for the EmuPerfTest CLI performance
 //! measurement tool.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2023-2024
+//! @date 2023-2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -126,7 +126,8 @@ public:
 protected:
     // Overrides
     // Inherited from Cli::ProgramArguments.
-    virtual bool processOption(uint32_t id, const String &value, String &error) override
+    virtual bool processOption(uint32_t id, const Ag::String &/*original*/,
+                               const String &value, String &error) override
     {
         bool isOK = true;
 

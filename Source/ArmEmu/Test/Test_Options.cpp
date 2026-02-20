@@ -1,7 +1,7 @@
 //! @file Test_Options.cpp
 //! @brief The definition of unit tests for the Options class.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2023
+//! @date 2023-2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -29,6 +29,25 @@ GTEST_TEST(Options, DefaultIsValid)
 
     EXPECT_TRUE(specimen.validate(error));
     EXPECT_TRUE(error.isEmpty()) << error.toUtf8();
+}
+
+GTEST_TEST(Options, ValidProductionConfigurations)
+{
+    // Try each production model to ensure each represents a valid configuration.
+    const auto &prodModelType = getProductionModelType();
+    Ag::String error;
+
+    for (const auto &symbol : prodModelType.getSymbols())
+    {
+        std::string scope;
+        scope.assign("Testing Production Config: ");
+        scope.append(symbol.getDisplayName());
+        SCOPED_TRACE(scope);
+
+        Options specimen = Options::makeProductionModel(symbol.getId());
+
+        EXPECT_TRUE(specimen.validate(error));
+    }
 }
 
 GTEST_TEST(Options, ValidTestBedConfiguration)
@@ -145,7 +164,6 @@ GTEST_TEST(Options, ValidStrongARMRiscPCConfiguration)
     EXPECT_TRUE(specimen.validate(error));
     EXPECT_TRUE(error.isEmpty()) << error.toUtf8();
 }
-
 
 GTEST_TEST(Options, InvalidArchimedesConfiguration)
 {

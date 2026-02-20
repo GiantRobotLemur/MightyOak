@@ -2,7 +2,7 @@
 //! @brief The definition of an object which shares information between
 //! internal components of an emulated system.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2023-2024
+//! @date 2023-2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -17,6 +17,135 @@
 
 namespace Mo {
 namespace Arm {
+
+////////////////////////////////////////////////////////////////////////////////
+// GuestTask Member Definitions
+////////////////////////////////////////////////////////////////////////////////
+//! @brief Constructs an empty task in an unscheduled state.
+GuestTask::GuestTask() :
+    _at(0),
+    _next(nullptr),
+    _context(0),
+    _task(nullptr)
+{
+}
+
+//! @brief Defines the task to execute when the task reaches the front of the
+//! queue.
+//! @param[in] task A pointer to the function to execute.
+//! @param[in] context The context to pass to the task function.
+void GuestTask::defineTask(TaskFn task, uintptr_t context)
+{
+    _task = task;
+    _context = context;
+}
+
+//! @brief Defines the task to execute when the task reaches the front of the
+//! queue.
+//! @param[in] task A pointer to the function to execute.
+//! @param[in] context The context to pass to the task function.
+void GuestTask::defineTask(TaskFn task, const void *context)
+{
+    _task = task;
+    _context = reinterpret_cast<uintptr_t>(context);
+}
+
+//! @brief Adds the task to a linked list of scheduled tasks.
+//! @param[in,out] listHead The item at the start of the singly-linked list of
+//! scheduled tasks.
+//! @param[in] time The absolute time in master clock ticks at which the task
+//! function should be executed after.
+void GuestTask::schedule(GuestTask *&listHead, uint64_t time)
+{
+    // The task is already in the queue, remove it.
+    if (_at != 0)
+        unschedule(listHead);
+
+    // Don't schedule an empty task.
+    if (_task == nullptr)
+        return;
+
+    // Mark the task as scheduled.
+    _at = time;
+
+    if ((listHead == nullptr) || (_at < listHead->_at))
+    {
+        // The task goes at the head of the queue.
+        _next = listHead;
+        listHead = this;
+    }
+    else
+    {
+        // Find the item which should proceed this task in the queue.
+        GuestTask *current = listHead;
+
+        while ((current->_next != nullptr) && (current->_next->_at < _at))
+        {
+            current = current->_next;
+        }
+
+        // Insert the task into the queue.
+        _next = current->_next;
+        current->_next = this;
+    }
+}
+
+//! @brief Removes the task from a list, if it was scheduled.
+//! @param[in,out] listHead The item at the start of the singly-linked list of
+//! scheduled tasks which may contain this task.
+//! @retval true The task was in a scheduled state and removed from the list.
+//! @retval false The task was not found in the list.
+bool GuestTask::unschedule(GuestTask *&listHead)
+{
+    if ((listHead == nullptr) || (_at == 0))
+        return false;
+
+    if (listHead == this)
+    {
+        // Remove the head task.
+        listHead = _next;
+        _next = nullptr;
+
+        // Mark the task as unscheduled.
+        _at = 0;
+
+        return true;
+    }
+
+    GuestTask *current = listHead;
+
+    while (current->_next != nullptr)
+    {
+        if (current->_next == this)
+        {
+            current->_next = _next;
+            _next = nullptr;
+
+            // Mark the task as unscheduled.
+            _at = 0;
+
+            return true;
+        }
+        else
+        {
+            // Move on to the next task.
+            current = current->_next;
+        }
+    }
+
+    return false;
+}
+
+//! @brief Executes the task.
+//! @param[in] sysContext The context of the system the task executes in.
+void GuestTask::execute(SystemContext &sysContext)
+{
+    // Reset this task into an unscheduled state.
+    _next = nullptr;
+    _at = 0;
+
+    _task(sysContext, _context);
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // SystemContext Member Definitions
@@ -108,41 +237,52 @@ void SystemContext::incrementCPUClock(uint32_t cycles)
 
     // Perform an scheduled tasks which are now pending.
     while ((_taskQueueHead != nullptr) &&
-           (_taskQueueHead->At <= _masterClock))
+           _taskQueueHead->canExecute(_masterClock))
     {
         // Pop the head task.
-        GuestTask *headTask = _taskQueueHead;
-        _taskQueueHead = headTask->Next;
+        GuestTask *currentTask = _taskQueueHead;
 
-        // Perform the task.
-        headTask->Task(*this, headTask->Context);
+        // Ensure we update the list head before executing the task,
+        // which may update the list head internally.
+        _taskQueueHead = currentTask->getNext();
+        currentTask->execute(*this);
     }
 }
 
 //! @brief Schedules a task to be executed at a specific time.
 //! @param[in] task The task description which is owned by the task owner.
-void SystemContext::scheduleTask(GuestTask *task)
+//! @param[in] cpuCycleDelta The count of CPU cycles in the future of the
+//! time when the task should be executed.
+void SystemContext::scheduleTaskDeltaCycles(GuestTask *task,
+                                            uint32_t cpuCycleDelta)
 {
-    task->Next = _taskQueueHead;
+    scheduleTaskDeltaTicks(task,
+                           static_cast<uint64_t>(cpuCycleDelta) << _cpuClockShift);
+}
 
-    if ((_taskQueueHead == nullptr) || (task->At < _taskQueueHead->At))
-    {
-        // The task goes at the head of the queue.
-        _taskQueueHead = task;
-    }
-    else
-    {
-        GuestTask *current = _taskQueueHead;
+//! @brief Schedules a task to be executed at a specific time.
+//! @param[in] task The task description which is owned by the task owner.
+//! @param[in] masterTickDelta The count of ticks in the future of the
+//! time when the task should be executed.
+void SystemContext::scheduleTaskDeltaTicks(GuestTask *task,
+                                           uint64_t masterTickDelta)
+{
+    if (task == nullptr)
+        return;
 
-        while ((current->Next != nullptr) && (current->Next->At < task->At))
-        {
-            current = current->Next;
-        }
+    task->schedule(_taskQueueHead, _masterClock + masterTickDelta);
+}
 
-        // Insert the task into the queue.
-        task->Next = current->Next;
-        current->Next = task;
-    }
+//! @brief Removes a task from the task queue.
+//! @param[in] taskToRemove The task to remove.
+//! @retval true The task was successfully removed.
+//! @retval false The task was not in the queue.
+bool SystemContext::SystemContext::unscheduleTask(GuestTask *taskToRemove)
+{
+    if (taskToRemove == nullptr)
+        return false;
+
+    return taskToRemove->unschedule(_taskQueueHead);
 }
 
 //! @brief Attempts to post a message to the host input thread without blocking.

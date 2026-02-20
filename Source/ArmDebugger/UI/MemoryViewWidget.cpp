@@ -2,7 +2,7 @@
 //! @brief The definition of a widget which displays the contents of memory in
 //! the emulated machine as assembly language.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2024
+//! @date 2024-2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -432,7 +432,7 @@ void appendBlocks(MemoryBlockViewCollection &blocks, uint32_t baseAddress,
                     if (endOfRun < wordCount)
                     {
                         // There are more words after this uniform block.
-                        BlockInfo uniformBlock(*blockPos, runLength);
+                        BlockInfo uniformBlock(*blockPos, runLength * 4);
                         blockPos = blockDefs.insert(blockPos, uniformBlock);
 
                         // Configure the block as uniform data.
@@ -688,7 +688,8 @@ void MemoryViewWidget::displayRegion(const MemoryRegion &region,
                                                                     regionOffset);
 
                     appendBlocks(_blocks, mapping.VirtualBaseAddr, hostPtr,
-                                 regionRemaining, app->getSession().getSettings());
+                                 std::min(regionRemaining, mapping.PageSize),
+                                 app->getSession().getSettings());
                 }
                 else
                 {

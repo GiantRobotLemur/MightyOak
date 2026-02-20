@@ -1,7 +1,7 @@
 //! @file ArmEmu.hpp
 //! @brief The declaration of public elements of the ArmEmu library.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2022-2023
+//! @date 2022-2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -20,6 +20,7 @@
 #include "ArmEmu/SystemContext.hpp"
 #include "ArmEmu/IOC.hpp"
 #include "ArmEmu/VIDC10.hpp"
+#include "ArmEmu/Display.hpp"
 #include "ArmEmu/ArmSystem.hpp"
 #include "ArmEmu/ArmSystemBuilder.hpp"
 

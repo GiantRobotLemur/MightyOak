@@ -2,7 +2,7 @@
 //! @brief The definition of an object which emulates the function of the
 //! VL86C410 IOC part.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2023-2024
+//! @date 2023-2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -38,9 +38,9 @@ constexpr uint8_t KartRxIrq = 15;
 //! @brief Constructs an object which holds state shared between threads.
 IocIrqState::IocIrqState() :
     _irqStatus(0),
-    _irqMask(0xFFFF),
+    _irqMask(0x00),
     _firqStatus(0),
-    _firqMask(0xFF),
+    _firqMask(0x00),
     _ctrlInput(0xFF),
     _ctrlOutput(0x00),
     _ctrlState(0xFF)
@@ -52,12 +52,12 @@ IocIrqState::IocIrqState() :
 //! @retval false No IRQs are pending.
 bool IocIrqState::getIrqPinState() const
 {
-    return ((_irqStatus.load() | 0x80) & ~_irqMask.load()) != 0;
+    return ((_irqStatus.load() | 0x80) & _irqMask.load()) != 0;
 }
 
 //! @brief Gets the current state of all pending interrupts, ignoring masks.
 //! @return A bitfield describing which interrupts are pending.
-uint16_t IocIrqState::getUnmaskedIrqState() const
+uint16_t IocIrqState::getIrqState() const
 {
     return _irqStatus.load() | 0x80;
 }
@@ -65,9 +65,9 @@ uint16_t IocIrqState::getUnmaskedIrqState() const
 //! @brief Gets the masked state of interrupts, i.e. which unmasked interrupts
 //! are pending.
 //! @return A bitfield describing which unmasked interrupts are pending.
-uint16_t IocIrqState::getMaskedIrqState() const
+uint16_t IocIrqState::getIrqRequestState() const
 {
-    return (_irqStatus.load() | 0x80) & ~_irqMask.load();
+    return (_irqStatus.load() | 0x80) & _irqMask.load();
 }
 
 //! @brief Gets the current interrupt mask.
@@ -81,6 +81,8 @@ uint16_t IocIrqState::getIrqMask() const
 //! @param[in] mask The low 8 bits of the interrupt mask.
 //! @retval true If any unmasked interrupts are pending.
 //! @retval false No unmasked interrupts are pending.
+//! @note A 1 in a corresponding bit of the mask enables an interrupt to be
+//! reported to the processor, a 0 disables reporting.
 bool IocIrqState::setIrqMaskLow(uint8_t mask)
 {
     _irqMask.store((_irqMask.load() & 0xFF00) | mask);
@@ -92,6 +94,8 @@ bool IocIrqState::setIrqMaskLow(uint8_t mask)
 //! @param[in] mask The high 8 bits of the interrupt mask.
 //! @retval true If any unmasked interrupts are pending.
 //! @retval false No unmasked interrupts are pending.
+//! @note A 1 in a corresponding bit of the mask enables an interrupt to be
+//! reported to the processor, a 0 disables reporting.
 bool IocIrqState::setIrqMaskHigh(uint8_t mask)
 {
     _irqMask.store((_irqMask.load() & 0xFF) | (static_cast<uint16_t>(mask) << 8));
@@ -124,17 +128,17 @@ bool IocIrqState::getFirqPinState() const
 //! @brief Gets the current state of all pending fast interrupts,
 //! ignoring masks.
 //! @return A bitfield describing which fast interrupts are pending.
-uint8_t IocIrqState::getUnmaskedFirqState() const
+uint8_t IocIrqState::getFirqState() const
 {
-    return _firqStatus.load();
+    return _firqStatus.load() | 0x80;
 }
 
 //! @brief Gets the masked state of fast interrupts, i.e. which unmasked
 //! fast interrupts are pending.
 //! @return A bitfield describing which unmasked fast interrupts are pending.
-uint8_t IocIrqState::getMaskedFirqState() const
+uint8_t IocIrqState::getFirqRequestState() const
 {
-    return _firqStatus.load() & ~_firqMask.load();
+    return (_firqStatus.load() | 0x80) & _firqMask.load();
 }
 
 //! @brief Gets a bitfield defining which fast interrupts are masked.
@@ -147,6 +151,8 @@ uint8_t IocIrqState::getFirqMask() const
 //! @param[in] mask The bits of the fast interrupt mask.
 //! @retval true If any unmasked fast interrupts are pending.
 //! @retval false No unmasked fast interrupts are pending.
+//! @note A 1 in a corresponding bit of the mask enables an fast interrupt
+//! to be reported to the processor, a 0 disables reporting.
 bool IocIrqState::setFirqMask(uint8_t mask)
 {
     bool oldFirqState = getFirqPinState();
@@ -316,6 +322,14 @@ void IOC::setCtrlPinInputState(uint8_t pin, bool state)
     _irqState->setControlPinInputState(pin, state);
 }
 
+//! @brief Raises the VSync (IR) interrupt, IRQ A bit 3.
+//! @retval true An unmasked IRQ is now pending.
+//! @retval false No unmasked IRQs are pending.
+bool IOC::raiseVSyncIrq()
+{
+    return _irqState->raiseIrq(3);
+}
+
 //! @brief Raises the POR interrupt as if the system had just been switched on..
 void IOC::powerOnReset()
 {
@@ -404,6 +418,16 @@ void IOC::writeKartByte(const uint8_t value)
     _synchronisedData->RxQueue.enqueue(value);
 }
 
+//! @brief Attempts to dequeue a byte from the KART receive queue.
+//! @param[out] byte Receives the dequeued byte if successful.
+//! @returns true if a byte was dequeued, false if the queue was empty.
+//! @note This is intended for use in test harnesses only. In normal operation,
+//! the KART timer callback dequeues bytes from this queue.
+bool IOC::tryReadKartRxByte(uint8_t &byte)
+{
+    return _synchronisedData->RxQueue.try_dequeue(byte);
+}
+
 //! @brief Removes all bytes from the KART receive queue.
 void IOC::flushKart()
 {
@@ -482,12 +506,12 @@ uint32_t IOC::read(uint32_t offset)
         case 4:  // IRQ Status A (read-only)
             result &= 0xFFFFFF00;
             // Bit 7 is always set
-            result |= static_cast<uint8_t>(_irqState->getUnmaskedIrqState());
+            result |= static_cast<uint8_t>(_irqState->getIrqState());
             break;
 
         case 5:  // IRQ Request A (read)/IRQ Clear (write)
             result &= 0xFFFFFF00;
-            result |= static_cast<uint8_t>(_irqState->getMaskedIrqState());
+            result |= static_cast<uint8_t>(_irqState->getIrqRequestState());
             break;
 
         case 6:  // IRQ Mask A
@@ -497,12 +521,12 @@ uint32_t IOC::read(uint32_t offset)
 
         case 8:  // IRQ Status B
             result &= 0xFFFFFF00;
-            result |= static_cast<uint8_t>(_irqState->getUnmaskedIrqState() >> 8);
+            result |= static_cast<uint8_t>(_irqState->getIrqState() >> 8);
             break;
 
         case 9:  // IRQ Request B
             result &= 0xFFFFFF00;
-            result |= static_cast<uint8_t>(_irqState->getMaskedIrqState() >> 8);
+            result |= static_cast<uint8_t>(_irqState->getIrqRequestState() >> 8);
             break;
 
         case 10: // IRQ Mask B
@@ -512,12 +536,12 @@ uint32_t IOC::read(uint32_t offset)
 
         case 12: // FIRQ Status
             result &= 0xFFFFFF00;
-            result |= _irqState->getUnmaskedFirqState();
+            result |= _irqState->getFirqState();
             break;
 
         case 13: // FIRQ Request
             result &= 0xFFFFFF00;
-            result |= _irqState->getMaskedFirqState();
+            result |= _irqState->getFirqRequestState();
             break;
 
         case 14: // FIRQ Mask
@@ -575,6 +599,8 @@ void IOC::write(uint32_t offset, uint32_t value)
             break;
 
         case 1:  // Serial Tx Data
+            // Enqueue the byte which will be delivered to the keyboard
+            // controller when timer 3 (the KART Baud timer) reaches 0.
             _kartTxQueue->enqueue(static_cast<uint8_t>(value));
 
             // Clear the pending KART Tx interrupt.
@@ -616,42 +642,70 @@ void IOC::write(uint32_t offset, uint32_t value)
         // It's a hardware timer register.
         uint8_t timerId = (regId - 16) >> 2;
 
-        // HACK: When timerId is 3, the accesses will go past the end of the
-        // _counters array and instead operate on the _kartCounter member,
-        // which is identical in data layout, but has a different go()
-        // member function.
-        switch (regId & 0x03)
+        // Timer 3 is the KART timer and has a different implementation.
+        // The following avoids the need for virtual functions.
+        if (timerId == 3)
         {
-        case 0: // Latch Low
-            _counters[timerId].writeLatchLow(static_cast<uint8_t>(value));
-            break;
-
-        case 1: // Latch High
-            _counters[timerId].writeLatchHigh(static_cast<uint8_t>(value));
-            break;
-
-        case 2: // Go Command (write-only)
-            // We don't care what value, writing here simply
-            // activates the timer.
-            if (timerId == 3)
+            switch (regId & 0x03)
             {
+            case 0: // Latch Low
+                _kartCounter.writeLatchLow(static_cast<uint8_t>(value));
+                break;
+
+            case 1: // Latch High
+                _kartCounter.writeLatchHigh(static_cast<uint8_t>(value));
+                break;
+
+            case 2: // Go Command (write-only)
+                // We don't care what value, writing here simply
+                // activates the timer.
+
+                // Remove any bytes being received or transmitted after
+                // resetting the timer.
+                while (_kartRxQueue->try_dequeue(timerId)) {}
+                while (_kartTxQueue->try_dequeue(timerId)) {}
+
                 // NOTE: This is a filthy hack to avoid a virtual function call.
                 _kartCounter.go(_context);
+                break;
+
+            case 3: // Latch Command (write-only)
+                // We don't care what value, writing here simply
+                // copies the current count to the output latch.
+                _kartCounter.latch(_context);
+                break;
+
+            default:
+                break;
             }
-            else
+        }
+        else // Timers T0-T2
+        {
+            switch (regId & 0x03)
             {
+            case 0: // Latch Low
+                _counters[timerId].writeLatchLow(static_cast<uint8_t>(value));
+                break;
+
+            case 1: // Latch High
+                _counters[timerId].writeLatchHigh(static_cast<uint8_t>(value));
+                break;
+
+            case 2: // Go Command (write-only)
+                // We don't care what value, writing here simply
+                // activates the timer.
                 _counters[timerId].go(_context);
+                break;
+
+            case 3: // Latch Command (write-only)
+                // We don't care what value, writing here simply
+                // copies the current count to the output latch.
+                _counters[timerId].latch(_context);
+                break;
+
+            default:
+                break;
             }
-            break;
-
-        case 3: // Latch Command (write-only)
-            // We don't care what value, writing here simply
-            // copies the current count to the output latch.
-            _counters[timerId].latch(_context);
-            break;
-
-        default:
-            break;
         }
     }
 }
@@ -676,8 +730,7 @@ IOC::Counter::Counter() :
     _inputLatch(0),
     _outputLatch(0)
 {
-    Ag::zeroFill(_triggerTask);
-    _triggerTask.Context = reinterpret_cast<uintptr_t>(this);
+    _triggerTask.defineTask(onCounterReachesZero, this);
 }
 
 //! @brief Determines if the timer is currently running.
@@ -718,8 +771,7 @@ void IOC::Counter::writeLatchHigh(uint8_t highLatch)
 //! @param[in] context The context to pass to the function.
 void IOC::Counter::setTriggerCallback(GuestTask::TaskFn fn, uintptr_t context)
 {
-    _triggerTask.Task = fn;
-    _triggerTask.Context = context;
+    _triggerTask.defineTask(fn, context);
 }
 
 //! @brief Starts the timer running.
@@ -740,19 +792,21 @@ void IOC::Counter::latch(SystemContext *context)
     _outputLatch = _inputLatch - static_cast<uint16_t>(elapsedTicks % _inputLatch);
 }
 
+//! @brief Starts a timer counting, possibly re-starting it if already running.
+//! @param[in] context The context in which the counter will run.
+//! @param[in] countFactor How much the timer frequency is multiplied by to
+//! reduce the countdown rate.
 void IOC::Counter::start(SystemContext *context, uint64_t countFactor)
 {
     _startTime = context->getMasterClockTicks();
     _masterTicksPerCount = context->getMasterClockFrequency() / 2000000;
 
     // Schedule interrupt.
-    if (_triggerTask.Task != nullptr)
-    {
-        _triggerTask.At = (_masterTicksPerCount * _inputLatch * countFactor) + _startTime;
-        context->scheduleTask(&_triggerTask);
-    }
+    context->scheduleTaskDeltaTicks(&_triggerTask, _masterTicksPerCount * _inputLatch * countFactor);
 }
 
+//! @brief Activates the KART timer to start sending and receiving bytes.
+//! @param[in] context The context in which the counter will run.
 void IOC::KartCounter::go(SystemContext *context)
 {
     // IOC data sheet page 11:
@@ -810,8 +864,9 @@ void IOC::onKartCounterReachesZero(SystemContext &guestContext,
         // implementation thereof.
         if (ioc->_kartRxQueue->try_dequeue(ioc->_kartRxByte))
         {
-            // A byte was received, raise an interrupt.
-            ioc->_irqState->raiseIrq(KartRxIrq);
+            // A byte was received in IOC from the keyboard,
+            // raise an interrupt.
+            ioc->_parent.setGuestIrq(ioc->_irqState->raiseIrq(KartRxIrq));
         }
 
         // Check for bytes we need to send to the keyboard, or the host
@@ -821,7 +876,12 @@ void IOC::onKartCounterReachesZero(SystemContext &guestContext,
         if (ioc->_kartTxQueue->try_dequeue(txByte) &&
             (ioc->_keyboard != nullptr))
         {
-            // Transmit the byte to the host system.
+            // A byte is sent from IOC to the keyboard.
+            // The STx register is now empty, raise an interrupt
+            // to signify a byte was successfully transmitted.
+            ioc->_parent.setGuestIrq(ioc->_irqState->raiseIrq(KartTxIrq));
+
+            // Have the keyboard controller process the byte sent to it.
             ioc->_keyboard->receiveKARTByte(txByte);
         }
 

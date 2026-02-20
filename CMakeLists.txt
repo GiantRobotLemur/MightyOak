@@ -2,6 +2,8 @@
 cmake_minimum_required(VERSION 3.21)
 
 set(MO_VERSION "0.0.1.0")
+set(MO_AUTHOR "GiantRobotLemur@na-se.co.uk")
+string(TIMESTAMP MO_COPYRIGHT "Copyright (c) 2021-%Y ${MO_AUTHOR}. All rights reserved.")
 
 # Use to determine whether to use ASM for small sections of code or
 # the C++, platform agnostic (slower) alternative.
@@ -31,14 +33,15 @@ if (${Qt6_FOUND})
     set(AG_CONFIG_QT ON CACHE "BOOL" "Use Qt" FORCE)
     message(STATUS "Qt6: Found (Version ${Qt6_VERSION})")
 else()
-    set(AG_CONFIG_QT ON CACHE "BOOL" "Use Qt" FORCE)
+    set(AG_CONFIG_QT OFF CACHE "BOOL" "Use Qt" FORCE)
     message(STATUS "Qt6: Not Found (Add Qt6 path to CMAKE_PREFIX_PATH)")
 endif()
 
 # Set options consumed by the Ag libraries before they are configured.
 set(AG_STATIC_RUNTIME ON CACHE "BOOL" "Static link" FORCE)
+
 set(AG_CONFIG_GFX OFF CACHE "BOOL" "Use Gfx" FORCE)
-set(AG_CONFIG_OPEN_GL ON CACHE "BOOL" "Use GL" FORCE)
+set(AG_CONFIG_OPEN_GL OFF CACHE "BOOL" "Use GL" FORCE)
 set(AG_CONFIG_SDL3 ON CACHE "BOOL" "Use SDL3" FORCE)
 
 set(AG_ENABLE_X64_V1 ON CACHE "BOOL" "Uses the capabilities of the x86-64 v1 architecture - SSE2" FORCE)
@@ -63,7 +66,7 @@ FetchContent_MakeAvailable(readerwriterqueue)
 ag_configure_gtest()
 
 # Download and build GLM
-ag_configure_glm()
+# ag_configure_glm()
 
 # Download and configure libSDL3
 ag_configure_sdl3()

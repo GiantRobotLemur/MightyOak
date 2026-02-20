@@ -2,7 +2,7 @@
 //! @brief The definition of an object representing the root of the application
 //! object hierarchy.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2024
+//! @date 2024-2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -20,7 +20,7 @@
 #include "DebuggerApp.hpp"
 #include "DebuggerWindow.hpp"
 #include "DebuggerActions.hpp"
-#include "Version.hpp"
+#include "AppVersion.hpp"
 
 #include "SessionSettings.hpp"
 #include "UI/AboutDialog.hpp"
@@ -58,7 +58,7 @@ DebuggerApp::DebuggerApp(int &argc, char *argv[]) :
     _isModified(false)
 {
     QCoreApplication::setApplicationName("ARM Debugger");
-    QCoreApplication::setApplicationVersion(MIGHTY_OAK_VERSION_TEXT);
+    QCoreApplication::setApplicationVersion(APP_VERSION_TEXT);
     QCoreApplication::setOrganizationName("GiantRobotLemur");
     QCoreApplication::setOrganizationDomain("na-se.co.uk");
 

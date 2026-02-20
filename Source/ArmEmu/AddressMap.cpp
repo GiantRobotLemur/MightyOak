@@ -2,7 +2,7 @@
 //! @brief The definition of an object which indexes IAddressRegion objects
 //! by the range of addresses they span.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2023-2024
+//! @date 2023-2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -138,34 +138,9 @@ void IAddressRegion::connect(const ConnectionContext &/*context*/)
 //! map to I/O devices of host memory.
 //! @param[in] writeMap The address map listing writeable regions of memory which
 //! map to I/O devices of host memory.
-ConnectionContext::ConnectionContext(SystemContextPtr interopContext,
-                                     const HardwareDevicePool &devices,
-                                     const AddressMap &readMap,
-                                     const AddressMap &writeMap) :
+ConnectionContext::ConnectionContext(SystemContextPtr interopContext) :
     _interopContext(interopContext)
 {
-    // Index owned devices.
-    for (const auto &devicePtr : devices)
-    {
-        addDevice(devicePtr.get());
-    }
-
-    // Index the Memory Mapped I/O regions as devices which can be looked up
-    // by name.
-    for (uint8_t i = 0; i < 2; ++i)
-    {
-        const AddressMap &map = (i == 0) ? readMap : writeMap;
-
-        for (const auto &mapping : map.getMappings())
-        {
-            IAddressRegionPtr region = mapping.Region;
-
-            if (region->getType() == RegionType::MMIO)
-            {
-                addDevice(region);
-            }
-        }
-    }
 }
 
 //! @brief Attempts to find a Memory Mapped I/O device mapped into the guest
@@ -176,7 +151,7 @@ ConnectionContext::ConnectionContext(SystemContextPtr interopContext,
 //! @retval true A matching device was found and its pointer returned.
 //! @retval false name device was found with a matching name.
 bool ConnectionContext::tryFindDevice(Ag::string_cref_t name,
-                                      IHardwreDevicePtr &device) const
+                                      IHardwareDevicePtr &device) const
 {
     auto pos = _devicesByName.find(name);
     bool hasMatch = false;
@@ -202,7 +177,7 @@ SystemContextPtr ConnectionContext::getInteropContext() const
 //! @param[in] device The device implementation to add.
 //! @throws Ag::OperationException If a device with the same name, but 
 //! a different implementation already exists in the index.
-void ConnectionContext::addDevice(IHardwreDevicePtr device)
+void ConnectionContext::addDevice(IHardwareDevicePtr device)
 {
     Ag::string_cref_t deviceName = device->getName();
     auto insertResult = _devicesByName.try_emplace(deviceName, device);

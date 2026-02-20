@@ -2,7 +2,7 @@
 //! @brief The definition of an object which manages options specified on the
 //! command line.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2024
+//! @date 2024-2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -84,7 +84,7 @@ bool CommandLineOptions::tryParse(const QStringList &args, QString &error)
 
             if (!Ag::isStdoutEnabled())
             {
-                Ag::enableStdout();
+                Ag::enableStdout(false);
                 putchar('\n');
             }
 
@@ -96,7 +96,7 @@ bool CommandLineOptions::tryParse(const QStringList &args, QString &error)
 
             if (!Ag::isStdoutEnabled())
             {
-                Ag::enableStdout();
+                Ag::enableStdout(false);
                 putchar('\n');
             }
 

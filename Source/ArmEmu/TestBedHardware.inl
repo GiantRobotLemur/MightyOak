@@ -2,7 +2,7 @@
 //! @brief The declaration of an implementation of an emulator hardware layer
 //! suitable for testing.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2023-2024
+//! @date 2023-2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -212,8 +212,8 @@ public:
             {
                 // Read from, then write to, RAM.
                 T *hostAddr = reinterpret_cast<T *>(_ram.data() + alignedAddr - RamBase);
-                readValue = *hostAddr;
-                *hostAddr = writeValue;
+
+                readValue = std::exchange(*hostAddr, writeValue);
             }
 
             isRead = true;
@@ -281,6 +281,9 @@ public:
 
         return isMapped;
     }
+
+    // Implemented for compatibility with GenericHardware.
+    void addIntegralHardware(IHardwareDeviceCollection &/*devices*/) {}
 };
 
 }} // namespace Mo::Arm

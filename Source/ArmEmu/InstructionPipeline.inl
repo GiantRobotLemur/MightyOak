@@ -3,7 +3,7 @@
 //! execution pipelines in a single mode of operation (i.e. 26-bit, 32-bit
 //! or thumb).
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2023-2024
+//! @date 2023-2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -88,6 +88,15 @@ public:
             _registers.incrementPC(static_cast<uint32_t>(-static_cast<int32_t>(PipelineAdjust)));
             _flushPending = 1;
         }
+    }
+
+    //! @brief Processes an ExecResult value triggered by an external change
+    //! such as an interrupt being raised.
+    //! @param[in] execResult The ExecResult-encoded value to process.
+    void processNonExecResult(uint32_t execResult)
+    {
+        // Flush the pipeline if needed (branchless)
+        _flushPending = static_cast<uint8_t>(execResult >> ExecResult::FlushShift) & 1;
     }
 
     uint32_t executeNext()

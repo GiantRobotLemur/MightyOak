@@ -31,6 +31,8 @@ ag_add_library(ArmEmu   FOLDER      ARM
                                     ${MO_INCLUDE_DIR}/ArmEmu/IOC.hpp
                                     VIDC10.cpp
                                     ${MO_INCLUDE_DIR}/ArmEmu/VIDC10.hpp
+                                    Display.cpp
+                                    ${MO_INCLUDE_DIR}/ArmEmu/Display.hpp
                                     ArmSystemBuilder.cpp
                                     ${MO_INCLUDE_DIR}/ArmEmu/ArmSystemBuilder.hpp
                                     ExecutionMetrics.cpp
@@ -92,6 +94,8 @@ source_group(Interface FILES
              ${MO_INCLUDE_DIR}/ArmEmu/IOC.hpp
              VIDC10.cpp
              ${MO_INCLUDE_DIR}/ArmEmu/VIDC10.hpp
+             Display.cpp
+             ${MO_INCLUDE_DIR}/ArmEmu/Display.hpp
              ArmSystemBuilder.cpp
              ${MO_INCLUDE_DIR}/ArmEmu/ArmSystemBuilder.hpp
              ExecutionMetrics.cpp
@@ -120,6 +124,7 @@ ag_add_test_app(ArmEmu_Tests    TEST_LIB ArmEmu
                                          Test/Test_Hardware.cpp
                                          Test/Test_MemcHardware.cpp
                                          Test/Test_MemcSystem.cpp
+                                         Test/Test_MemcRomBoot.cpp
                                          Test/Test_AluOperations.cpp
                                          Test/Test_ALU.cpp
                                          Test/Test_DataTransfer.cpp
@@ -127,6 +132,9 @@ ag_add_test_app(ArmEmu_Tests    TEST_LIB ArmEmu
                                          Test/Test_Options.cpp
                                          Test/Test_GuestEventQueue.cpp
                                          Test/Test_ArmSystemBuilder.cpp
+                                         Test/Test_VIDC10.cpp
+                                         Test/Test_Display.cpp
+                                         Test/Test_KeyboardController.cpp
                                          Test/Test_Main.cpp)
 
 target_include_directories(ArmEmu_Tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
@@ -135,11 +143,13 @@ target_include_directories(ArmEmu_Tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
 target_link_libraries(ArmEmu_Tests PRIVATE AsmTools)
 
 ag_add_cli_app(EmuPerf_Test FOLDER ARM
-                NAME "EmuPerfTest"
+                NAME        "EmuPerfTest"
                 DESCRIPTION "Measures the performance of different emulated system configurations."
-                VERSION "${PROJECT_VERSION}"
-                SOURCES EmuPerfTest_Main.cpp
-                LIBS AgCore AsmTools ArmEmu)
+                AUTHOR      "${MO_AUTHOR}"
+                COPYRIGHT   "${MO_COPYRIGHT}"
+                VERSION     "${PROJECT_VERSION}"
+                SOURCES     EmuPerfTest_Main.cpp
+                LIBS        AgCore AsmTools ArmEmu)
 
 set(DhyrstoneSourceIn "${PROJECT_SOURCE_DIR}/Tests/ArmEmu/Dhrystone2_1.arm")
 
@@ -177,4 +187,8 @@ add_custom_command(OUTPUT "${MemcTestRomImagePath}"
 
 # Embed the ARM machine code in the program source code.
 ag_add_static_data(EmuPerf_Test "MemcTestRom.hpp" BINARY
+                   SOURCES "${MemcTestRomImagePath}")
+
+# Embed the same MEMC test ROM in the unit test executable.
+ag_add_static_data(ArmEmu_Tests "MemcTestRom.hpp" BINARY
                    SOURCES "${MemcTestRomImagePath}")
