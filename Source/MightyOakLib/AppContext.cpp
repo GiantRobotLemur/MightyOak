@@ -10,6 +10,8 @@
 ////////////////////////////////////////////////////////////////////////////////
 // Header File Includes
 ////////////////////////////////////////////////////////////////////////////////
+#include "Ag/Core/Exception.hpp"
+
 #include "MightyOakLib/AppContext.hpp"
 #include "MightyOakLib/CliOptions.hpp"
 
@@ -69,9 +71,22 @@ const Ag::SDL3::Window &AppContext::getMainWindow() const
 //! @brief Creates the initial windows and device resources required by all
 //! application states.
 //! @param[in] appOptions The options parsed from the command line.
-void AppContext::initialise(const CliOptions &/*appOptions*/)
+void AppContext::initialise(const CliOptions &appOptions)
 {
     _mainWindow.create("Mighty Oak", 640, 480, SDL_WINDOW_RESIZABLE);
+
+    // Create an emulator session from the CLI options.
+    _currentSession = std::make_unique<EmulatorSession>(appOptions.getEmulatedSystemConfig());
+
+    // Create the emulated system from the session configuration.
+    Ag::String error;
+
+    if (_currentSession->createSystem(error) == false)
+    {
+        _currentSession.reset();
+
+        throw Ag::OperationException(error.getUtf8Bytes());
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////

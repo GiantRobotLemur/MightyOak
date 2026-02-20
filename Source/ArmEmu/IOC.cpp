@@ -18,6 +18,7 @@
 
 #include "MemcHardware.hpp"
 #include "AcornKeyboardController.hpp"
+#include "I2CBus.hpp"
 
 #include "ArmEmu/IOC.hpp"
 #include "ArmEmu/HostMessageID.hpp"
@@ -290,6 +291,7 @@ IOC::IOC(MemcHardware &parent) :
     _keyboard(nullptr),
     _kartRxQueue(&_synchronisedData->RxQueue),
     _kartTxQueue(&_synchronisedData->TxQueue),
+    _i2cBus(nullptr),
     _kartRxByte(0)
 {
     // Enable HW counters 0 and 1 to raise interrupts.
@@ -309,6 +311,13 @@ IOC::IOC(MemcHardware &parent) :
     // Use HW counter 3 to service the KART interface.
     _kartCounter.setTriggerCallback(IOC::onKartCounterReachesZero,
                                     reinterpret_cast<uintptr_t>(this));
+}
+
+//! @brief Sets the I2C bus connected to control pins C0 (SDA) and C1 (SCL).
+//! @param[in] bus A pointer to the I2C bus, or nullptr to disconnect.
+void IOC::setI2CBus(I2CBus *bus)
+{
+    _i2cBus = bus;
 }
 
 //! @brief Gets the state of the 5 control pins.
@@ -596,6 +605,20 @@ void IOC::write(uint32_t offset, uint32_t value)
         {
         case 0:  // IOC Control Register
             _irqState->writeCtrlRegister(static_cast<uint8_t>(value));
+
+            // Notify the I2C bus of SDA/SCL state changes.
+            // C0 = SDA, C1 = SCL. Open-drain: 0 = driven low, 1 = released (high).
+            if (_i2cBus != nullptr)
+            {
+                bool sda = (value & 0x01) != 0;
+                bool scl = (value & 0x02) != 0;
+                bool sdaInput;
+
+                _i2cBus->update(sda, scl, sdaInput);
+
+                // Drive SDA input back to IOC so the CPU can read the bus state.
+                _irqState->setControlPinInputState(0, sdaInput);
+            }
             break;
 
         case 1:  // Serial Tx Data

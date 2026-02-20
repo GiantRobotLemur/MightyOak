@@ -133,7 +133,10 @@ Concrete traits are defined in `SystemConfigurations.inl`:
 
 `ArmSystemBuilder::createSystem()` selects the traits at runtime based on
 `SystemModel` + `ProcessorModel` and instantiates the correct
-`ArmSystem<Traits>`.
+`ArmSystem<Traits>`. ROM loading is handled by `MemcHardware`'s constructor
+which reads the ROM file path from `Options::getRomPath()`.
+`Options::findRomImagePath()` walks up a directory hierarchy to locate a
+`ROMs/` folder relative to the executable or a configured base path.
 
 #### Key `.inl` Files
 
@@ -159,14 +162,18 @@ Concrete traits are defined in `SystemConfigurations.inl`:
   (54–56 MB), address translation space (56–64 MB).
 - 512 page mappings with configurable page sizes (4/8/16/32 KB) and 4-level
   page protection (PPL bits).
-- Owns IOC, VIDC10, and AcornKeyboardController as sub-devices.
+- Owns IOC, VIDC10, AcornKeyboardController, I2CBus, and PCF8583 as sub-devices.
+- Loads system ROM from file into high ROM (0x3800000) at construction;
+  reset maps high ROM to logical address 0 via a 4 MB MEMC page.
 - Video DMA addresses: Vinit, Vstart, Vend (framebuffer), Cinit (cursor).
 
 **IOC** (`IOC.hpp/cpp`) — VL86C410 I/O controller.
 
 - Interrupt subsystem: `IocIrqState` with `std::atomic` fields for thread-safe
-  IRQ A/B (16-bit) and FIRQ (8-bit) registers, plus 6 control pins (C0–C5 for
-  I2C, etc.).
+  IRQ A/B (16-bit) and FIRQ (8-bit) registers, plus 6 control pins (C0–C5).
+- I2C integration: control register writes on C0 (SDA) and C1 (SCL) are
+  forwarded to the `I2CBus` via `setI2CBus()`; SDA input state is fed back
+  to the control pin input register.
 - Four timers: 3 general-purpose `Counter` objects + 1 `KartCounter` for the
   keyboard serial clock, all scheduled via `GuestTask`.
 - KART serial: lock-free `SynchronisedByteQueue` Rx/Tx queues (Moody Camel)
@@ -187,6 +194,21 @@ state machine.
 
 - Protocol: Idle → WaitingForRAK1 → WaitingForRAK2 → Initialised → command
   processing (RQID, LEDS, RQMP, RQPD).
+
+**I2CBus** (`I2CBus.hpp/cpp`) — bit-banged I2C bus controller.
+
+- Monitors SDA/SCL line transitions driven by IOC control register writes.
+- Detects START/STOP conditions, clocks in address and data bytes.
+- Dispatches to registered `II2CDevice` implementations (up to 4 devices).
+- Drives SDA for ACK and read-data phases.
+
+**PCF8583** (`PCF8583.hpp/cpp`) — PCF8583 RTC and CMOS RAM emulation.
+
+- I2C device at address 0x50 (7-bit), implementing the `II2CDevice` interface.
+- 256-byte register space: 0x00–0x0F control/clock, 0x10–0xFF general RAM.
+- RISC OS CMOS settings area at offset 0x40 with sensible defaults
+  (Mode 12, 640x256 16-colour desktop configuration).
+- Auto-incrementing register pointer for sequential read/write access.
 
 **Display** (`Display.hpp/cpp`) — read-side frame renderer.
 
@@ -221,10 +243,12 @@ Namespace `Mo`. SDL3-based application framework:
 - `EmulatorApp` — extends `Ag::App`; implements `initialise()`, `run()`,
   `shutdown()`.
 - `CliOptions` — command-line parsing into `Arm::Options`.
-- `EmulatorSession` — owns an `Arm::Options` and (future) running
-  `IArmSystem`.
+- `EmulatorSession` — owns an `Arm::Options` and running `IArmSystem`.
 - `AppState` / `AppContext` — state machine pattern for the application
-  lifecycle.
+  lifecycle. `AppContext::initialise()` creates an `EmulatorSession` and
+  calls `createSystem()` to instantiate the emulated hardware.
+- `EmulatorApp::initialiseRuntimeGlobals()` — locates the ROM directory
+  via `Options::findRomImagePath()` at startup.
 - `SessionRunningState` — concrete state for active emulation (currently a
   stub).
 
@@ -292,6 +316,10 @@ Build-time ROM assembly: `AAsm` assembles test ROM sources
 (`Tests/ArmEmu/*.arm`) into binaries during the build, which are then embedded
 as C arrays via `ag_add_static_data()`.
 
+System ROM deployment: real RISC OS ROM images are stored in
+`Source/MightyOakLib/Roms/` and copied to `<output_dir>/ROMs/` as a post-build
+step on both `MightyOak` (EmulatorApp) and `ArmEmu_Tests` targets.
+
 Supported platforms: Visual Studio 2022 x64 (Windows), gcc 11 x64 (Linux).
 
 ## Testing Patterns
@@ -305,7 +333,11 @@ Supported platforms: Visual Studio 2022 x64 (Windows), gcc 11 x64 (Linux).
   `InstructionInfo::disassemble()` to verify which checkpoint was reached.
 - Shared test utilities: `TestTools`, `TestExecTools`, `TestConstraints`,
   `LoggerDevice`.
-- 21 AsmTools test files covering each pipeline stage; 27 ArmEmu test files
+- **Headless RISC OS boot tests** (`Test_RiscOSBoot.cpp`) — loads a real
+  RISC OS 3.10 ROM via `ArmSystemBuilder`, runs millions of cycles, and
+  verifies the PC advances past reset, I2C probe, and hardware init.
+  ROM files are copied to the test output directory at build time.
+- 21 AsmTools test files covering each pipeline stage; 28 ArmEmu test files
   covering CPU, hardware, and integration.
 - `EmuPerfTest` benchmark target for performance measurement.
 
@@ -317,20 +349,13 @@ Supported platforms: Visual Studio 2022 x64 (Windows), gcc 11 x64 (Linux).
    SDL event loop. The `EmulatorApp::run()` state machine has no functional
    running state.
 
-2. **System ROM loading not implemented.** `ArmSystemBuilder::createSystem()`
-   has empty `// TODO: Load system ROM preset` stubs for both TestBed and
-   Archimedes/A-Series paths. Systems start with blank ROM.
-
-3. **Five keyboard input methods are stubs.** `keyDown()`, `keyUp()`,
+2. **Five keyboard input methods are stubs.** `keyDown()`, `keyUp()`,
    `mouseButtonDown()`, `mouseButtonUp()`, `mouseDelta()` — no scancode
    encoding. `tryMapMouseButton()` returns 0 for all buttons.
 
-4. **No SDL keycode to Acorn keyboard matrix mapping.**
+3. **No SDL keycode to Acorn keyboard matrix mapping.**
 
-5. **I2C bus and CMOS RAM not implemented.** RISC OS may stall at I2C probe
-   without these.
-
-6. **Cursor rendering not implemented.** `Display::renderFrame()` handles the
+4. **Cursor rendering not implemented.** `Display::renderFrame()` handles the
    framebuffer but not the hardware cursor. The `Cinit` MEMC register write
    handler is empty.
 

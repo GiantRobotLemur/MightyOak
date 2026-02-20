@@ -220,6 +220,8 @@ public:
 
     static bool isValidMemcRAMSize(uint32_t ramSizeKb);
     static bool isValidRiscPCRAMSize(uint32_t ramSizeKb);
+    static bool findRomImagePath(const Ag::Fs::Path &baseSearchPath,
+                                 const Ag::Fs::Path &leafPath);
     static void setRomImageBasePath(const Ag::Fs::Path &basePath);
     static Options makeProductionModel(ProductionModel model);
 private:

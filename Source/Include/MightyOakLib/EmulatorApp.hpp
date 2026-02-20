@@ -34,6 +34,7 @@ public:
     // Accessors
 
     // Operations
+    static void initialiseRuntimeGlobals();
 
     // Overrides
     // virtual void onUnhandledException(const std::exception &error);

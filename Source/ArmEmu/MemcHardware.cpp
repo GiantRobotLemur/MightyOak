@@ -104,10 +104,7 @@ public:
 //! @brief An object describing a range of memory which is page mapped.
 class LogicalRamRegion : public IMMIOBlock
 {
-private:
-
 public:
-
     virtual RegionType getType() const = 0;
     virtual Ag::string_cref_t getName() const = 0;
     virtual Ag::string_cref_t getDescription() const = 0;
@@ -409,43 +406,26 @@ uint8_t MemcHardware::tryGetReadHostMapping(uint32_t logicalAddr, void *&hostBlo
     }
     else // if (logicalAddr >= MEMC::LowRomStart)
     {
-        if (logicalAddr >= MEMC::HighRomStart)
-        {
-            // Its in the high ROM, which may not exist.
-            size_t offset = logicalAddr - MEMC::HighRomStart;
+        // The address is in the ROM.
 
-            if (offset < _highRom.size())
-            {
-                // Return a pointer to the actual ROM.
-                hostBlock = _highRom.data() + offset;
-                length = static_cast<uint32_t>(_highRom.size() - offset);
-            }
-            else
-            {
-                // Produce random data, the most we'll ever need in a
-                // single memory transaction.
-                hostBlock = _fuzz;
-                length = static_cast<uint32_t>(std::size(_fuzz));
-            }
+        // Hopefully these two lines should be branchless.
+        auto &rom = (logicalAddr < MEMC::HighRomStart) ? _lowRom : _highRom;
+        uint32_t romBase = (logicalAddr < MEMC::HighRomStart) ? MEMC::LowRomStart : MEMC::HighRomStart;
+
+        size_t offset = logicalAddr - romBase;
+
+        if (offset < rom.size())
+        {
+            // Return a pointer to the actual ROM.
+            hostBlock = rom.data() + offset;
+            length = static_cast<uint32_t>(rom.size() - offset);
         }
         else
         {
-            // Its in the low ROM, which should exist.
-            size_t offset = logicalAddr - MEMC::LowRomStart;
-
-            if (offset < _lowRom.size())
-            {
-                // Return a pointer to the actual ROM.
-                hostBlock = _lowRom.data() + offset;
-                length = static_cast<uint32_t>(_lowRom.size() - offset);
-            }
-            else
-            {
-                // Produce random data, the most we'll ever need in a
-                // single memory transaction.
-                hostBlock = _fuzz;
-                length = static_cast<uint32_t>(std::size(_fuzz));
-            }
+            // Produce random data, the most we'll ever need in a
+            // single memory transaction.
+            hostBlock = _fuzz;
+            length = static_cast<uint32_t>(std::size(_fuzz));
         }
 
         // The address can be read 
@@ -546,20 +526,20 @@ MemcHardware::MemcHardware(const Options &options,
     _videoEndAddr(0),
     _cursorInitAddr(0),
     _physicalRamBlock("Physical RAM", "The system RAM without any logical address mapping"),
-    _lowRomBlock("System ROM", "The low ROM area, usually containing the operating system."),
-    _highRomBlock("Extension ROM", "The high ROM area, usually containing extensions ROMs.")
+    _lowRomBlock("Extension ROM", "The low ROM area, usually containing extensions ROMs."),
+    _highRomBlock("System ROM", "The high ROM area, usually containing the operating system.")
 {
     // Generate random fuzz to use when memory can be accessed, but isn't mapped.
     std::generate_n(_fuzz, std::size(_fuzz), GenerateFuzz());
 
     // Add IOC and VIDC to the address map.
-    if ((_readAddrDecoder.tryInsert(0x3200000, &_ioc) == false) ||
-        (_writeAddrDecoder.tryInsert(0x3200000, &_ioc) == false))
+    if ((_readAddrDecoder.tryInsert(IOC::BaseAddr, &_ioc) == false) ||
+        (_writeAddrDecoder.tryInsert(IOC::BaseAddr, &_ioc) == false))
     {
         throw Ag::OperationException("An I/O device conflicts with IOC at address 0x3200000.");
     }
 
-    if (_writeAddrDecoder.tryInsert(0x3400000, &_vidc) == false)
+    if (_writeAddrDecoder.tryInsert(MEMC::VidcStart, &_vidc) == false)
     {
         throw Ag::OperationException("An I/O device conflicts with VIDC10 at address 0x3400000.");
     }
@@ -593,13 +573,22 @@ MemcHardware::MemcHardware(const Options &options,
     _pageMappings.resize(8192, 0);
 
     // On reset the page mappings will be initialised to a state where the
-    // low ROM is mapped to the bottom of the logical address space.
+    // ROM is "continually enabled" to map it to the bottom of the logical
+    // address space.
     // 
     // See ARM Family Data Manual Page 4-9.
+    // It doesn't say whether that is the low ROM (0x03400000) or high ROM
+    // (0x03800000), but the RISC OS ROMs suggest they are in the high ROM.
 
     // Load low ROM image.
     _lowRom.clear();
-    _lowRom.resize(LowRomSize, 0);
+    _lowRom.reserve(LowRomSize);
+
+    // Load the OS into the high ROM.
+    _highRom.clear();
+    _highRom.resize(HighRomSize, 0);
+    _highRomBlock.updateHostMapping(_highRom.data(),
+                                    static_cast<uint32_t>(_highRom.size()));
 
     const auto &romPath = options.getRomPath();
 
@@ -609,18 +598,17 @@ MemcHardware::MemcHardware(const Options &options,
         if (auto romFile = Ag::IFileStream::open(romPath, Ag::FileAccess::Read |
                                                           Ag::FileAccess::OpenExisting))
         {
-            romFile->read(_lowRom.data(), _lowRom.size());
+            romFile->read(_highRom.data(), _highRom.size());
         }
 
-        _lowRomBlock.updateHostMapping(_lowRom.data(),
-                                       static_cast<uint32_t>(_lowRom.size()));
+        _highRomBlock.updateHostMapping(_highRom.data(),
+                                        static_cast<uint32_t>(_highRom.size()));
     }
 
-    // TODO: Load high ROM?
-    _highRom.clear();
-    _highRom.reserve(HighRomSize);
-    _highRomBlock.updateHostMapping(_highRom.data(),
-                                    static_cast<uint32_t>(_highRom.size()));
+    // Wire the I2C bus: register the PCF8583 CMOS/RTC device and connect
+    // the bus to IOC control pins C0 (SDA) and C1 (SCL).
+    _i2cBus.addDevice(&_cmos);
+    _ioc.setI2CBus(&_i2cBus);
 }
 
 // Accessors
@@ -722,7 +710,7 @@ void MemcHardware::reset()
     // large offsets with 4 KB pages.
 
     // We'll create 1 x 4 MB page mapping logical address 0x0000 to
-    // physical address 0x3400000.
+    // physical address 0x3800000.
     constexpr uint8_t InitialPageSizePow2 = 22;
 
     setPageSize(InitialPageSizePow2);
@@ -730,7 +718,7 @@ void MemcHardware::reset()
 
     // MEMC Data Sheet page 25: Sound DMA operations are disabled when RESET is
     // asserted. Video/Cursor operations are unaffected by RESET.
-    // _videoDMAEnabled = false;
+    _videoDMAEnabled = false;
     _soundDMAEnabled = false;
     _videoInitAddr = 0;
     _videoStartAddr = 0;
@@ -738,13 +726,13 @@ void MemcHardware::reset()
     _cursorInitAddr = 0;
 
     // Generate a set of mappings which map logical addresses from 0x0000
-    // to physical addresses 0x3400000 where the low ROM is positioned.
+    // to physical addresses 0x3800000 where the high ROM is positioned.
     // The PPL is set so that the pages are read-only in user mode.
-    constexpr uint32_t LowRomPageCount = LowRomSize >> InitialPageSizePow2;
-    auto lastMapped = _pageMappings.begin() + LowRomPageCount;
+    constexpr uint32_t HighRomPageCount = HighRomSize >> InitialPageSizePow2;
+    auto lastMapped = _pageMappings.begin() + HighRomPageCount;
 
     std::generate(_pageMappings.begin(), lastMapped,
-                  GenerateRomMemcMapping(0x3400000, InitialPageSizePow2, 1));
+                  GenerateRomMemcMapping(MEMC::HighRomStart, InitialPageSizePow2, 1));
 
     // Mark the rest of the page entries as not present.
     std::fill(lastMapped, _pageMappings.end(), static_cast<uint16_t>(0));

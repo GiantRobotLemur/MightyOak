@@ -43,6 +43,17 @@ EmulatorApp::EmulatorApp(const Ag::AppMetadata &appMetadata) :
                                "https://github.com/GiantRobotLemur/MightyOak");
     SDL_SetAppMetadataProperty(SDL_PROP_APP_METADATA_TYPE_STRING,
                                "application");
+
+    initialiseRuntimeGlobals();
+}
+
+//! @brief Initialises global variables which don't depend on anything complex
+//! but have to be detected at runtime.
+void EmulatorApp::initialiseRuntimeGlobals()
+{
+    // Figure out the path to the folder containing default OS ROMs.
+    Arm::Options::findRomImagePath(Ag::Fs::Path::getProgramDirectory(),
+                                   Ag::Fs::Path("ROMs"));
 }
 
 // Inherited from Ag::App.

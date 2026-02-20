@@ -25,6 +25,8 @@
 #include "ArmCore.hpp"
 #include "Hardware.inl"
 #include "AcornKeyboardController.hpp"
+#include "I2CBus.hpp"
+#include "PCF8583.hpp"
 
 namespace Mo {
 namespace Arm {
@@ -94,6 +96,8 @@ private:
     IOC _ioc;
     VIDC10 _vidc;
     AcornKeyboardController _keyboard;
+    I2CBus _i2cBus;
+    PCF8583 _cmos;
     AddressMap _readAddrDecoder;
     AddressMap _writeAddrDecoder;
     std::vector<uint8_t> _ram;

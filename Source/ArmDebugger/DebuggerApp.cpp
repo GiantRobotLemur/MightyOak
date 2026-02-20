@@ -70,6 +70,10 @@ DebuggerApp::DebuggerApp(int &argc, char *argv[]) :
             this, &DebuggerApp::onEmulatorCreated);
     connect(&_session, &EmulatorSession::sessionEnded,
             this, &DebuggerApp::onEmulatorDestroyed);
+
+    // Initialise the location of default ROM images.
+    Mo::Arm::Options::findRomImagePath(Ag::Fs::Path::getProgramDirectory(),
+                                       Ag::Fs::Path("ROMs"));
 }
 
 const ActionManager &DebuggerApp::getActions() const

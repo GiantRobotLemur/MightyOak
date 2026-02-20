@@ -39,3 +39,6 @@ build*
 # Local Claude Code artefacts
 CLAUDE.local.md
 .claude/settings.local.json
+
+# The CMakeBuild folder favoured by Claude.
+MightyOakBuild/

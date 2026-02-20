@@ -39,8 +39,11 @@ public:
 
     // Accessors
     const Arm::Options &getConfiguration() const;
+    Arm::IArmSystem *getSystem();
+    const Arm::IArmSystem *getSystem() const;
 
     // Operations
+    bool createSystem(Ag::String &error);
 
 private:
     // Internal Types
@@ -49,6 +52,7 @@ private:
 
     // Internal Fields
     Arm::Options _configuration;
+    Arm::IArmSystemUPtr _system;
 };
 
 ////////////////////////////////////////////////////////////////////////////////

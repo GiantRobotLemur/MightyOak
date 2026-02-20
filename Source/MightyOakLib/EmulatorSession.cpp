@@ -11,7 +11,10 @@
 ////////////////////////////////////////////////////////////////////////////////
 // Header File Includes
 ////////////////////////////////////////////////////////////////////////////////
+#include "Ag/Core/Exception.hpp"
+
 #include "MightyOakLib/EmulatorSession.hpp"
+#include "ArmEmu/ArmSystemBuilder.hpp"
 
 ////////////////////////////////////////////////////////////////////////////////
 // Macro Definitions
@@ -46,6 +49,42 @@ EmulatorSession::EmulatorSession(const Arm::Options &configuration) :
 const Arm::Options &EmulatorSession::getConfiguration() const
 {
     return _configuration;
+}
+
+//! @brief Gets the emulated ARM system, possibly nullptr if not yet created.
+Arm::IArmSystem *EmulatorSession::getSystem()
+{
+    return _system.get();
+}
+
+//! @brief Gets the emulated ARM system, possibly nullptr if not yet created.
+const Arm::IArmSystem *EmulatorSession::getSystem() const
+{
+    return _system.get();
+}
+
+//! @brief Creates the emulated ARM system based on the stored configuration.
+//! @param[out] error Receives a description of any error that occurred.
+//! @retval true The system was created successfully.
+//! @retval false The system could not be created, error describes why.
+bool EmulatorSession::createSystem(Ag::String &error)
+{
+    try
+    {
+        Arm::ArmSystemBuilder builder(_configuration);
+        _system = builder.createSystem();
+        return true;
+    }
+    catch (const Ag::Exception &ex)
+    {
+        error = ex.getMessage();
+    }
+    catch (const std::exception &ex)
+    {
+        error = ex.what();
+    }
+
+    return false;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

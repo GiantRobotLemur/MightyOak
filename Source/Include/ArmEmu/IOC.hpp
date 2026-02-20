@@ -33,6 +33,7 @@ namespace Arm {
 class MemcHardware;
 class SystemContext;
 class AcornKeyboardController;
+class I2CBus;
 
 using SynchronisedByteQueue = moodycamel::ReaderWriterQueue<uint8_t>;
 
@@ -152,6 +153,7 @@ public:
     void setCtrlPinInputState(uint8_t pin, bool state);
 
     // Operations
+    void setI2CBus(I2CBus *bus);
     void powerOnReset();
     void setInterruptLow(uint8_t ilNo, bool state);
     void setFastHighInterrupt(uint8_t fhNo, bool state);
@@ -248,6 +250,7 @@ private:
     CounterEventContext _timer1Context;
     SynchronisedByteQueue *_kartRxQueue;
     SynchronisedByteQueue *_kartTxQueue;
+    I2CBus *_i2cBus;
     uint8_t _kartRxByte;
 };
 

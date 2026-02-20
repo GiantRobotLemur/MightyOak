@@ -136,7 +136,7 @@ protected:
         size_t romByteCount;
         const uint8_t *romData = getMemcTestRomData(romByteCount);
 
-        _system->getHardare().setLowRom(romData, romByteCount);
+        _system->getHardare().setHighRom(romData, romByteCount);
 
         // Re-reset so that the CPU starts from address 0 with the ROM data
         // in place for the initial page mappings.
@@ -259,14 +259,14 @@ TEST_F(MemcRomBootTests, JumpsToPhysicalRom)
     // After which the PC should be >= 0x3400000.
     uint32_t steps = runUntil([](IArmSystem *sys) {
         uint32_t pc = sys->getCoreRegister(CoreRegister::PC);
-        return pc >= MEMC::LowRomStart;
+        return pc >= MEMC::HighRomStart;
     }, 10);
 
     uint32_t pc = getLastPC();
-    EXPECT_GE(pc, MEMC::LowRomStart)
+    EXPECT_GE(pc, MEMC::HighRomStart)
         << "PC did not reach physical ROM region after " << steps << " steps.";
-    EXPECT_LT(pc, MEMC::HighRomStart)
-        << "PC is beyond the low ROM region.";
+    EXPECT_LT(pc, MEMC::AddrSpaceEnd)
+        << "PC is beyond the high ROM region.";
     EXPECT_LT(steps, 10u)
         << "Jump to physical ROM took too many steps.";
 }
@@ -285,7 +285,8 @@ TEST_F(MemcRomBootTests, MemorySizeDetection)
     ASSERT_GE(workspace.State, BootState::MemDetected);
 
     // The default Options RAM size is <RamSizeKb> KB.
-    EXPECT_EQ(workspace.DetectedRamSize, RamSizeKb << 10) << "Detected RAM size incorrect: " << workspace.DetectedRamSize;
+    EXPECT_EQ(workspace.DetectedRamSize, RamSizeKb << 10)
+        << "Detected RAM size incorrect: " << workspace.DetectedRamSize;
 }
 
 //! @brief After the ROM programs MEMC for 8KB pages and identity-maps the first
@@ -313,14 +314,16 @@ TEST_F(MemcRomBootTests, MEMCControlRegisterProgrammed)
                                                 SampleWordCount * sizeof(uint32_t));
 
     // The value should be non-zero (it's the RAM size and other bits).
-    ASSERT_EQ(bytesRead, SampleWordCount * sizeof(uint32_t)) << "Could not read from identity-mapped logical addresses.";
+    ASSERT_EQ(bytesRead, SampleWordCount * sizeof(uint32_t))
+        << "Could not read from identity-mapped logical addresses.";
 
     // Verify the same bytes exist in physically mapped RAM.
     bytesRead = readFromPhysicalAddress(getSystem(), OS_Workspace + MEMC::PhysRamStart,
                                         physicalMemSample,
                                         SampleWordCount * sizeof(uint32_t));
 
-    ASSERT_EQ(bytesRead, SampleWordCount * sizeof(uint32_t)) << "Could not read from physical addresses.";
+    ASSERT_EQ(bytesRead, SampleWordCount * sizeof(uint32_t))
+        << "Could not read from physical addresses.";
 
     for (uint32_t i = 0; i < SampleWordCount; ++i)
     {
@@ -371,15 +374,17 @@ TEST_F(MemcRomBootTests, HardwareVectorsInstalledInRAM)
         //   current vector table entry.
         EXPECT_EQ(hwVectors[i], 0xE59FF018);
 
-        // Handler addresses should point into the ROM region (>= 0x3400000).
-        EXPECT_GE(handlerAddr, MEMC::LowRomStart)
+        // Handler addresses should point into the ROM region (>= 0x3800000).
+        EXPECT_GE(handlerAddr, MEMC::HighRomStart)
             << "Handler address at 0x" << std::hex << addr
             << " points to 0x" << handlerAddr
-            << ", expected ROM region (>= 0x3400000).";
-        EXPECT_LT(handlerAddr, MEMC::HighRomStart)
+            << ", expected ROM region (>= 0x"
+            << std::hex << MEMC::HighRomStart << ").";
+        EXPECT_LT(handlerAddr, MEMC::AddrSpaceEnd)
             << "Handler address at 0x" << std::hex << addr
             << " points to 0x" << handlerAddr
-            << ", expected low ROM region (< 0x3800000).";
+            << ", expected low ROM region (< 0x"
+            << std::hex << MEMC::AddrSpaceEnd << ").";
     }
 }
 
@@ -400,10 +405,10 @@ TEST_F(MemcRomBootTests, IOCInitCompletes)
 
     // Verify the PC is in the ROM region (the B $ is in the IOC init code).
     uint32_t pc = getLastPC();
-    EXPECT_GE(pc, MEMC::LowRomStart)
+    EXPECT_GE(pc, MEMC::HighRomStart)
         << "PC is not in the ROM region at halt.";
-    EXPECT_LT(pc, MEMC::HighRomStart)
-        << "PC is beyond the low ROM region at halt.";
+    EXPECT_LT(pc, MEMC::AddrSpaceEnd)
+        << "PC is beyond the high ROM region at halt.";
 }
 
 //! @brief Unit test for the Cinit fix: write to MEMC address space with
@@ -460,7 +465,7 @@ TEST_F(MemcRomBootTests, BootRunsToCompletion)
 
     uint32_t pc = getLastPC();
 
-    EXPECT_GE(pc, MEMC::LowRomStart)
+    EXPECT_GE(pc, MEMC::HighRomStart)
         << "PC is not in the ROM region at halt.";
 }
 

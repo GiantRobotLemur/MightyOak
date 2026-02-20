@@ -29,6 +29,10 @@ ag_add_library(ArmEmu   FOLDER      ARM
                                     AcornKeyboardController.hpp
                                     IOC.cpp
                                     ${MO_INCLUDE_DIR}/ArmEmu/IOC.hpp
+                                    I2CBus.cpp
+                                    I2CBus.hpp
+                                    PCF8583.cpp
+                                    PCF8583.hpp
                                     VIDC10.cpp
                                     ${MO_INCLUDE_DIR}/ArmEmu/VIDC10.hpp
                                     Display.cpp
@@ -92,6 +96,10 @@ source_group(Interface FILES
              ${MO_INCLUDE_DIR}/ArmEmu/IKeyboardController.hpp
              IOC.cpp
              ${MO_INCLUDE_DIR}/ArmEmu/IOC.hpp
+             I2CBus.cpp
+             I2CBus.hpp
+             PCF8583.cpp
+             PCF8583.hpp
              VIDC10.cpp
              ${MO_INCLUDE_DIR}/ArmEmu/VIDC10.hpp
              Display.cpp
@@ -135,6 +143,7 @@ ag_add_test_app(ArmEmu_Tests    TEST_LIB ArmEmu
                                          Test/Test_VIDC10.cpp
                                          Test/Test_Display.cpp
                                          Test/Test_KeyboardController.cpp
+                                         Test/Test_RiscOSBoot.cpp
                                          Test/Test_Main.cpp)
 
 target_include_directories(ArmEmu_Tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")

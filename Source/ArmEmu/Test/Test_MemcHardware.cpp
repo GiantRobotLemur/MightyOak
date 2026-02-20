@@ -1,7 +1,7 @@
 //! @file Test_MemcHardware.cpp
 //! @brief The definition of unit tests for the MemcHardware class.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2023-2024
+//! @date 2023-2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -643,8 +643,8 @@ TEST_F(MemcHardwareTests, InitialROMMapping)
         0x42692496,
     };
 
-    specimen.setLowRom(reinterpret_cast<const uint8_t *>(sampleRomBytes),
-                       sizeof(sampleRomBytes));
+    specimen.setHighRom(reinterpret_cast<const uint8_t *>(sampleRomBytes),
+                        sizeof(sampleRomBytes));
 
     // Verify that reading from low logical addresses read the ROM.
     uint32_t value = 0;
@@ -661,15 +661,15 @@ TEST_F(MemcHardwareTests, InitialROMMapping)
 
     // Verify the contents of the ROM in-place.
     value = 0;
-    EXPECT_TRUE(specimen.read(MEMC::LowRomStart, value));
+    EXPECT_TRUE(specimen.read(MEMC::HighRomStart, value));
     EXPECT_EQ(value, sampleRomBytes[0]);
 
     value = 0;
-    EXPECT_TRUE(specimen.read(MEMC::LowRomStart + 4, value));
+    EXPECT_TRUE(specimen.read(MEMC::HighRomStart + 4, value));
     EXPECT_EQ(value, sampleRomBytes[1]);
 
     value = 0;
-    EXPECT_TRUE(specimen.read(MEMC::LowRomStart + 8, value));
+    EXPECT_TRUE(specimen.read(MEMC::HighRomStart + 8, value));
     EXPECT_EQ(value, sampleRomBytes[2]);
 }
 

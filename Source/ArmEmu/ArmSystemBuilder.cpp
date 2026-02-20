@@ -2,7 +2,7 @@
 //! @brief The definition of an object used to incrementally construct another
 //! object representing an emulated ARM-based system.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2023-2024
+//! @date 2023-2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -244,6 +244,7 @@ IArmSystemUPtr ArmSystemBuilder::createSystem()
         // Reset the object state.
         _readMap.clear();
         _writeMap.clear();
+        _devices.clear();
 
         return IArmSystemUPtr(sys);
     }
