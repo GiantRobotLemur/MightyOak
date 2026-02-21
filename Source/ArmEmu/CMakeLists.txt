@@ -143,6 +143,8 @@ ag_add_test_app(ArmEmu_Tests    TEST_LIB ArmEmu
                                          Test/Test_VIDC10.cpp
                                          Test/Test_Display.cpp
                                          Test/Test_KeyboardController.cpp
+                                         Test/Test_I2CBus.cpp
+                                         Test/Test_PCF8583.cpp
                                          Test/Test_RiscOSBoot.cpp
                                          Test/Test_Main.cpp)
 

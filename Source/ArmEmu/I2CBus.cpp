@@ -116,6 +116,7 @@ void I2CBus::update(bool sda, bool scl, bool &sdaInput)
                 uint8_t addr7 = _shiftRegister >> 1;
                 _isRead = (_shiftRegister & 1) != 0;
                 _selectedDevice = findDevice(addr7);
+                _bitCount = 0;
                 _state = BusState::AddressAck;
             }
         }
@@ -154,6 +155,10 @@ void I2CBus::update(bool sda, bool scl, bool &sdaInput)
                 _shiftRegister = 0xFF;
                 _selectedDevice->onI2CRead(_shiftRegister);
                 _state = BusState::DataBitsRead;
+
+                // Drive the first data bit immediately since we are already
+                // on the falling edge that DataBitsRead would normally use.
+                _sdaDriven = !((_shiftRegister >> 7) & 1);
             }
             else
             {
@@ -171,6 +176,7 @@ void I2CBus::update(bool sda, bool scl, bool &sdaInput)
 
             if (_bitCount >= 8)
             {
+                _bitCount = 0;
                 _state = BusState::DataAckWrite;
             }
         }
@@ -212,20 +218,22 @@ void I2CBus::update(bool sda, bool scl, bool &sdaInput)
     case BusState::DataBitsRead:
         if (sclFalling)
         {
-            // Drive the next data bit (MSB first).
-            _sdaDriven = !((_shiftRegister >> (7 - _bitCount)) & 1);
-        }
-        else if (sclRising)
-        {
-            // Bit has been sampled by master.
-            _bitCount++;
-
             if (_bitCount >= 8)
             {
                 // Byte complete, release SDA and wait for master ACK/NACK.
                 _sdaDriven = false;
                 _state = BusState::DataAckRead;
             }
+            else
+            {
+                // Drive the next data bit (MSB first).
+                _sdaDriven = !((_shiftRegister >> (7 - _bitCount)) & 1);
+            }
+        }
+        else if (sclRising)
+        {
+            // Bit has been sampled by master.
+            _bitCount++;
         }
         break;
 
