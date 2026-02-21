@@ -75,7 +75,7 @@ public:
     // Overrides
     virtual Ag::string_cref_t getName() const override;
     virtual Ag::string_cref_t getDescription() const override;
-    virtual void connect(const ConnectionContext &context) override;
+    virtual void connect(SystemContext &context) override;
 
     virtual void keyDown(uint32_t hostScanCode) override;
     virtual void keyUp(uint32_t hostScanCode) override;

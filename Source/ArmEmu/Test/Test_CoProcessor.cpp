@@ -1,8 +1,8 @@
-//! @file Test_CoProcessor.cpp
+//! @file ArmEmu/Test/Test_CoProcessor.cpp
 //! @brief The definition of unit tests verifying the execution of generic
 //! co-processor instructions.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2023-2024
+//! @date 2023-2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -146,6 +146,10 @@ void registerCoProcessorExecTests()
     // Register tests to show no access to co-processors on the ARM 2.
     RegisterExecTests<ArmV2TestSystemTraits>("ARM2_CoProcessor", armV2CPAccessDenied,
                                              std::size(armV2CPAccessDenied));
+
+    // Register tests to show no access to co-processors on the ARM 250.
+    RegisterExecTests<ArmV2aSTestSystemTraits>("ARM250_CoProcessor", armV2CPAccessDenied,
+                                               std::size(armV2CPAccessDenied));
 
     // Repeat the test for the ARMv2a architecture.
     RegisterExecTests<ArmV2aTestSystemTraits>("ARM3_CoProcessor", armV2CPAccessDenied,

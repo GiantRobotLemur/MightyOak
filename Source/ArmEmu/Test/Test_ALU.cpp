@@ -1,8 +1,8 @@
-//! @file ArmEmu/Test_ALU.cpp
+//! @file ArmEmu/Test/Test_ALU.cpp
 //! @brief The definition of unit tests for the emulation of the Arithmetic
 //! Logic Unit of an ARM processor core.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2022-2024
+//! @date 2022-2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -265,6 +265,10 @@ void registerAluExecTests()
     // Register test points against basic ARMv2 implementation.
     RegisterExecTests<ArmV2TestSystemTraits>("ARMv2_ALU", basicAlu, std::size(basicAlu));
     RegisterExecTests<ArmV2TestSystemTraits>("ARMv2_ALU", basic26BitAlu, std::size(basic26BitAlu));
+
+    // Repeat tests for the ARM 250 core.
+    RegisterExecTests<ArmV2aSTestSystemTraits>("ARMv2aS_ALU", basicAlu, std::size(basicAlu));
+    RegisterExecTests<ArmV2aSTestSystemTraits>("ARMv2aS_ALU", basic26BitAlu, std::size(basic26BitAlu));
 
     // Repeat tests for the ARM 3 core.
     RegisterExecTests<ArmV2aTestSystemTraits>("ARMv2a_ALU", basicAlu, std::size(basicAlu));

@@ -1,8 +1,8 @@
-//! @file Test_DataTransfer.cpp
+//! @file ArmEmu/Test/Test_DataTransfer.cpp
 //! @brief The definition of unit test for the emulation of data transfer
 //! instructions of a virtual ARM processor.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2022-2024
+//! @date 2022-2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -629,6 +629,14 @@ void registerDataTransferExecTests()
                                              std::size(basicDataTransfer));
     RegisterExecTests<ArmV2TestSystemTraits>("ARMv2_DataTransfer", basicDataTransfer26Bit,
                                              std::size(basicDataTransfer26Bit));
+
+    // Repeat the test for the ARMv2aS architecture.
+    RegisterExecTests<ArmV2aSTestSystemTraits>("ARMv2aS_DataTransfer", basicDataTransfer,
+                                               std::size(basicDataTransfer));
+    RegisterExecTests<ArmV2aSTestSystemTraits>("ARMv2aS_DataTransfer", basicDataTransfer26Bit,
+                                               std::size(basicDataTransfer26Bit));
+    RegisterExecTests<ArmV2aSTestSystemTraits>("ARMv2aS_DataTransfer", armV2aDataTransfer,
+                                               std::size(armV2aDataTransfer));
 
     // Repeat the test for the ARMv2a architecture.
     RegisterExecTests<ArmV2aTestSystemTraits>("ARMv2a_DataTransfer", basicDataTransfer,

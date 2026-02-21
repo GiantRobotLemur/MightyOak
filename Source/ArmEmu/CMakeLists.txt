@@ -33,6 +33,7 @@ ag_add_library(ArmEmu   FOLDER      ARM
                                     I2CBus.hpp
                                     PCF8583.cpp
                                     PCF8583.hpp
+                                    ${MO_INCLUDE_DIR}/ArmEmu/IVideoFrameProvider.hpp
                                     VIDC10.cpp
                                     ${MO_INCLUDE_DIR}/ArmEmu/VIDC10.hpp
                                     Display.cpp
@@ -74,6 +75,10 @@ source_group(Emulation FILES
              MemcHardware.hpp
              AcornKeyboardController.cpp
              AcornKeyboardController.hpp
+             I2CBus.cpp
+             I2CBus.hpp
+             PCF8583.cpp
+             PCF8583.hpp
              RegisterFile.inl
              ARMv2CoreRegisterFile.inl
              AluInstructions.inl
@@ -96,12 +101,9 @@ source_group(Interface FILES
              ${MO_INCLUDE_DIR}/ArmEmu/IKeyboardController.hpp
              IOC.cpp
              ${MO_INCLUDE_DIR}/ArmEmu/IOC.hpp
-             I2CBus.cpp
-             I2CBus.hpp
-             PCF8583.cpp
-             PCF8583.hpp
              VIDC10.cpp
              ${MO_INCLUDE_DIR}/ArmEmu/VIDC10.hpp
+             ${MO_INCLUDE_DIR}/ArmEmu/IVideoFrameProvider.hpp
              Display.cpp
              ${MO_INCLUDE_DIR}/ArmEmu/Display.hpp
              ArmSystemBuilder.cpp

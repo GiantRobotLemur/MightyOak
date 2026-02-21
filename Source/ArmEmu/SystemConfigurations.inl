@@ -2,7 +2,7 @@
 //! @brief The declaration of various traits types describing different
 //! configurations of system to emulate.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2023-2024
+//! @date 2023-2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -100,7 +100,37 @@ struct ArmV2TestSystemTraits
                                                       typename ArmV2TestSystemTraits::PrimaryPipelineType>;
 };
 
-//! @brief Defines the traits of a basic ARMv2a-based system with test bed hardware.
+
+//! @brief Defines the traits of a basic ARMv2aS-based (ARM250 core) system
+//! with test bed hardware.
+struct ArmV2aSTestSystemTraits
+{
+    // Public Types
+    //! @brief The data type of the object which manages the physical address
+    //! map and major hardware resources.
+    using HardwareType = TestBedHardware;
+
+    //! @brief The data type of the object which holds state of the processor
+    //! in terms of register contents, this includes co-processor state.
+    using RegisterFileType = ARMv2CoreRegisterFile<typename ArmV2aSTestSystemTraits::HardwareType>;
+
+    struct PrimaryPipelineTraits
+    {
+        using HardwareType = ArmV2aSTestSystemTraits::HardwareType;
+        using RegisterFileType = ArmV2aSTestSystemTraits::RegisterFileType;
+        using DecoderType = ARMv2aInstructionDecoder<HardwareType, RegisterFileType, true>;
+        using InstructionWordType = uint32_t;
+        static constexpr uint8_t InstructionSizePow2 = 2;
+    };
+
+    using PrimaryPipelineType = InstructionPipeline<typename ArmV2aSTestSystemTraits::PrimaryPipelineTraits>;
+
+    using ExecutionUnitType = SingleModeExecutionUnit<typename ArmV2aSTestSystemTraits::HardwareType,
+        typename ArmV2aSTestSystemTraits::RegisterFileType,
+        typename ArmV2aSTestSystemTraits::PrimaryPipelineType>;
+};
+
+//! @brief Defines the traits of a basic ARMv2a-based (ARM3) system with test bed hardware.
 struct ArmV2aTestSystemTraits
 {
     // Public Types
@@ -127,7 +157,6 @@ struct ArmV2aTestSystemTraits
                                                       typename ArmV2aTestSystemTraits::RegisterFileType,
                                                       typename ArmV2aTestSystemTraits::PrimaryPipelineType>;
 };
-
 
 //! @brief Defines the traits of an ARMv2-based system with
 //! MEMC/IOC/VIDC hardware.
@@ -158,7 +187,36 @@ struct ArmV2MemcSystemTraits
                                                       ArmV2MemcSystemTraits::PrimaryPipelineType>;
 };
 
-//! @brief Defines the traits of a basic ARMv2a-based system with 
+//! @brief Defines the traits of an ARMv2aS-based (ARM250 core) system with
+//! MEMC/IOC/VIDC hardware.
+struct ArmV2aSMemcSystemTraits
+{
+    // Public Types
+    //! @brief The data type of the object which manages the physical address
+    //! map and major hardware resources.
+    using HardwareType = MemcHardware;
+
+    //! @brief The data type of the object which holds state of the processor
+    //! in terms of register contents, this includes co-processor state.
+    using RegisterFileType = ARMv2CoreRegisterFile<MemcHardware>;
+
+    struct PrimaryPipelineTraits
+    {
+        using HardwareType = ArmV2aSMemcSystemTraits::HardwareType;
+        using RegisterFileType = ArmV2aSMemcSystemTraits::RegisterFileType;
+        using DecoderType = ARMv2aInstructionDecoder<HardwareType, RegisterFileType, true>;
+        using InstructionWordType = uint32_t;
+        static constexpr uint8_t InstructionSizePow2 = 2;
+    };
+
+    using PrimaryPipelineType = InstructionPipeline<ArmV2aSMemcSystemTraits::PrimaryPipelineTraits>;
+
+    using ExecutionUnitType = SingleModeExecutionUnit<ArmV2aSMemcSystemTraits::HardwareType,
+        ArmV2aSMemcSystemTraits::RegisterFileType,
+        ArmV2aSMemcSystemTraits::PrimaryPipelineType>;
+};
+
+//! @brief Defines the traits of a basic ARMv2a-based (ARM3) system with 
 //! MEMC/IOC/VIDC hardware.
 struct ArmV2aMemcSystemTraits
 {

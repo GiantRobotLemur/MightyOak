@@ -1,4 +1,4 @@
-//! @file Test_Display.cpp
+//! @file ArmEmu/Test/Test_Display.cpp
 //! @brief The definition of unit tests for the Display framebuffer renderer.
 //! @author GiantRobotLemur@na-se.co.uk
 //! @date 2026
@@ -55,10 +55,25 @@ class DisplayTest : public ::testing::Test
 protected:
     AddressMap _readDevices, _writeDevices;
     MemcHardware _hw;
+    VIDC10 *_vidc;
 
     DisplayTest() :
-        _hw(Options(), _readDevices, _writeDevices)
+        _hw(Options(), _readDevices, _writeDevices),
+        _vidc(nullptr)
     {
+        const Ag::String vidcName("VIDC10");
+
+        IHardwareDeviceCollection devices;
+        devices.reserve(16);
+        _hw.addIntegralHardware(devices);
+
+        for (auto device : devices)
+        {
+            if ((device->getName() == vidcName) &&
+                Ag::tryCast(device, _vidc))
+                break;
+        }
+
         _hw.reset();
         _hw.setPrivilegedMode(true);
     }
@@ -196,7 +211,7 @@ TEST_F(DisplayTest, Render1Bpp)
     enableVideoDMA();
     writePhysicalRam(0, ramData, sizeof(ramData));
 
-    Display display(_hw.getVIDC(), _hw);
+    Display display(*_vidc, _hw);
     FrameInfo info = {};
     std::vector<uint32_t> pixels(16 * 2);
 
@@ -238,7 +253,7 @@ TEST_F(DisplayTest, Render2Bpp)
     enableVideoDMA();
     writePhysicalRam(0, ramData, sizeof(ramData));
 
-    Display display(_hw.getVIDC(), _hw);
+    Display display(*_vidc, _hw);
     FrameInfo info = {};
     std::vector<uint32_t> pixels(8);
 
@@ -281,7 +296,7 @@ TEST_F(DisplayTest, Render4Bpp)
     enableVideoDMA();
     writePhysicalRam(0, ramData, sizeof(ramData));
 
-    Display display(_hw.getVIDC(), _hw);
+    Display display(*_vidc, _hw);
     FrameInfo info = {};
     std::vector<uint32_t> pixels(4);
 
@@ -315,7 +330,7 @@ TEST_F(DisplayTest, Render8BppGreenOverride)
     enableVideoDMA();
     writePhysicalRam(0, ramData, sizeof(ramData));
 
-    Display display(_hw.getVIDC(), _hw);
+    Display display(*_vidc, _hw);
     FrameInfo info = {};
     std::vector<uint32_t> pixels(4);
 
@@ -347,7 +362,7 @@ TEST_F(DisplayTest, RenderFailsWhenDMADisabled)
     setDmaRegisters(0, 0, 0x1000);
     // Do NOT call enableVideoDMA().
 
-    Display display(_hw.getVIDC(), _hw);
+    Display display(*_vidc, _hw);
     FrameInfo info = {};
     std::vector<uint32_t> pixels(32);
 
@@ -360,7 +375,7 @@ TEST_F(DisplayTest, RenderFailsWithZeroDimensions)
     // Do NOT configure timing registers, so dimensions are zero.
     enableVideoDMA();
 
-    Display display(_hw.getVIDC(), _hw);
+    Display display(*_vidc, _hw);
     FrameInfo info = {};
     std::vector<uint32_t> pixels(1);
 
@@ -385,7 +400,7 @@ TEST_F(DisplayTest, SolidColourFill)
     enableVideoDMA();
     writePhysicalRam(0, ramData, sizeof(ramData));
 
-    Display display(_hw.getVIDC(), _hw);
+    Display display(*_vidc, _hw);
     FrameInfo info = {};
     std::vector<uint32_t> pixels(8 * 4);
 
@@ -457,7 +472,7 @@ TEST_F(DisplayTest, DMAWrapAtVend)
     enableVideoDMA();
     writePhysicalRam(0x100, ramData, sizeof(ramData));
 
-    Display display(_hw.getVIDC(), _hw);
+    Display display(*_vidc, _hw);
     FrameInfo info = {};
     std::vector<uint32_t> pixels(8 * 5);
 

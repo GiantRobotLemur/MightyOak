@@ -128,8 +128,10 @@ Concrete traits are defined in `SystemConfigurations.inl`:
 |----------------------------|-----------------|------------------|-----------------------|------------------------|
 | `ArmV2TestSystemTraits`    | TestBedHardware | ARMv2CoreRegFile | ARMv2InstructionDecoder | Unit tests            |
 | `ArmV2aTestSystemTraits`   | TestBedHardware | ARMv2aCoreRegFile| ARMv2aInstructionDecoder| ARMv2a unit tests     |
+| `ArmV2aSTestSystemTraits`  | TestBedHardware | ARMv2aCoreRegFile| ARMv2aInstructionDecoder(ARM250)| ARM250 unit tests |
 | `ArmV2MemcSystemTraits`    | MemcHardware    | ARMv2CoreRegFile | ARMv2InstructionDecoder | Archimedes ARM2       |
 | `ArmV2aMemcSystemTraits`   | MemcHardware    | ARMv2aCoreRegFile| ARMv2aInstructionDecoder| A-Series / ARM3       |
+| `ArmV2aSMemcSystemTraits`  | MemcHardware    | ARMv2aCoreRegFile| ARMv2aInstructionDecoder(ARM250)| A3010/A3020 ARM250|
 
 `ArmSystemBuilder::createSystem()` selects the traits at runtime based on
 `SystemModel` + `ProcessorModel` and instantiates the correct
@@ -148,7 +150,7 @@ which reads the ROM file path from `Options::getRomPath()`.
 | `ARMv2InstructionDecoder.inl`   | 3-bit major opcode dispatch (bits 27:25)             |
 | `InstructionPipeline.inl`       | Fetch, condition check, decode/execute, PC advance   |
 | `ExecutionUnit.inl`             | IRQ priority loop; cycle-limited or unlimited run    |
-| `ArmSystem.inl`                 | Concrete `IArmSystem`; device connection, run methods|
+| `ArmSystem.inl`                 | Concrete `IArmSystem`; connectAllDevices, run methods|
 | `AluInstructions.inl`           | ALU data processing operations                       |
 | `DataTransferInstructions.inl`  | LDR/STR/LDM/STM implementation                      |
 | `SystemConfigurations.inl`      | Traits struct definitions                            |
@@ -163,9 +165,12 @@ which reads the ROM file path from `Options::getRomPath()`.
 - 512 page mappings with configurable page sizes (4/8/16/32 KB) and 4-level
   page protection (PPL bits).
 - Owns IOC, VIDC10, AcornKeyboardController, I2CBus, and PCF8583 as sub-devices.
+  `addIntegralHardware()` pushes IOC, VIDC10, and keyboard into the device
+  collection so they participate in the `connectAllDevices()` lifecycle.
 - Loads system ROM from file into high ROM (0x3800000) at construction;
   reset maps high ROM to logical address 0 via a 4 MB MEMC page.
-- Video DMA addresses: Vinit, Vstart, Vend (framebuffer), Cinit (cursor).
+- MEMC DMA register writes (Vinit, Vstart, Vend, Cinit) are forwarded to
+  `VIDC10` via setter methods; MemcHardware no longer stores these addresses.
 
 **IOC** (`IOC.hpp/cpp`) — VL86C410 I/O controller.
 
@@ -181,13 +186,20 @@ which reads the ROM file path from `Options::getRomPath()`.
 - Cache-line alignment on all shared state
   (`std::hardware_destructive_interference_size`).
 
-**VIDC10** (`VIDC10.hpp/cpp`) — VL86C310 video controller.
+**VIDC10** (`VIDC10.hpp/cpp`) — VL86C310 video controller. Implements
+`IVideoFrameProvider`.
 
 - Write-only MMIO; register selected by bits 31:26 of the written word.
 - 16-colour palette (13-bit physical colour), border colour, 3 cursor colours,
   8-channel stereo positions.
 - Full H/V timing registers; control register (pixel rate, BPP, interlace).
 - Schedules VSync via `GuestTask` at frame rate derived from timing registers.
+- Owns DMA address fields (Vinit, Vstart, Vend, Cinit) received from MEMC
+  register writes; `reset()` clears them and cancels any scheduled VSync.
+- `getRawFrame()` copies raw indexed framebuffer bytes from physical RAM
+  (handling DMA address wrapping), builds a 256-entry ARGB8888 palette
+  (with 8-BPP green-channel override expansion), and returns `RawFrameInfo`.
+- Registers under device alias `"DISPLAY"` for host-side lookup.
 
 **AcornKeyboardController** (`AcornKeyboardController.cpp`) — KART protocol
 state machine.
@@ -210,9 +222,18 @@ state machine.
   (Mode 12, 640x256 16-colour desktop configuration).
 - Auto-incrementing register pointer for sequential read/write access.
 
+**IVideoFrameProvider** (`IVideoFrameProvider.hpp`) — public interface for
+host-side frame capture, derived from `IMMIOBlock`.
+
+- `getRawFrame()` returns raw indexed framebuffer bytes, a 256-entry ARGB8888
+  palette, and a `RawFrameInfo` struct (Width, Height, BytesPerRow,
+  BitsPerPixel, BorderColour). Designed for future GPU shader-based palette
+  lookup rendering.
+
 **Display** (`Display.hpp/cpp`) — read-side frame renderer.
 
-- Reads framebuffer from MemcHardware RAM using VIDC10 DMA addresses.
+- Reads framebuffer from MemcHardware RAM using VIDC10 DMA addresses
+  (sourced from `VIDC10` rather than `MemcHardware`).
 - Per-BPP scanline renderers (1, 2, 4, 8 BPP).
 - Converts 13-bit VIDC physical colour to ARGB32 via palette lookup.
 
@@ -233,8 +254,14 @@ state machine.
   read and write maps.
 - Device hierarchy: `IHardwareDevice` → `IAddressRegion` → `IHostBlock`
   (host RAM/ROM) or `IMMIOBlock` (register dispatch).
-- `ConnectionContext` — built during `ArmSystem::initialise()` for devices to
-  discover and wire up to each other.
+- Two-phase device startup managed by `SystemContext::connectAllDevices()`:
+  1. **Phase 1 (`registerDevice`)**: each device registers itself (and any
+     aliases) into `SystemContext`'s name-indexed `HardwareMap`.
+  2. **Phase 2 (`connect`)**: each device looks up other devices by name via
+     `SystemContext::tryFindDevice()` / `tryFindTypedDevice<T>()`.
+- The former `ConnectionContext` intermediary has been removed; `SystemContext`
+  now owns the persistent device registry, which remains accessible at runtime
+  via `IArmSystem::tryFindDevice()` and `tryFindTypedDevice<T>()`.
 
 ### MightyOakLib — Application Layer
 
@@ -249,8 +276,14 @@ Namespace `Mo`. SDL3-based application framework:
   calls `createSystem()` to instantiate the emulated hardware.
 - `EmulatorApp::initialiseRuntimeGlobals()` — locates the ROM directory
   via `Options::findRomImagePath()` at startup.
-- `SessionRunningState` — concrete state for active emulation (currently a
-  stub).
+- `SessionRunningState` — concrete state for active emulation. Creates an SDL3
+  renderer, launches the emulator on a background thread, and runs a
+  `PeriodicEventProcessor` on the main thread synchronised to display refresh.
+  Each frame calls `IVideoFrameProvider::getRawFrame()` to capture the indexed
+  framebuffer and palette, expands to ARGB32 on the CPU (1/2/4/8 BPP), and
+  uploads via `SDL_UpdateTexture()`. Looks up `IKeyboardController` and
+  `IVideoFrameProvider` through `IArmSystem::tryFindTypedDevice()` by device
+  name. Forwards SDL key and mouse events to `IKeyboardController`.
 
 ### ArmDebugger — Qt6 GUI Debugger (Optional)
 
@@ -338,22 +371,34 @@ Supported platforms: Visual Studio 2022 x64 (Windows), gcc 11 x64 (Linux).
   verifies the PC advances past reset, I2C probe, and hardware init.
   ROM files are copied to the test output directory at build time.
 - 21 AsmTools test files covering each pipeline stage; 28 ArmEmu test files
-  covering CPU, hardware, and integration.
+  covering CPU, hardware, and integration (including ARM250 variant tests for
+  ALU, co-processor, and data transfer).
 - `EmuPerfTest` benchmark target for performance measurement.
 
 ## Technical Debt
 
 ### Blocking Issues (Preventing Boot to Desktop)
 
-1. **`SessionRunningState::runInternal()` is a stub.** No emulator thread or
-   SDL event loop. The `EmulatorApp::run()` state machine has no functional
-   running state.
+1. ~~**`SessionRunningState::runInternal()` is a stub.**~~ **RESOLVED.**
+   `SessionRunningState` now overrides `configure()` and `runInternal()`. It
+   creates an SDL renderer, launches the emulator on a background thread, and
+   runs a `PeriodicEventProcessor` on the main thread synchronised to the
+   display refresh rate. A periodic callback calls `IArmSystem::getRawFrame()`
+   to obtain raw indexed framebuffer bytes and a 256-entry ARGB32 palette,
+   expands them to ARGB32 on the CPU, and uploads via `SDL_UpdateTexture()`.
+   The `getRawFrame()` interface is designed for future GPU shader-based
+   palette lookup (upload R8 framebuffer + RGBA palette texture, sample in
+   fragment shader) once the Ag SDL3Tools GPU wrapper supports texture upload,
+   fragment sampler binding, and uniform push.
 
-2. **Five keyboard input methods are stubs.** `keyDown()`, `keyUp()`,
-   `mouseButtonDown()`, `mouseButtonUp()`, `mouseDelta()` — no scancode
-   encoding. `tryMapMouseButton()` returns 0 for all buttons.
+2. ~~**Five keyboard input methods are stubs.**~~ **RESOLVED.** Keyboard and
+   mouse input is forwarded from SDL events to the `IKeyboardController`
+   via `IArmSystem::getKeyboardController()`.
 
-3. **No SDL keycode to Acorn keyboard matrix mapping.**
+3. **No SDL keycode to Acorn keyboard matrix mapping.** Raw SDL scancodes are
+   forwarded but no host-to-Acorn translation table has been applied yet.
+   `IKeyboardController::setKeyMapping()` exists but no mapping data is
+   provided.
 
 4. **Cursor rendering not implemented.** `Display::renderFrame()` handles the
    framebuffer but not the hardware cursor. The `Cinit` MEMC register write
@@ -373,7 +418,7 @@ Supported platforms: Visual Studio 2022 x64 (Windows), gcc 11 x64 (Linux).
 - IOC KART counter accessed as `_counters[3]` relying on memory layout of
   consecutive `Counter` and `KartCounter` objects.
 - FPA co-processor disassembly partially implemented.
-- Commented-out dead code in `ArmSystem.inl` (old device connection approach).
+- ~~Commented-out dead code in `ArmSystem.inl` (old device connection approach).~~ **RESOLVED.** `ConnectionContext` removed; device lifecycle consolidated into `SystemContext::connectAllDevices()`.
 - ArmDebugger: step-into / step-over not implemented; dark theme icons missing;
   ARMv3+ register display not handled.
 - RiscPC `SystemModel` not supported — falls through to an error message.

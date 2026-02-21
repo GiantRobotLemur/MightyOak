@@ -185,7 +185,7 @@ Ag::string_cref_t AcornKeyboardController::getDescription() const
 }
 
 // Inherited from IHardwareDevice.
-void AcornKeyboardController::connect(const ConnectionContext &context)
+void AcornKeyboardController::connect(SystemContext &context)
 {
     IHardwareDevicePtr iocDevice;
 

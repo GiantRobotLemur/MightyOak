@@ -18,6 +18,7 @@
 #include "ArmEmu/AddressMap.hpp"
 #include "ArmEmu/ArmSystem.hpp"
 #include "ArmEmu/GuestEventQueue.hpp"
+#include "ArmEmu/SystemContext.hpp"
 
 namespace Mo {
 namespace Arm {
@@ -118,81 +119,18 @@ PageMapping::PageMapping(uint32_t virtBaseAddr, uint32_t physBaseAddr,
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// ConnectionContext Member Definitions
+// IHardwareDevice Member Definitions
 ////////////////////////////////////////////////////////////////////////////////
-//! @brief The base implementation of connect does nothing for a block of memory.
-void IAddressRegion::connect(const ConnectionContext &/*context*/)
+// See header files for docs.
+void IHardwareDevice::registerDevice(SystemContext &context)
+{
+    context.addDevice(this);
+}
+
+// See header files for docs.
+void IHardwareDevice::connect(SystemContext &/*context*/)
 {
     ;
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// ConnectionContext Member Definitions
-////////////////////////////////////////////////////////////////////////////////
-//! @brief Constructs an object used to connect emulated I/O devices to the
-//! host system and each other.
-//! @param[in] interopContext The context object which provides inter-operation
-//! services for emulated hardware devices.
-//! @param[in] devices A collection of device objects owned by the emulated system.
-//! @param[in] readMap The address map listing readable regions of memory which
-//! map to I/O devices of host memory.
-//! @param[in] writeMap The address map listing writeable regions of memory which
-//! map to I/O devices of host memory.
-ConnectionContext::ConnectionContext(SystemContextPtr interopContext) :
-    _interopContext(interopContext)
-{
-}
-
-//! @brief Attempts to find a Memory Mapped I/O device mapped into the guest
-//! system address space by its name.
-//! @param[in] name The device name to search for.
-//! @param[out] device Receives a pointer to the matching device if one
-//! was found.
-//! @retval true A matching device was found and its pointer returned.
-//! @retval false name device was found with a matching name.
-bool ConnectionContext::tryFindDevice(Ag::string_cref_t name,
-                                      IHardwareDevicePtr &device) const
-{
-    auto pos = _devicesByName.find(name);
-    bool hasMatch = false;
-    device = nullptr;
-
-    if (pos != _devicesByName.end())
-    {
-        hasMatch = true;
-        device = pos->second;
-    }
-
-    return hasMatch;
-}
-
-//! @brief Gets a pointer to and object which provides services to I/O devices
-//! while the emulated system is running.
-SystemContextPtr ConnectionContext::getInteropContext() const
-{
-    return _interopContext;
-}
-
-//! @brief Adds a device to the internal index.
-//! @param[in] device The device implementation to add.
-//! @throws Ag::OperationException If a device with the same name, but 
-//! a different implementation already exists in the index.
-void ConnectionContext::addDevice(IHardwareDevicePtr device)
-{
-    Ag::string_cref_t deviceName = device->getName();
-    auto insertResult = _devicesByName.try_emplace(deviceName, device);
-
-    // Ensure that if the name was already in the map, it referred
-    // to the same device.
-    if ((insertResult.second == false) &&
-        (insertResult.first->second != device))
-    {
-        std::string message("The device name '");
-        Ag::appendAgString(message, deviceName);
-        message.append("' refers to multiple entities in the same emulated system.");
-
-        throw Ag::OperationException(std::string_view(message));
-    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////

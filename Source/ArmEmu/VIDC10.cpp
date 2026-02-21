@@ -34,13 +34,19 @@ constexpr uint8_t PixelRates[] = { 8, 12, 16, 24 };
 ////////////////////////////////////////////////////////////////////////////////
 // VIDC10 Member Definitions
 ////////////////////////////////////////////////////////////////////////////////
+//! @brief Constructs an object to emulate the functions of the VIDC10 chip.
+//! @param[in] parent The object providing access to the system memory map.
 VIDC10::VIDC10(MemcHardware &parent) :
     _parent(parent),
     _context(nullptr),
-    _vSyncActive(false),
+    _videoInitAddr(0),
+    _videoStartAddr(0),
+    _videoEndAddr(0),
+    _cursorInitAddr(0),
     _borderColour(0),
     _soundFreq(0),
-    _controlReg(0)
+    _controlReg(0),
+    _vSyncActive(false)
 {
     std::memset(_palette, 0, sizeof(_palette));
     std::memset(_cursorColours, 0, sizeof(_cursorColours));
@@ -51,53 +57,114 @@ VIDC10::VIDC10(MemcHardware &parent) :
     _vSyncTask.defineTask(&onVSync, this);
 }
 
-// Accessors
+//! @brief Gets the video DMA initial address (Vinit) as a physical byte offset.
+uint32_t VIDC10::getVideoInitAddr() const
+{
+    return _videoInitAddr;
+}
+
+//! @brief Sets the video DMA initial address (Vinit) as a physical byte offset.
+void VIDC10::setVideoInitAddr(uint32_t initAddr)
+{
+    _videoInitAddr = initAddr;
+}
+
+//! @brief Gets the video DMA start address (Vstart) as a physical byte offset.
+uint32_t VIDC10::getVideoStartAddr() const
+{
+    return _videoStartAddr;
+}
+
+//! @brief Sets the video DMA start address (Vstart) as a physical byte offset.
+void VIDC10::setVideoStartAddr(uint32_t startAddr)
+{
+    _videoStartAddr = startAddr;
+}
+
+//! @brief Gets the video DMA end address (Vend) as a physical byte offset.
+uint32_t VIDC10::getVideoEndAddr() const
+{
+    return _videoEndAddr;
+}
+
+//! @brief Sets the video DMA end address (Vend) as a physical byte offset.
+void VIDC10::setVideoEndAddr(uint32_t endAddr)
+{
+    _videoEndAddr = endAddr;
+}
+
+//! @brief Gets the cursor DMA initial address (Cinit) as a physical byte offset.
+uint32_t VIDC10::getCursorInitAddr() const
+{
+    return _cursorInitAddr;
+}
+
+//! @brief Sets the cursor DMA initial address (Cinit) as a physical byte offset.
+void VIDC10::setCursorInitAddr(uint32_t cursorAddr)
+{
+    _cursorInitAddr = cursorAddr;
+}
+
+//! @brief Gets a palette entry (0-15) as a 13-bit physical colour.
 uint16_t VIDC10::getPaletteEntry(uint8_t index) const
 {
     return (index < VIDCRegister::PaletteCount) ? _palette[index] : 0;
 }
 
+//! @brief Gets the border colour as a 13-bit physical colour.
 uint16_t VIDC10::getBorderColour() const
 {
     return _borderColour;
 }
 
+//! @brief Gets a cursor colour entry (0-2) as a 13-bit physical colour.
 uint16_t VIDC10::getCursorColour(uint8_t index) const
 {
     return (index < VIDCRegister::CursorColourCount) ? _cursorColours[index] : 0;
 }
 
+//! @brief Gets a horizontal timing register value.
+//! @param[in] index The register index (0-7), corresponding to HCR, HSWR, HBSR,
+//! HDSR, HDER, HBER, HCSR, HIR.
 uint16_t VIDC10::getHorizontalReg(uint8_t index) const
 {
     return (index < VIDCRegister::HorizontalCount) ? _hRegs[index] : 0;
 }
 
+//! @brief Gets a vertical timing register value.
+//! @param[in] index The register index (0-7), corresponding to VCR, VSWR, VBSR,
+//! VDSR, VDER, VBER, VCSR, VCER.
 uint16_t VIDC10::getVerticalReg(uint8_t index) const
 {
     return (index < VIDCRegister::VerticalCount) ? _vRegs[index] : 0;
 }
 
+//! @brief Gets the control register value.
 uint8_t VIDC10::getControlReg() const
 {
     return _controlReg;
 }
 
+//! @brief Gets the sound frequency register value.
 uint8_t VIDC10::getSoundFreqReg() const
 {
     return _soundFreq;
 }
 
+//! @brief Gets the bits per pixel from the control register (1, 2, 4, or 8).
 uint8_t VIDC10::getBitsPerPixel() const
 {
     // Control register bits 2-3 encode BPP: 00=1, 01=2, 10=4, 11=8.
     return static_cast<uint8_t>(1) << ((_controlReg & VIDCControl::BppMask) >> VIDCControl::BppShift);
 }
 
+//! @brief Gets the pixel clock rate in MHz from the control register.
 uint8_t VIDC10::getPixelRateMHz() const
 {
     return PixelRates[_controlReg & VIDCControl::PixelRateMask];
 }
 
+//! @brief Gets the display width in pixels derived from horizontal timing.
 uint32_t VIDC10::getDisplayWidth() const
 {
     // The horizontal display region is between HDSR and HDER.
@@ -113,6 +180,7 @@ uint32_t VIDC10::getDisplayWidth() const
     return 0;
 }
 
+//! @brief Gets the display height in lines derived from vertical timing.
 uint32_t VIDC10::getDisplayHeight() const
 {
     // The vertical display region is between VDSR and VDER.
@@ -128,40 +196,26 @@ uint32_t VIDC10::getDisplayHeight() const
     return 0;
 }
 
-uint64_t VIDC10::getFramePeriodTicks() const
+//! @brief Resets the state of the device.
+void VIDC10::reset()
 {
-    if (_context == nullptr)
+    // TODO: Should more be reset in here?
+    _videoInitAddr = 0;
+    _videoStartAddr = 0;
+    _videoEndAddr = 0;
+    _cursorInitAddr = 0;
+
+    if (_vSyncTask.isScheduled() && (_context != nullptr))
     {
-        return 0;
+        _context->unscheduleTask(&_vSyncTask);
     }
 
-    // The frame period is (VCR + 1) horizontal lines, each (HCR + 1) * 2
-    // pixel clock periods wide.
-    uint16_t hcr = _hRegs[VIDCRegister::HCR - VIDCRegister::HorizontalBase];
-    uint16_t vcr = _vRegs[VIDCRegister::VCR - VIDCRegister::VerticalBase];
-
-    if (hcr == 0 || vcr == 0)
-    {
-        return 0;
-    }
-
-    // Total pixel clocks per frame = (HCR + 1) * 2 * (VCR + 1)
-    uint64_t pixelClocksPerFrame = static_cast<uint64_t>(hcr + 1) * 2 *
-                                   static_cast<uint64_t>(vcr + 1);
-
-    // Convert pixel clocks to master clock ticks.
-    // Master clock frequency / pixel clock frequency = ticks per pixel clock.
-    uint64_t masterFreq = _context->getMasterClockFrequency();
-    uint64_t pixelFreq = static_cast<uint64_t>(getPixelRateMHz()) * 1000000;
-
-    if (pixelFreq == 0)
-    {
-        return 0;
-    }
-
-    return (pixelClocksPerFrame * masterFreq) / pixelFreq;
+    _vSyncActive = false;
 }
 
+//! @brief Writes a raw 32-bit VIDC register value. The register ID is
+//! encoded in bits 24-31 of the value, with bits 24-25 always zero.
+//! @param[in] value The 32-bit value written to the VIDC address space.
 void VIDC10::writeRegister(uint32_t value)
 {
     // The register ID is encoded in bits 26-31 of the data word.
@@ -236,6 +290,44 @@ void VIDC10::writeRegister(uint32_t value)
     }
 }
 
+//! @brief Gets the frame period in master clock ticks calculated from
+//! the current horizontal and vertical timing register values.
+//! @return The frame period in master clock ticks, or 0 if timing
+//! registers have not been configured.
+uint64_t VIDC10::getFramePeriodTicks() const
+{
+    if (_context == nullptr)
+    {
+        return 0;
+    }
+
+    // The frame period is (VCR + 1) horizontal lines, each (HCR + 1) * 2
+    // pixel clock periods wide.
+    uint16_t hcr = _hRegs[VIDCRegister::HCR - VIDCRegister::HorizontalBase];
+    uint16_t vcr = _vRegs[VIDCRegister::VCR - VIDCRegister::VerticalBase];
+
+    if (hcr == 0 || vcr == 0)
+    {
+        return 0;
+    }
+
+    // Total pixel clocks per frame = (HCR + 1) * 2 * (VCR + 1)
+    uint64_t pixelClocksPerFrame = static_cast<uint64_t>(hcr + 1) * 2 *
+        static_cast<uint64_t>(vcr + 1);
+
+    // Convert pixel clocks to master clock ticks.
+    // Master clock frequency / pixel clock frequency = ticks per pixel clock.
+    uint64_t masterFreq = _context->getMasterClockFrequency();
+    uint64_t pixelFreq = static_cast<uint64_t>(getPixelRateMHz()) * 1000000;
+
+    if (pixelFreq == 0)
+    {
+        return 0;
+    }
+
+    return (pixelClocksPerFrame * masterFreq) / pixelFreq;
+}
+
 void VIDC10::scheduleVSync()
 {
     uint64_t period = getFramePeriodTicks();
@@ -255,8 +347,7 @@ void VIDC10::onVSync(SystemContext &guestContext, uintptr_t taskContext)
     vidc->_parent.raiseVSyncIrq();
 
     // Post a message to the host to signal that a frame boundary occurred.
-    guestContext.postMessageToHost(
-        static_cast<uint32_t>(HostMessageID::VSyncOccurred), 0, 0);
+    guestContext.postMessageToHost(Ag::toScalar(HostMessageID::VSyncOccurred), 0, 0);
 
     // Schedule the next VSync.
     if (vidc->_vSyncActive)
@@ -313,11 +404,126 @@ void VIDC10::write(uint32_t /*offset*/, uint32_t value)
     writeRegister(value);
 }
 
-// Inherited from IMMIOBlock.
-void VIDC10::connect(const ConnectionContext &context)
+// Inherited from IHardwareDevice.
+void VIDC10::registerDevice(SystemContext &context)
+{
+    context.addDevice(this);
+
+    // Add this object as the primary display device.
+    context.addDeviceAlias(getName(), "DISPLAY");
+}
+
+// Inherited from IHardwareDevice.
+void VIDC10::connect(SystemContext &context)
 {
     // Connect to the rest of the emulated system.
-    _context = context.getInteropContext();
+    _context = &context;
+}
+
+// Inherited from IVideoFrameProvider.
+bool VIDC10::getRawFrame(uint8_t *frameBuffer, size_t frameBufferSize,
+                         uint32_t palette[256],
+                         RawFrameInfo &info) const
+{
+    if (!_parent.isVideoDMAEnabled())
+        return false;
+
+    uint32_t width = getDisplayWidth();
+    uint32_t height = getDisplayHeight();
+
+    if (width == 0 || height == 0)
+        return false;
+
+    uint8_t bpp = getBitsPerPixel();
+    uint32_t bytesPerRow = (width * bpp + 7) / 8;
+    size_t totalBytes = static_cast<size_t>(bytesPerRow) * height;
+
+    if (frameBufferSize < totalBytes)
+        return false;
+
+    // Copy raw frame buffer bytes, resolving DMA address wrapping.
+    uint32_t vInit = getVideoInitAddr();
+    uint32_t vStart = getVideoStartAddr();
+    uint32_t vEnd = getVideoEndAddr();
+    const uint8_t *ram = _parent.getRamData();
+    uint32_t ramSize = _parent.getRamSize();
+
+    uint32_t dmaAddr = vInit;
+    uint8_t *dest = frameBuffer;
+
+    for (uint32_t y = 0; y < height; ++y)
+    {
+        uint32_t bytesRemaining = bytesPerRow;
+
+        while (bytesRemaining > 0)
+        {
+            uint32_t bytesBeforeWrap;
+
+            if (vEnd > vStart && dmaAddr < vEnd)
+                bytesBeforeWrap = vEnd - dmaAddr;
+            else
+                bytesBeforeWrap = bytesRemaining;
+
+            uint32_t chunk = (bytesRemaining < bytesBeforeWrap)
+                ? bytesRemaining : bytesBeforeWrap;
+
+            uint32_t srcOffset = dmaAddr % ramSize;
+            std::memcpy(dest, ram + srcOffset, chunk);
+
+            dest += chunk;
+            dmaAddr += chunk;
+            bytesRemaining -= chunk;
+
+            if (vEnd > vStart && dmaAddr >= vEnd)
+                dmaAddr = vStart;
+        }
+    }
+
+    // Build the 256-entry ARGB32 palette.
+    if (bpp <= 4)
+    {
+        // For 1/2/4 BPP, convert the meaningful palette entries.
+        uint32_t colourCount = 1u << bpp;
+
+        for (uint32_t i = 0; i < colourCount; ++i)
+        {
+            palette[i] = Display::vidc13ToARGB32(
+                getPaletteEntry(static_cast<uint8_t>(i)));
+        }
+
+        // Fill remaining entries with opaque black.
+        for (uint32_t i = colourCount; i < 256; ++i)
+            palette[i] = 0xFF000000;
+    }
+    else
+    {
+        // For 8 BPP, pre-expand all 256 byte values.
+        // Low nibble selects a 13-bit base colour from the palette;
+        // high nibble overrides the green channel (bits [7:4]).
+        for (uint32_t byteVal = 0; byteVal < 256; ++byteVal)
+        {
+            uint16_t colour13 = getPaletteEntry(
+                static_cast<uint8_t>(byteVal & 0x0F));
+
+            uint8_t greenOverride = static_cast<uint8_t>(
+                (byteVal >> 4) & 0x0F);
+
+            colour13 = static_cast<uint16_t>(
+                (colour13 & ~static_cast<uint16_t>(0x00F0)) |
+                (static_cast<uint16_t>(greenOverride) << 4));
+
+            palette[byteVal] = Display::vidc13ToARGB32(colour13);
+        }
+    }
+
+    // Fill the frame info.
+    info.Width = width;
+    info.Height = height;
+    info.BytesPerRow = bytesPerRow;
+    info.BitsPerPixel = bpp;
+    info.BorderColour = Display::vidc13ToARGB32(getBorderColour());
+
+    return true;
 }
 
 }} // namespace Mo::Arm

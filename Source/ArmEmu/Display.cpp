@@ -107,9 +107,9 @@ bool Display::renderFrame(uint32_t *outputPixels, size_t outputSize,
     uint32_t bytesPerLine = (bitsPerLine + 7) / 8;
 
     // Read DMA addresses and RAM pointer.
-    uint32_t vInit = _memc.getVideoInitAddr();
-    uint32_t vStart = _memc.getVideoStartAddr();
-    uint32_t vEnd = _memc.getVideoEndAddr();
+    uint32_t vInit = _vidc.getVideoInitAddr();
+    uint32_t vStart = _vidc.getVideoStartAddr();
+    uint32_t vEnd = _vidc.getVideoEndAddr();
     const uint8_t *ram = _memc.getRamData();
     uint32_t ramSize = _memc.getRamSize();
 

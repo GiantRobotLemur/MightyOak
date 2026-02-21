@@ -23,6 +23,7 @@ namespace Arm {
 // Class Declarations
 ////////////////////////////////////////////////////////////////////////////////
 class IArmSystem;
+struct IHardwareDevice;
 class GuestEventQueue;
 class SystemContext;
 class Options;
@@ -87,6 +88,10 @@ public:
 class SystemContext
 {
 public:
+    // Public Types
+    using IHardwareDevicePtr = IHardwareDevice *;
+    using IHardwareDeviceCollection = std::vector<IHardwareDevicePtr>;
+
     // Construction/Destruction
     SystemContext(const Options &sysConfig,
                   GuestEventQueue &eventQueue,
@@ -98,6 +103,23 @@ public:
     uint64_t getCPUClockTicks() const;
     uint64_t getMasterClockTicks() const;
     uint64_t getMasterClockFrequency() const;
+    bool tryFindDevice(Ag::string_cref_t name, IHardwareDevicePtr &device) const;
+    template<typename TDevice>
+    bool tryFindTypedDevice(Ag::string_cref_t name, TDevice *&device) const
+    {
+        auto pos = _devicesByName.find(name);
+
+        if (pos == _devicesByName.end())
+        {
+            device = nullptr;
+
+            return false;
+        }
+        else
+        {
+            return Ag::tryCast(pos->second, device);
+        }
+    }
 
     // Operations
     uint32_t getFuzz();
@@ -106,6 +128,10 @@ public:
     void scheduleTaskDeltaTicks(GuestTask *task, uint64_t masterTickDelta);
     bool unscheduleTask(GuestTask *taskToRemove);
     bool postMessageToHost(uint32_t eventID, uintptr_t data1, uintptr_t data2);
+    void addDevice(IHardwareDevicePtr device);
+    void connectAllDevices(IHardwareDeviceCollection &allDevices,
+                           bool resetIndex = true);
+    void addDeviceAlias(Ag::string_cref_t deviceName, Ag::string_cref_t alias);
 private:
     // Internal Constants
     // Ensure the size of the fuzz array is a power of 2 to allow easy wrapping.
@@ -113,10 +139,14 @@ private:
     static constexpr uint8_t FuzzSizeMask = (static_cast<uint8_t>(1) << FuzzSizePow2) - 1;
     static constexpr size_t FuzzSize = 1 << FuzzSizePow2;
 
+    // Internal Types
+    using HardwareMap = std::unordered_map<Ag::String, IHardwareDevicePtr>;
+
     // Internal Fields
     GuestEventQueue &_eventQueue;
     IArmSystem *_parentSystem;
     GuestTask *_taskQueueHead;
+    HardwareMap _devicesByName;
     uint64_t _masterClock;
     uint64_t _masterFreq;
     uint8_t _cpuClockShift;

@@ -176,7 +176,7 @@ public:
 
     virtual uint32_t read(uint32_t offset) override;
     virtual void write(uint32_t offset, uint32_t value) override;
-    virtual void connect(const ConnectionContext &context) override;
+    virtual void connect(SystemContext &context) override;
 private:
     // Internal Types
     class Counter

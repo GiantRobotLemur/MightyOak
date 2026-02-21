@@ -16,6 +16,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 #include "AddressMap.hpp"
 #include "SystemContext.hpp"
+#include "IVideoFrameProvider.hpp"
 
 namespace Mo {
 namespace Arm {
@@ -105,7 +106,7 @@ struct VIDCControl
 class MemcHardware;
 
 //! @brief An object which emulates the function of the VL86C310 VIDC part.
-class VIDC10 : public IMMIOBlock
+class VIDC10 : public IVideoFrameProvider
 {
 public:
     // Construction/Destruction
@@ -113,53 +114,29 @@ public:
     virtual ~VIDC10() = default;
 
     // Accessors
-    //! @brief Gets a palette entry (0-15) as a 13-bit physical colour.
+    uint32_t getVideoInitAddr() const;
+    void setVideoInitAddr(uint32_t initAddr);
+    uint32_t getVideoStartAddr() const;
+    void setVideoStartAddr(uint32_t startAddr);
+    uint32_t getVideoEndAddr() const;
+    void setVideoEndAddr(uint32_t endAddr);
+    uint32_t getCursorInitAddr() const;
+    void setCursorInitAddr(uint32_t cursorAddr);
     uint16_t getPaletteEntry(uint8_t index) const;
-
-    //! @brief Gets the border colour as a 13-bit physical colour.
     uint16_t getBorderColour() const;
-
-    //! @brief Gets a cursor colour entry (0-2) as a 13-bit physical colour.
     uint16_t getCursorColour(uint8_t index) const;
-
-    //! @brief Gets a horizontal timing register value.
-    //! @param[in] index The register index (0-7), corresponding to
-    //! HCR, HSWR, HBSR, HDSR, HDER, HBER, HCSR, HIR.
     uint16_t getHorizontalReg(uint8_t index) const;
-
-    //! @brief Gets a vertical timing register value.
-    //! @param[in] index The register index (0-7), corresponding to
-    //! VCR, VSWR, VBSR, VDSR, VDER, VBER, VCSR, VCER.
     uint16_t getVerticalReg(uint8_t index) const;
-
-    //! @brief Gets the control register value.
     uint8_t getControlReg() const;
-
-    //! @brief Gets the sound frequency register value.
     uint8_t getSoundFreqReg() const;
-
-    //! @brief Gets the bits per pixel from the control register (1, 2, 4, or 8).
     uint8_t getBitsPerPixel() const;
-
-    //! @brief Gets the pixel clock rate in MHz from the control register.
     uint8_t getPixelRateMHz() const;
-
-    //! @brief Gets the display width in pixels derived from horizontal timing.
     uint32_t getDisplayWidth() const;
-
-    //! @brief Gets the display height in lines derived from vertical timing.
     uint32_t getDisplayHeight() const;
 
     // Operations
-    //! @brief Writes a raw 32-bit VIDC register value. The register ID is
-    //! encoded in bits 24-31 of the value, with bits 24-25 always zero.
-    //! @param[in] value The 32-bit value written to the VIDC address space.
+    void reset();
     void writeRegister(uint32_t value);
-
-    //! @brief Gets the frame period in master clock ticks calculated from
-    //! the current horizontal and vertical timing register values.
-    //! @return The frame period in master clock ticks, or 0 if timing
-    //! registers have not been configured.
     uint64_t getFramePeriodTicks() const;
 
     // Overrides
@@ -170,7 +147,11 @@ public:
 
     virtual uint32_t read(uint32_t offset) override;
     virtual void write(uint32_t offset, uint32_t value) override;
-    virtual void connect(const ConnectionContext &context) override;
+    virtual void registerDevice(SystemContext &context) override;
+    virtual void connect(SystemContext &context) override;
+    virtual bool getRawFrame(uint8_t *frameBuffer, size_t frameBufferSize,
+                             uint32_t palette[256],
+                             RawFrameInfo &info) const override;
 private:
     // Internal Functions
     void scheduleVSync();
@@ -183,8 +164,17 @@ private:
     //! @brief The scheduled task for VSync generation.
     GuestTask _vSyncTask;
 
-    //! @brief Whether VSync scheduling is active.
-    bool _vSyncActive;
+    //! @brief The video DMA Vinit value.
+    uint32_t _videoInitAddr;
+
+    //! @brief The video DMA Vstart value.
+    uint32_t _videoStartAddr;
+
+    //! @brief The video DMA Vend value.
+    uint32_t _videoEndAddr;
+
+    //! @brief The cursor DMA Cinit value.
+    uint32_t _cursorInitAddr;
 
     //! @brief Video palette registers (16 entries, 13-bit physical colour).
     uint16_t _palette[VIDCRegister::PaletteCount];
@@ -209,6 +199,10 @@ private:
 
     //! @brief Control register (8 bits: pixel rate, BPP, interlace, etc.).
     uint8_t _controlReg;
+
+    //! @brief Whether VSync scheduling is active.
+    bool _vSyncActive;
+
 };
 
 }} // namespace Mo::Arm

@@ -113,9 +113,8 @@ public:
     // Overrides
     virtual uint32_t read(uint32_t offset) = 0;
     virtual void write(uint32_t offset, uint32_t value) = 0;
-    virtual void connect(const ConnectionContext &context) = 0;
+    virtual void connect(SystemContext &context) = 0;
 };
-
 
 ////////////////////////////////////////////////////////////////////////////////
 // Local Data Definitions
@@ -159,16 +158,16 @@ void MemcHardware::writeMEMC(uint32_t offset, uint32_t value)
         switch (Ag::Bin::extractBits<uint8_t, 17, 3>(offset))
         {
         case 0: // Vinit
-            _videoInitAddr = offset & 0x1FFFC;
+            _vidc.setVideoInitAddr(offset & 0x1FFFC);
             break;
         case 1: // Vstart
-            _videoStartAddr = offset & 0x1FFFC;
+            _vidc.setVideoStartAddr(offset & 0x1FFFC);
             break;
         case 2: // Vend
-            _videoEndAddr = offset & 0x1FFFC;
+            _vidc.setVideoEndAddr(offset & 0x1FFFC);
             break;
         case 3: // Cinit
-            _cursorInitAddr = offset & 0x1FFFC;
+            _vidc.setCursorInitAddr(offset & 0x1FFFC);
             break;
         case 4: // Sstart
         case 5: // SendN
@@ -521,10 +520,6 @@ MemcHardware::MemcHardware(const Options &options,
     _osMode(false),
     _videoDMAEnabled(false),
     _soundDMAEnabled(false),
-    _videoInitAddr(0),
-    _videoStartAddr(0),
-    _videoEndAddr(0),
-    _cursorInitAddr(0),
     _physicalRamBlock("Physical RAM", "The system RAM without any logical address mapping"),
     _lowRomBlock("Extension ROM", "The low ROM area, usually containing extensions ROMs."),
     _highRomBlock("System ROM", "The high ROM area, usually containing the operating system.")
@@ -611,32 +606,6 @@ MemcHardware::MemcHardware(const Options &options,
     _ioc.setI2CBus(&_i2cBus);
 }
 
-// Accessors
-IOC &MemcHardware::getIOC()
-{
-    return _ioc;
-}
-
-uint32_t MemcHardware::getVideoInitAddr() const
-{
-    return _videoInitAddr;
-}
-
-uint32_t MemcHardware::getVideoStartAddr() const
-{
-    return _videoStartAddr;
-}
-
-uint32_t MemcHardware::getVideoEndAddr() const
-{
-    return _videoEndAddr;
-}
-
-uint32_t MemcHardware::getCursorInitAddr() const
-{
-    return _cursorInitAddr;
-}
-
 const uint8_t *MemcHardware::getRamData() const
 {
     return _ram.data();
@@ -645,11 +614,6 @@ const uint8_t *MemcHardware::getRamData() const
 uint32_t MemcHardware::getRamSize() const
 {
     return static_cast<uint32_t>(_ram.size());
-}
-
-const VIDC10 &MemcHardware::getVIDC() const
-{
-    return _vidc;
 }
 
 bool MemcHardware::isVideoDMAEnabled() const
@@ -720,10 +684,7 @@ void MemcHardware::reset()
     // asserted. Video/Cursor operations are unaffected by RESET.
     _videoDMAEnabled = false;
     _soundDMAEnabled = false;
-    _videoInitAddr = 0;
-    _videoStartAddr = 0;
-    _videoEndAddr = 0;
-    _cursorInitAddr = 0;
+    _vidc.reset();
 
     // Generate a set of mappings which map logical addresses from 0x0000
     // to physical addresses 0x3800000 where the high ROM is positioned.
@@ -1019,6 +980,8 @@ AddressMap MemcHardware::createMasterWriteMap()
 // Based on GenericHardware::addIntegralHardware().
 void MemcHardware::addIntegralHardware(IHardwareDeviceCollection &devices)
 {
+    devices.push_back(&_ioc);
+    devices.push_back(&_vidc);
     devices.push_back(&_keyboard);
 }
 

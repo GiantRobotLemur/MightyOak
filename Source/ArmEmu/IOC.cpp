@@ -734,10 +734,10 @@ void IOC::write(uint32_t offset, uint32_t value)
 }
 
 // Inherited from IMMIOBlock.
-void IOC::connect(const ConnectionContext &context)
+void IOC::connect(SystemContext &context)
 {
     // Connect to the rest of the emulated system.
-    _context = context.getInteropContext();
+    _context = &context;
     IHardwareDevice *keyboardDevice = nullptr;
 
     if (context.tryFindDevice("Keyboard Controller", keyboardDevice))

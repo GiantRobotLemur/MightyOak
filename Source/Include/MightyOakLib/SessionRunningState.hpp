@@ -14,17 +14,22 @@
 ////////////////////////////////////////////////////////////////////////////////
 // Dependent Header Files
 ////////////////////////////////////////////////////////////////////////////////
-#include "AppState.hpp"
+#include <thread>
+#include <vector>
 
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
+#include <SDL3/SDL.h>
+
+#include "AppState.hpp"
 
 namespace Mo {
 
 ////////////////////////////////////////////////////////////////////////////////
 // Data Type Declarations
 ////////////////////////////////////////////////////////////////////////////////
+namespace Arm {
+class IKeyboardController;
+class IVideoFrameProvider;
+} // namespace Arm
 
 ////////////////////////////////////////////////////////////////////////////////
 // Class Declarations
@@ -35,28 +40,38 @@ class SessionRunningState : public AppState
 public:
     // Construction/Destruction
     SessionRunningState(AppContext *sharedContext);
-    virtual ~SessionRunningState() = default;
+    virtual ~SessionRunningState();
 
     // Accessors
 
     // Operations
 
     // Overrides
-private:
-    // Internal Types
+protected:
+    std::unique_ptr<Ag::SDL3::EventProcessor> configure() override;
+    AppState *runInternal() override;
 
+private:
     // Internal Functions
+    static bool onRenderFrame(uintptr_t context, double timeDelta);
+    static bool onKeyDown(uintptr_t context, SDL_Event *event);
+    static bool onKeyUp(uintptr_t context, SDL_Event *event);
+    static bool onMouseMotion(uintptr_t context, SDL_Event *event);
+    static bool onMouseButton(uintptr_t context, SDL_Event *event);
+    bool renderFrame();
 
     // Internal Fields
+    std::thread _emulatorThread;
+    SDL_Renderer *_renderer;
+    SDL_Texture *_texture;
+    Arm::IKeyboardController *_keyboard;
+    Arm::IVideoFrameProvider *_frameProvider;
+    std::vector<uint8_t> _rawFrameBuffer;
+    std::vector<uint32_t> _argb32Buffer;
+    uint32_t _palette[256];
+    uint32_t _lastWidth;
+    uint32_t _lastHeight;
 };
-
-////////////////////////////////////////////////////////////////////////////////
-// Function Declarations
-////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////
-// Templates
-////////////////////////////////////////////////////////////////////////////////
 
 } // namespace Mo
 

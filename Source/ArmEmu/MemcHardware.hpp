@@ -111,10 +111,6 @@ private:
     bool _osMode;
     bool _videoDMAEnabled;
     bool _soundDMAEnabled;
-    uint32_t _videoInitAddr;
-    uint32_t _videoStartAddr;
-    uint32_t _videoEndAddr;
-    uint32_t _cursorInitAddr;
 
     // Non-cache intensive.
     GenericHostBlock _physicalRamBlock;
@@ -138,29 +134,11 @@ public:
     ~MemcHardware() = default;
 
     // Accessors
-    //! @brief Gets a reference to the IOC for use by internal hardware devices.
-    IOC &getIOC();
-
-    //! @brief Gets the video DMA initial address (Vinit) as a physical byte offset.
-    uint32_t getVideoInitAddr() const;
-
-    //! @brief Gets the video DMA start address (Vstart) as a physical byte offset.
-    uint32_t getVideoStartAddr() const;
-
-    //! @brief Gets the video DMA end address (Vend) as a physical byte offset.
-    uint32_t getVideoEndAddr() const;
-
-    //! @brief Gets the cursor DMA initial address (Cinit) as a physical byte offset.
-    uint32_t getCursorInitAddr() const;
-
     //! @brief Gets a direct pointer to the physical RAM.
     const uint8_t *getRamData() const;
 
     //! @brief Gets the total size of physical RAM in bytes.
     uint32_t getRamSize() const;
-
-    //! @brief Gets a const reference to the VIDC10 video controller.
-    const VIDC10 &getVIDC() const;
 
     //! @brief Gets whether video DMA is currently enabled.
     bool isVideoDMAEnabled() const;

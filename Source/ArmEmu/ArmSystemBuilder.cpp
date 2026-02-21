@@ -179,6 +179,13 @@ IArmSystemUPtr ArmSystemBuilder::createSystem()
                                                            std::move(_devices),
                                                            _readMap, _writeMap);
             }
+            else if (_baseOptions.getProcessorVariant() == ProcessorModel::ARM250)
+            {
+                // A test system with an ARM 250 processor.
+                sys = new ArmSystem<ArmV2aSTestSystemTraits>(_baseOptions,
+                                                             std::move(_devices),
+                                                             _readMap, _writeMap);
+            }
             else if (_baseOptions.getProcessorVariant() == ProcessorModel::ARM3)
             {
                 // A test system with an ARM 3 processor.
@@ -204,6 +211,12 @@ IArmSystemUPtr ArmSystemBuilder::createSystem()
                 sys = new ArmSystem<ArmV2MemcSystemTraits>(_baseOptions,
                                                            std::move(_devices),
                                                            _readMap, _writeMap);
+            }
+            else if (_baseOptions.getProcessorVariant() == ProcessorModel::ARM250)
+            {
+                sys = new ArmSystem<ArmV2aSMemcSystemTraits>(_baseOptions,
+                                                             std::move(_devices),
+                                                             _readMap, _writeMap);
             }
             else if (_baseOptions.getProcessorVariant() == ProcessorModel::ARM3)
             {

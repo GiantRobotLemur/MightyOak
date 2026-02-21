@@ -21,6 +21,8 @@
 #include "ArmEmu/AddressMap.hpp"
 #include "ArmEmu/ExecutionMetrics.hpp"
 #include "ArmEmu/GuestEventQueue.hpp"
+#include "ArmEmu/HostMessageID.hpp"
+#include "ArmEmu/IVideoFrameProvider.hpp"
 
 //! @brief Contains all source code elements of the Mighty Oak application.
 namespace Mo {
@@ -162,6 +164,41 @@ public:
     //! specified logical address.
     virtual bool logicalToPhysicalAddress(uint32_t logicalAddr,
                                           PageMapping &mapping) const = 0;
+
+    //! @brief Attempts to look up an object which emulates a named hardware
+    //! device within the system.
+    //! @param[in] name The name of the device to look up.
+    //! @param[out] device Receives a pointer to the device instance, if one
+    //! was found.
+    //! @retval true A device with a matching name was found and its pointer
+    //! returned in @p device. The lifetime of the pointer matches that of the
+    //! current object.
+    //! @retval false The system did not contain any device with an identifier
+    //! which matched @p name.
+    virtual bool tryFindDevice(Ag::string_cref_t name,
+                               IHardwareDevicePtr &device) const = 0;
+
+    //! @brief Attempts to find a named device in the system and convert
+    //! it to the required data type.
+    //! @tparam TDevice The data type of the device to obtain.
+    //! @param[in] name The device identifier.
+    //! @param[out] device Receives the typed pointer to the device if successful.
+    //! @retval true A device with a matching name was found and its pointer
+    //! returned in @p device. The lifetime of the pointer matches that of the
+    //! current object.
+    //! @retval false The system did not contain any device with an identifier
+    //! which matched @p name, or it could not be cast to @p TDevice.
+    template<typename TDevice>
+    bool tryFindTypedDevice(Ag::string_cref_t name,
+                            TDevice *&device) const
+    {
+        IHardwareDevicePtr rawDevice;
+
+        if (tryFindDevice(name, rawDevice))
+            return Ag::tryCast(rawDevice, device);
+
+        return false;
+    }
 
     // Operations
     //! @brief Runs the processor until a host or debug interrupt occurs.

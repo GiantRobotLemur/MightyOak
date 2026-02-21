@@ -418,11 +418,24 @@ TEST_F(MemcRomBootTests, CinitRegisterStored)
     // Create a standalone MemcHardware to test the Cinit register directly.
     AddressMap readDevices, writeDevices;
     MemcHardware memc(Options(), readDevices, writeDevices);
+    IHardwareDeviceCollection devices;
+    VIDC10 *specimen = nullptr;
+
+    memc.addIntegralHardware(devices);
+
+    for (auto device : devices)
+    {
+        if (Ag::tryCast(device, specimen))
+            break;
+    }
+
+    ASSERT_NE(specimen, nullptr) << "VIDC10 instance not found!";
+
     memc.reset();
     memc.setPrivilegedMode(true);
 
     // Verify initial value is 0.
-    EXPECT_EQ(memc.getCursorInitAddr(), 0u);
+    EXPECT_EQ(specimen->getCursorInitAddr(), 0u);
 
     // Write a Cinit register value. The MEMC register encoding for Cinit is:
     // Base address 0x3600000, register ID = 3 (bits [19:17]).
@@ -433,19 +446,19 @@ TEST_F(MemcRomBootTests, CinitRegisterStored)
     uint32_t memcAddr = 0x3660000 | 0x1234C;
     EXPECT_TRUE(memc.write<uint32_t>(memcAddr, 0));
 
-    EXPECT_EQ(memc.getCursorInitAddr(), 0x1234Cu)
+    EXPECT_EQ(specimen->getCursorInitAddr(), 0x1234Cu)
         << "Cinit register did not store the expected value.";
 
     // Write a different value.
     memcAddr = 0x3660000 | 0x1FFF8;
     EXPECT_TRUE(memc.write<uint32_t>(memcAddr, 0));
 
-    EXPECT_EQ(memc.getCursorInitAddr(), 0x1FFF8u)
+    EXPECT_EQ(specimen->getCursorInitAddr(), 0x1FFF8u)
         << "Cinit register did not update to the new value.";
 
     // Verify reset clears Cinit.
     memc.reset();
-    EXPECT_EQ(memc.getCursorInitAddr(), 0u)
+    EXPECT_EQ(specimen->getCursorInitAddr(), 0u)
         << "Cinit register was not cleared on reset.";
 }
 
