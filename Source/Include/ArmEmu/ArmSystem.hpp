@@ -18,6 +18,7 @@
 #include <memory>
 
 #include "Ag/Core/EnumInfo.hpp"
+#include "Ag/Core/Utils.hpp"
 #include "ArmEmu/AddressMap.hpp"
 #include "ArmEmu/ExecutionMetrics.hpp"
 #include "ArmEmu/GuestEventQueue.hpp"

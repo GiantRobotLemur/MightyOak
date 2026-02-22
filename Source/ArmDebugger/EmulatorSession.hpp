@@ -19,6 +19,7 @@
 
 #include "ArmEmu/EmuOptions.hpp"
 #include "ArmEmu/ArmSystem.hpp"
+#include "ArmEmu/BootProgressMonitor.hpp"
 
 #include "Breakpoint.hpp"
 #include "EmulatorIOAdapter.hpp"
@@ -112,6 +113,7 @@ private:
     QTimer _emulatorPollTimer;
     QEmulatorFutureWatcher _emulatorWatcher;
     Arm::IArmSystemUPtr _emulator;
+    Arm::BootProgressMonitor *_diagnostic;
     IEmulatorIOAdapterUPtr _ioAdapter;
     BreakpointCollection _breakpoints;
     SessionSettings _settings;

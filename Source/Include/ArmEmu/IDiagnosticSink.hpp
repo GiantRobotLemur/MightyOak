@@ -139,6 +139,9 @@ public:
                               ProcessorMode newMode) = 0;
 };
 
+//! @brief An alias for a unique pointer to an IDiagnosticSink implementation.
+using IDiagnosticSinkUPtr = std::unique_ptr<IDiagnosticSink>;
+
 }} // namespace Mo::Arm
 
 #endif // Header guard

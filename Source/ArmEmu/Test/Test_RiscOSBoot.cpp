@@ -34,11 +34,13 @@ namespace {
 class RiscOSBootTests : public ::testing::Test
 {
 protected:
-    IArmSystemUPtr _system;
-
     static constexpr uint32_t RamSizeKb = 4096; // 4 MB for RISC OS 3.10
 
     RiscOSBootTests()
+    {
+    }
+
+    IArmSystemUPtr createSystem(IDiagnosticSinkUPtr &&diagnostics)
     {
         Options opts;
         opts.setHardwareArchitecture(SystemModel::Archimedies);
@@ -47,7 +49,15 @@ protected:
         opts.setRamSizeKb(RamSizeKb);
         ArmSystemBuilder builder(opts);
 
-        _system = builder.createSystem();
+        if (diagnostics)
+            builder.addDevice(std::move(diagnostics));
+
+        return builder.createSystem();
+    }
+
+    IArmSystemUPtr createSystem()
+    {
+        return createSystem({ });
     }
 };
 
@@ -59,9 +69,10 @@ protected:
 TEST_F(RiscOSBootTests, ResetVectorExecutes)
 {
     // Run a modest number of cycles to verify the PC advances from the reset vector.
-    auto result = _system->runLimited(1000);
+    auto specimen = createSystem();
+    auto result = specimen->runLimited(1000);
 
-    uint32_t pc = _system->getCoreRegister(CoreRegister::PC);
+    uint32_t pc = specimen->getCoreRegister(CoreRegister::PC);
     EXPECT_GT(pc, 0u) << "PC did not advance from the reset vector.";
     EXPECT_GT(result.InstructionCount, 0u) << "No instructions were executed.";
 }
@@ -74,9 +85,14 @@ TEST_F(RiscOSBootTests, ResetVectorExecutes)
 TEST_F(RiscOSBootTests, AdvancesPastI2CProbe)
 {
     // Run 1 million cycles. This should be enough to get past the I2C probe.
-    auto result = _system->runLimited(1000000);
+    auto sinkPtr = std::make_unique<BootProgressMonitor>();
+    auto sink = sinkPtr.get();
+    auto specimen = createSystem();
+    auto result = specimen->runLimited(1000000);
 
-    uint32_t pc = _system->getCoreRegister(CoreRegister::PC);
+    uint32_t pc = specimen->getCoreRegister(CoreRegister::PC);
+    EXPECT_GT(sink->getI2cToggleCount(), 1u) << "PC at 0x" << std::hex << pc;
+
 
     // After 1M cycles, if the PC is still in the very early ROM code
     // (the first few hundred bytes), we're likely stuck in the I2C probe loop.
@@ -85,7 +101,7 @@ TEST_F(RiscOSBootTests, AdvancesPastI2CProbe)
     //
     // We check that the PC has moved beyond the initial reset/I2C area
     // into the main ROM body.
-    EXPECT_GT(pc, MEMC::LowRomStart + 0x1000u)
+    EXPECT_GT(pc, MEMC::HighRomStart + 0x1000u)
         << "PC appears stuck in early boot code (possibly I2C probe). "
         << "PC = 0x" << std::hex << pc;
 }
@@ -95,9 +111,10 @@ TEST_F(RiscOSBootTests, AdvancesPastI2CProbe)
 TEST_F(RiscOSBootTests, BootProgressesBeyondHardwareInit)
 {
     // Run 10 million cycles to get through hardware initialisation.
-    auto result = _system->runLimited(10000000);
+    auto specimen = createSystem();
+    auto result = specimen->runLimited(10000000);
 
-    uint32_t pc = _system->getCoreRegister(CoreRegister::PC);
+    uint32_t pc = specimen->getCoreRegister(CoreRegister::PC);
 
     // Verify the PC is in a reasonable range (ROM or RAM — once RISC OS
     // starts initialising its workspace, the PC may be in RAM).

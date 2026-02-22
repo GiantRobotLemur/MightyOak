@@ -75,6 +75,7 @@ EmulatorSession::EmulatorSession(QObject *owner) :
     QObject(owner),
     _emulatorPollTimer(this),
     _emulatorWatcher(this),
+    _diagnostic(nullptr),
     _state(EmulatorState::Uninitialised)
 {
     connect(&_emulatorPollTimer, &QTimer::timeout,
@@ -303,6 +304,13 @@ void EmulatorSession::create(const Arm::Options &options)
     try
     {
         Arm::ArmSystemBuilder builder(options);
+
+        // Add a diagnostic monitor.
+        auto bootMonitor = std::make_unique<Arm::BootProgressMonitor>();
+
+        _diagnostic = bootMonitor.get();
+        builder.addDevice(std::move(bootMonitor));
+        builder.setDiagnosticsEnabled(true);
 
         _emulator = builder.createSystem();
         _settings.setEmulatorOptions(options);
