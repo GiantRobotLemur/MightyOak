@@ -292,6 +292,12 @@ implementations in `Source/ArmEmu/`):
   patterns (MEMC 0x3600000, IOC 0x3200000, VIDC 0x3400000, I2C toggling on
   IOC control register). Tracks per-category access counts and a timestamped
   milestone list. `printSummary()` for text output.
+- **BootStallDetector** — monitors the instruction stream for tight PC loops
+  (the primary symptom of a boot stall). Maintains a circular buffer of recent
+  PC values and periodically checks for low PC diversity. Records `StallInfo`
+  entries with loop PCs and detection timestamps. Tracks high-water-mark PC
+  (furthest into ROM the boot reached). `printReport()` outputs stall info
+  with disassembled instructions via `Asm::InstructionInfo`.
 - **CompositeDiagnosticSink** — header-only forwarder to multiple child sinks.
 
 #### SystemContext and Scheduling
@@ -441,6 +447,11 @@ Supported platforms: Visual Studio 2022 x64 (Windows), gcc 11 x64 (Linux).
 - **Diagnostic boot trace** (`Test_MemcRomBoot.cpp::DiagnosticBootTrace`) —
   attaches a `CompositeDiagnosticSink` (RingBufferTrace + BootProgressMonitor)
   to the test ROM boot, verifies trace capture, and outputs boot progress.
+- **Diagnostic boot investigation** (`Test_RiscOSBootDiag.cpp`) — 6 tests
+  using `BootStallDetector`, `BootProgressMonitor`, and `RingBufferTrace` to
+  investigate where RISC OS 3.10 boot stalls: stall detection with
+  disassembly, boot progress with trace, exception vector integrity, MEMC
+  page table dump, I2C/IOC activity analysis, and PC progression timeline.
 - 21 AsmTools test files covering each pipeline stage; 29 ArmEmu test files
   covering CPU, hardware, diagnostics, and integration (including ARM250
   variant tests for ALU, co-processor, and data transfer).

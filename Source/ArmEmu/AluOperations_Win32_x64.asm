@@ -1,6 +1,6 @@
 ; AluOperations_Win32_x64.asm
 ; author GiantRobotLemur@na-se.co.uk
-; date 2023
+; date 2023-2026
 ; copyright This file is part of the Mighty Oak project which is released
 ; under LGPL 3 license. See LICENSE file at the repository root or go to
 ; https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -80,6 +80,7 @@ ALU_Add endp
 ;                     StatusFlags[uint8_t] &statusFlags)
 ALU_Sub proc
     sub ecx,edx
+    cmc                         ; Complement carry: ARM C = NOT(x86 CF) for sub
     MOVE_PSR_TO_DL
     mov byte ptr [r8],dl    ; Store the ARM-compatible flags
     mov eax,ecx             ; Return the operation result
@@ -101,12 +102,13 @@ ALU_Adc endp
 
 ; uint32_t ALU_Sbc(uint32_t op1, uint32_t op2,
 ;                     StatusFlags[uint8_t] &statusFlags)
-; result = op1 - (op2 + Carry)
+; result = op1 - op2 - NOT(Carry)
 ALU_Sbc proc
     mov al,byte ptr [r8]    ; Load ARM status flags
-    shl al,7                ; Shift bit 2 out to bit 8,
-                            ; which will end up in RFlags.Carry
+    shl al,7                ; Shift ARM C flag into x86 CF
+    cmc                     ; Complement: x86 CF = NOT(ARM C) = borrow-in
     sbb ecx,edx             ; Perform the operation being emulated.
+    cmc                     ; Complement: ARM C = NOT(x86 CF) for sub
     MOVE_PSR_TO_DL
     mov byte ptr [r8],dl    ; Store the ARM-compatible flags
     mov eax,ecx             ; Return the operation result
@@ -115,12 +117,13 @@ ALU_Sbc endp
 
 ; uint32_t ALU_Rsc(uint32_t op1, uint32_t op2,
 ;                     StatusFlags[uint8_t] &statusFlags)
-; result = op2 - (op1 + Carry)
+; result = op2 - op1 - NOT(Carry)
 ALU_Rsc proc
     mov al,byte ptr [r8]    ; Load ARM status flags
-    shl al,7                ; Shift bit 2 out to bit 8,
-                            ; which will end up in RFlags.Carry
+    shl al,7                ; Shift ARM C flag into x86 CF
+    cmc                     ; Complement: x86 CF = NOT(ARM C) = borrow-in
     sbb edx,ecx             ; Perform the operation being emulated.
+    cmc                     ; Complement: ARM C = NOT(x86 CF) for sub
     MOVE_PSR_TO_CL
     mov byte ptr [r8],cl    ; Store the ARM-compatible flags
     mov eax,edx             ; Return the operation result

@@ -25,6 +25,7 @@
 #include "ArmEmu/IDiagnosticSink.hpp"
 #include "ArmEmu/RingBufferTrace.hpp"
 #include "ArmEmu/BootProgressMonitor.hpp"
+#include "ArmEmu/BootStallDetector.hpp"
 #include "ArmEmu/CompositeDiagnosticSink.hpp"
 #include "ArmEmu/ArmSystemBuilder.hpp"
 

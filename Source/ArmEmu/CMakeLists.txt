@@ -54,6 +54,8 @@ ag_add_library(ArmEmu   FOLDER      ARM
                                     "${MO_INCLUDE_DIR}/ArmEmu/RingBufferTrace.hpp"
                                     "BootProgressMonitor.cpp"
                                     "${MO_INCLUDE_DIR}/ArmEmu/BootProgressMonitor.hpp"
+                                    "BootStallDetector.cpp"
+                                    "${MO_INCLUDE_DIR}/ArmEmu/BootStallDetector.hpp"
                                     "${MO_INCLUDE_DIR}/ArmEmu/CompositeDiagnosticSink.hpp"
                         HEADERS     "${MO_INCLUDE_DIR}/ArmEmu.hpp"
                         PUBLIC_LIBS AgCore readerwriterqueue)
@@ -129,6 +131,8 @@ source_group(Interface FILES
              "${MO_INCLUDE_DIR}/ArmEmu/RingBufferTrace.hpp"
              "BootProgressMonitor.cpp"
              "${MO_INCLUDE_DIR}/ArmEmu/BootProgressMonitor.hpp"
+             "BootStallDetector.cpp"
+             "${MO_INCLUDE_DIR}/ArmEmu/BootStallDetector.hpp"
              "${MO_INCLUDE_DIR}/ArmEmu/CompositeIDiagnosticSink.hpp"
 )
 
@@ -163,6 +167,7 @@ ag_add_test_app(ArmEmu_Tests    TEST_LIB ArmEmu
                                          "Test/Test_PCF8583.cpp"
                                          "Test/Test_RiscOSBoot.cpp"
                                          "Test/Test_Diagnostics.cpp"
+                                         "Test/Test_RiscOSBootDiag.cpp"
                                          "Test/Test_Main.cpp"
                                          )
 
