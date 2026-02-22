@@ -15,6 +15,7 @@
 // Dependent Header Files
 ////////////////////////////////////////////////////////////////////////////////
 #include "ArmCore.hpp"
+#include "ArmEmu/IDiagnosticSink.hpp"
 
 namespace Mo {
 namespace Arm {
@@ -31,7 +32,10 @@ namespace Arm {
 //! @tparam TPrimaryPipeline The pipeline which executes instructions for the
 //! single operating mode the execution units supports modelled on
 //! InstructionPipeline.
-template<typename THardware, typename TRegisterFile, typename TPrimaryPipeline>
+//! @tparam Used with if constexpr to determine of IDiagnosticSink branches
+//! should be taken - otherwise they will be optimised out.
+template<typename THardware, typename TRegisterFile,
+         typename TPrimaryPipeline, bool TAllowDiagnostics>
 class SingleModeExecutionUnit
 {
 public:
@@ -39,6 +43,7 @@ public:
     using PrimaryPipeline = TPrimaryPipeline;
     using Hardware = THardware;
     using RegisterFile = TRegisterFile;
+    static constexpr bool AllowDiagnostics = TAllowDiagnostics;
 
 private:
     // Internal Fields
@@ -46,6 +51,7 @@ private:
     RegisterFile &_regs;
     SystemContext &_context;
     PrimaryPipeline _pipeline;
+    IDiagnosticSink *_diagnosticSink;
 
     // Internal Functions
     static void onMaxCyclesElapsed(SystemContext &guestContext,
@@ -70,7 +76,8 @@ public:
         _hardware(hw),
         _regs(regs),
         _context(context),
-        _pipeline(_hardware, _regs)
+        _pipeline(_hardware, _regs),
+        _diagnosticSink(nullptr)
     {
     }
 
@@ -153,11 +160,37 @@ public:
                 {
                     // A fast interrupt has been signalled.
                     result = _regs.handleFirq();
+
+                    if constexpr (AllowDiagnostics)
+                    {
+                        // Notify diagnostic sink of interrupt taken.
+                        if (_diagnosticSink != nullptr)
+                        {
+                            InterruptEvent evt = {};
+                            evt.CycleCount = _context.getMasterClockTicks();
+                            evt.CpuTookFirq = true;
+                            evt.CpuTookIrq = false;
+                            _diagnosticSink->onInterruptChange(evt);
+                        }
+                    }
                 }
                 else // if (pendingIrqs & IS_IrqPending)
                 {
                     // A normal interrupt has been signalled.
                     result = _regs.handleIrq();
+
+                    // Notify diagnostic sink of interrupt taken.
+                    if constexpr (AllowDiagnostics)
+                    {
+                        if (_diagnosticSink != nullptr)
+                        {
+                            InterruptEvent evt = {};
+                            evt.CycleCount = _context.getMasterClockTicks();
+                            evt.CpuTookIrq = true;
+                            evt.CpuTookFirq = false;
+                            _diagnosticSink->onInterruptChange(evt);
+                        }
+                    }
                 }
 
                 // Ensure the results are properly applied to the pipeline.
@@ -167,6 +200,22 @@ public:
             {
                 // Decode and execute the next instruction.
                 result = _pipeline.executeNext();
+
+                if constexpr (AllowDiagnostics)
+                {
+                    // Notify diagnostic sink of instruction execution.
+                    if (_diagnosticSink != nullptr)
+                    {
+                        InstructionTraceEntry entry = {};
+                        entry.CycleCount = _context.getMasterClockTicks();
+                        entry.PC = _pipeline.getLastPC();
+                        entry.Opcode = _pipeline.getLastInstruction();
+                        entry.PSR = _regs.getPSR();
+                        entry.CyclesTaken = static_cast<uint8_t>(result & ExecResult::CycleCountMask);
+                        entry.WasExecuted = _pipeline.getLastWasExecuted();
+                        _diagnosticSink->onInstruction(entry);
+                    }
+                }
 
                 // Update metrics.
                 ++metrics.InstructionCount;
@@ -192,6 +241,14 @@ public:
         }
 
         return metrics;
+    }
+
+    //! @brief A function called after the SystemContext has been initialised,
+    //! but before any execution takes place.
+    void connect()
+    {
+        if constexpr (AllowDiagnostics)
+            _context.tryFindTypedDevice("DiagnosticSink", _diagnosticSink);
     }
 };
 

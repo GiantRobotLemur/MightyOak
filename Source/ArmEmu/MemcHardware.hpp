@@ -116,6 +116,7 @@ private:
     GenericHostBlock _physicalRamBlock;
     GenericHostBlock _lowRomBlock;
     GenericHostBlock _highRomBlock;
+    IDiagnosticSink *_diagnosticSink;
 private:
     // Internal Functions
     void setPageSize(uint8_t pageSizePow2);
@@ -292,6 +293,7 @@ public:
     AddressMap createMasterReadMap();
     AddressMap createMasterWriteMap();
     void addIntegralHardware(IHardwareDeviceCollection &devices);
+    void connect(SystemContext &context);
 };
 
 }} // namespace Mo::Arm

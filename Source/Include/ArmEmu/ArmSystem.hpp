@@ -197,6 +197,7 @@ public:
         if (tryFindDevice(name, rawDevice))
             return Ag::tryCast(rawDevice, device);
 
+        device = nullptr;
         return false;
     }
 

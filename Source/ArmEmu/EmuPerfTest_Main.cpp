@@ -76,12 +76,14 @@ private:
     {
         ShowHelp,
         CycleCount,
+        UseDiagnostics,
     };
 
     // Internal Fields
     EmuPerfTestCommand _command;
     Configuration _config;
     uint32_t _cycleCount;
+    bool _useDiagnostics;
 
     // Internal Functions
 public:
@@ -104,6 +106,10 @@ public:
         builder.defineAlias(Option::CycleCount, U'c');
         builder.defineAlias(Option::CycleCount, "cycles");
 
+        builder.defineOption(Option::UseDiagnostics, "Specifies that diagnostics should be enabled (sloiwer).");
+        builder.defineAlias(Option::UseDiagnostics, U'd');
+        builder.defineAlias(Option::UseDiagnostics, "diagnostics");
+
         return builder.createSchema();
     }
 
@@ -112,7 +118,8 @@ public:
         Cli::ProgramArguments(createSchema()),
         _command(EmuPerfTestCommand::Auto),
         _config(Configuration::None),
-        _cycleCount(0)
+        _cycleCount(0),
+        _useDiagnostics(false)
     {
     }
 
@@ -122,6 +129,7 @@ public:
     EmuPerfTestCommand getCommand() const { return _command; }
     Configuration getConfiguration() const { return _config; }
     uint32_t getCycleCount() const { return _cycleCount; }
+    bool useDiagnostics() const { return _useDiagnostics; }
 
 protected:
     // Overrides
@@ -159,6 +167,10 @@ protected:
                                        { value });
                 isOK = false;
             }
+            break;
+
+        case UseDiagnostics:
+            _useDiagnostics = true;
             break;
 
         default:
@@ -262,6 +274,7 @@ private:
     EmuPerfTestCommand _command;
     Configuration _config;
     uint32_t _cycleCount;
+    bool _useDiagnostics;
 
     // Internal Functions
     IArmSystemUPtr initialiseEmbeddedTestSystem(Options &systemOptions) const
@@ -311,6 +324,7 @@ private:
         {
             // Create the emulated system based on the settings provided.
             ArmSystemBuilder builder(systemOptions);
+            builder.setDiagnosticsEnabled(_useDiagnostics);
             testSystem = builder.createSystem();
 
             // Create a ROM image filled with breakpoints.
@@ -377,11 +391,15 @@ private:
         testSystem->setCoreRegister(CoreRegister::R0, _cycleCount);
 
         std::string output;
+        appendFormat(FormatInfo::getDisplay(), "Selected {0} processor", output,
+                     { getProcessorModelType().toDisplayName(testSystemOptions.getProcessorVariant()) });
+
+        if (_useDiagnostics)
+            output.append(" (diagnostics enabled)");
+
         appendFormat(FormatInfo::getDisplay(),
-                     "Selected {0} processor.\n"
-                     "Running {1} loops of the Dhrystone 2.1 benchmark...", output,
-                     { getProcessorModelType().toDisplayName(testSystemOptions.getProcessorVariant()),
-                       _cycleCount });
+                     ".\nRunning {0} loops of the Dhrystone 2.1 benchmark...", output,
+                     { _cycleCount });
 
         puts(output.c_str());
         ExecutionMetrics metrics = testSystem->run();
@@ -434,7 +452,8 @@ public:
     EmuPerfTestApp() :
         _command(EmuPerfTestCommand::Auto),
         _config(Configuration::None),
-        _cycleCount(100)
+        _cycleCount(100),
+        _useDiagnostics(false)
     {
     }
 
@@ -463,6 +482,7 @@ protected:
                 // Extract the options we need.
                 _config = testArgs->getConfiguration();
                 _cycleCount = testArgs->getCycleCount();
+                _useDiagnostics = testArgs->useDiagnostics();
             }
             else if (_command == EmuPerfTestCommand::Auto)
             {

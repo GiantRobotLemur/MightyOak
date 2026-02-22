@@ -21,6 +21,7 @@
 #include "Ag/Core/Utils.hpp"
 
 #include "ArmEmu/ArmSystem.hpp"
+#include "ArmEmu/IDiagnosticSink.hpp"
 #include "ArmEmu/Display.hpp"
 #include "ArmEmu/GuestEventQueue.hpp"
 #include "ArmEmu/EmuOptions.hpp"
@@ -86,6 +87,12 @@ private:
 
         // Index and connect all devices together and to inter-op services.
         _interop.connectAllDevices(allDevices);
+
+        // Allow hardware to connect to (possibly external) devices.
+        _hardware.connect(_interop);
+
+        // Connect the execution unit to the same devices, if needed.
+        _execUnit.connect();
     }
 public:
     // Construction/Destruction

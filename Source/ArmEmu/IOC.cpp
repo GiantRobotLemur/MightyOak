@@ -20,6 +20,7 @@
 #include "AcornKeyboardController.hpp"
 #include "I2CBus.hpp"
 
+#include "ArmEmu/IDiagnosticSink.hpp"
 #include "ArmEmu/IOC.hpp"
 #include "ArmEmu/HostMessageID.hpp"
 #include "ArmEmu/SystemContext.hpp"
@@ -292,6 +293,7 @@ IOC::IOC(MemcHardware &parent) :
     _kartRxQueue(&_synchronisedData->RxQueue),
     _kartTxQueue(&_synchronisedData->TxQueue),
     _i2cBus(nullptr),
+    _diagnosticSink(nullptr),
     _kartRxByte(0)
 {
     // Enable HW counters 0 and 1 to raise interrupts.
@@ -336,7 +338,20 @@ void IOC::setCtrlPinInputState(uint8_t pin, bool state)
 //! @retval false No unmasked IRQs are pending.
 bool IOC::raiseVSyncIrq()
 {
-    return _irqState->raiseIrq(3);
+    bool result = _irqState->raiseIrq(3);
+
+    if (_diagnosticSink != nullptr && _context != nullptr)
+    {
+        InterruptEvent evt = {};
+        evt.CycleCount = _context->getMasterClockTicks();
+        evt.IrqStatus = _irqState->getIrqState();
+        evt.IrqMask = _irqState->getIrqMask();
+        evt.FirqStatus = _irqState->getFirqState();
+        evt.FirqMask = _irqState->getFirqMask();
+        _diagnosticSink->onInterruptChange(evt);
+    }
+
+    return result;
 }
 
 //! @brief Raises the POR interrupt as if the system had just been switched on..
@@ -370,6 +385,17 @@ void IOC::setInterruptLow(uint8_t ilNo, bool state)
         // IL[6:7].
         _parent.setGuestIrq(_irqState->setIrqState(ilNo - 6, !state));
     }
+
+    if (_diagnosticSink != nullptr && _context != nullptr)
+    {
+        InterruptEvent evt = {};
+        evt.CycleCount = _context->getMasterClockTicks();
+        evt.IrqStatus = _irqState->getIrqState();
+        evt.IrqMask = _irqState->getIrqMask();
+        evt.FirqStatus = _irqState->getFirqState();
+        evt.FirqMask = _irqState->getFirqMask();
+        _diagnosticSink->onInterruptChange(evt);
+    }
 }
 
 //! @brief Activates one of the FH pins.
@@ -382,6 +408,17 @@ void IOC::setFastHighInterrupt(uint8_t fhNo, bool state)
     {
         // The FH pins tragger FIRQ-0 and 1.
         _parent.setGuestFastIrq(_irqState->setFirqState(fhNo, state));
+    }
+
+    if (_diagnosticSink != nullptr && _context != nullptr)
+    {
+        InterruptEvent evt = {};
+        evt.CycleCount = _context->getMasterClockTicks();
+        evt.IrqStatus = _irqState->getIrqState();
+        evt.IrqMask = _irqState->getIrqMask();
+        evt.FirqStatus = _irqState->getFirqState();
+        evt.FirqMask = _irqState->getFirqMask();
+        _diagnosticSink->onInterruptChange(evt);
     }
 }
 
@@ -494,6 +531,7 @@ uint32_t IOC::read(uint32_t offset)
 {
     uint32_t result = _context->getFuzz();
     uint8_t regId = Ag::Bin::extractBits<uint8_t, 0, 7>(offset) >> 2;
+    IDiagnosticSink *sink = _diagnosticSink;
 
     if (regId < 16)
     {
@@ -589,6 +627,17 @@ uint32_t IOC::read(uint32_t offset)
         default:
             break;
         }
+    }
+
+    if (sink != nullptr)
+    {
+        MemoryAccessEntry entry = {};
+        entry.CycleCount = _context->getMasterClockTicks();
+        entry.Address = BaseAddr + offset;
+        entry.Value = result;
+        entry.Size = 4;
+        entry.IsWrite = false;
+        sink->onMemoryAccess(entry);
     }
 
     return result;
@@ -731,6 +780,17 @@ void IOC::write(uint32_t offset, uint32_t value)
             }
         }
     }
+
+    if (_diagnosticSink != nullptr)
+    {
+        MemoryAccessEntry entry = {};
+        entry.CycleCount = _context->getMasterClockTicks();
+        entry.Address = BaseAddr + offset;
+        entry.Value = value;
+        entry.Size = 4;
+        entry.IsWrite = true;
+        _diagnosticSink->onMemoryAccess(entry);
+    }
 }
 
 // Inherited from IMMIOBlock.
@@ -738,12 +798,9 @@ void IOC::connect(SystemContext &context)
 {
     // Connect to the rest of the emulated system.
     _context = &context;
-    IHardwareDevice *keyboardDevice = nullptr;
 
-    if (context.tryFindDevice("Keyboard Controller", keyboardDevice))
-    {
-        _keyboard = dynamic_cast<AcornKeyboardController *>(keyboardDevice);
-    }
+    context.tryFindTypedDevice("Keyboard Controller", _keyboard);
+    context.tryFindTypedDevice("DiagnosticSink", _diagnosticSink);
 }
 
 //! @brief Constructs an object representing a hardware counter.

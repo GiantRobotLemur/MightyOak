@@ -22,6 +22,10 @@
 #include "ArmEmu/VIDC10.hpp"
 #include "ArmEmu/Display.hpp"
 #include "ArmEmu/ArmSystem.hpp"
+#include "ArmEmu/IDiagnosticSink.hpp"
+#include "ArmEmu/RingBufferTrace.hpp"
+#include "ArmEmu/BootProgressMonitor.hpp"
+#include "ArmEmu/CompositeDiagnosticSink.hpp"
 #include "ArmEmu/ArmSystemBuilder.hpp"
 
 #endif // Header guard

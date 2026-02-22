@@ -57,6 +57,24 @@ ArmSystemBuilder::ArmSystemBuilder(const Options &baseOptions)
     reset(baseOptions);
 }
 
+//! @brief Gets whether the performance-intensive components of the created
+//! system will integrate with diagnostics, slowing them down.
+//! @retval true Diagnostics are enabled.
+//! @retval false Diagnostics will not be enabled.
+bool ArmSystemBuilder::isDiagnosticsEnabled() const
+{
+    return _enableDiagnostics;
+}
+
+//! @brief Specifies whether the performance-intensive components of the created
+//! system will integrate with diagnostics, slowing them down.
+//! @param[in] isEnabled True to enable diagnostics integration, false to
+//! leave them optimized out.
+void ArmSystemBuilder::setDiagnosticsEnabled(bool isEnabled)
+{
+    _enableDiagnostics = isEnabled;
+}
+
 //! @brief Adds a device which the emulated system being built will take
 //! ownership of.
 //! @param[in] device A pointer to the device implementation to transfer
@@ -175,23 +193,45 @@ IArmSystemUPtr ArmSystemBuilder::createSystem()
             if (_baseOptions.getProcessorVariant() == ProcessorModel::ARM2)
             {
                 // A test system with an ARM 2 processor.
-                sys = new ArmSystem<ArmV2TestSystemTraits>(_baseOptions,
-                                                           std::move(_devices),
-                                                           _readMap, _writeMap);
+                if (_enableDiagnostics)
+                {
+                    sys = new ArmSystem<ArmV2TestSystemTraits<true>>(_baseOptions,
+                        std::move(_devices), _readMap, _writeMap);
+                }
+                else
+                {
+                    sys = new ArmSystem<ArmV2TestSystemTraits<false>>(_baseOptions,
+                        std::move(_devices),_readMap, _writeMap);
+                }
             }
             else if (_baseOptions.getProcessorVariant() == ProcessorModel::ARM250)
             {
                 // A test system with an ARM 250 processor.
-                sys = new ArmSystem<ArmV2aSTestSystemTraits>(_baseOptions,
-                                                             std::move(_devices),
-                                                             _readMap, _writeMap);
+                if (_enableDiagnostics)
+                {
+                    sys = new ArmSystem<ArmV2aSTestSystemTraits<true>>(_baseOptions,
+                        std::move(_devices),_readMap, _writeMap);
+                }
+                else
+                {
+                    sys = new ArmSystem<ArmV2aSTestSystemTraits<false>>(_baseOptions,
+                        std::move(_devices), _readMap, _writeMap);
+                }
+
             }
             else if (_baseOptions.getProcessorVariant() == ProcessorModel::ARM3)
             {
                 // A test system with an ARM 3 processor.
-                sys = new ArmSystem<ArmV2aTestSystemTraits>(_baseOptions,
-                                                            std::move(_devices),
-                                                            _readMap, _writeMap);
+                if (_enableDiagnostics)
+                {
+                    sys = new ArmSystem<ArmV2aTestSystemTraits<true>>(_baseOptions,
+                        std::move(_devices), _readMap, _writeMap);
+                }
+                else
+                {
+                    sys = new ArmSystem<ArmV2aTestSystemTraits<false>>(_baseOptions,
+                        std::move(_devices), _readMap, _writeMap);
+                }
             }
             else
             {
@@ -208,21 +248,42 @@ IArmSystemUPtr ArmSystemBuilder::createSystem()
         case SystemModel::ASeries:
             if (_baseOptions.getProcessorVariant() == ProcessorModel::ARM2)
             {
-                sys = new ArmSystem<ArmV2MemcSystemTraits>(_baseOptions,
-                                                           std::move(_devices),
-                                                           _readMap, _writeMap);
+                if (_enableDiagnostics)
+                {
+                    sys = new ArmSystem<ArmV2MemcSystemTraits<true>>(_baseOptions,
+                        std::move(_devices), _readMap, _writeMap);
+                }
+                else
+                {
+                    sys = new ArmSystem<ArmV2MemcSystemTraits<false>>(_baseOptions,
+                        std::move(_devices), _readMap, _writeMap);
+                }
             }
             else if (_baseOptions.getProcessorVariant() == ProcessorModel::ARM250)
             {
-                sys = new ArmSystem<ArmV2aSMemcSystemTraits>(_baseOptions,
-                                                             std::move(_devices),
-                                                             _readMap, _writeMap);
+                if (_enableDiagnostics)
+                {
+                    sys = new ArmSystem<ArmV2aSMemcSystemTraits<true>>(_baseOptions,
+                        std::move(_devices), _readMap, _writeMap);
+                }
+                else
+                {
+                    sys = new ArmSystem<ArmV2aSMemcSystemTraits<false>>(_baseOptions,
+                        std::move(_devices), _readMap, _writeMap);
+                }
             }
             else if (_baseOptions.getProcessorVariant() == ProcessorModel::ARM3)
             {
-                sys = new ArmSystem<ArmV2aMemcSystemTraits>(_baseOptions,
-                                                            std::move(_devices),
-                                                            _readMap, _writeMap);
+                if (_enableDiagnostics)
+                {
+                    sys = new ArmSystem<ArmV2aMemcSystemTraits<true>>(_baseOptions,
+                        std::move(_devices), _readMap, _writeMap);
+                }
+                else
+                {
+                    sys = new ArmSystem<ArmV2aMemcSystemTraits<false>>(_baseOptions,
+                        std::move(_devices), _readMap, _writeMap);
+                }
             }
             else
             {

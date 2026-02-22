@@ -1,7 +1,7 @@
 //! @file ArmEmu/Test/Test_MemcRomBoot.cpp
 //! @brief The definition of unit tests which exercise the MEMC-based system
 //! boot sequence using the embedded MemcTestSystemRom.
-//! @author GiantRobotLemur@na-se.co.uk
+//! @author GiantRobotLemur@na-se.co.uk and Claude Code
 //! @date 2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
@@ -15,10 +15,16 @@
 
 #include "AsmTools.hpp"
 
+#include <iostream>
+#include <sstream>
+
 #include "ArmSystem.inl"
 #include "SystemConfigurations.inl"
 #include "MemcHardware.hpp"
 #include "MemcTestRom.hpp"
+#include "ArmEmu/RingBufferTrace.hpp"
+#include "ArmEmu/BootProgressMonitor.hpp"
+#include "ArmEmu/CompositeDiagnosticSink.hpp"
 
 namespace Mo {
 namespace Arm {
@@ -27,8 +33,8 @@ namespace {
 ////////////////////////////////////////////////////////////////////////////////
 // Local Data Types
 ////////////////////////////////////////////////////////////////////////////////
-//! @brief The concrete MEMC system type used for testing.
-using MemcSystem = ArmSystem<ArmV2MemcSystemTraits>;
+//! @brief The concrete MEMC system type, which enables diagnostics, used for testing.
+using MemcSystem = ArmSystem<ArmV2MemcSystemTraits<true>>;
 
 //! @brief A test fixture which creates a MEMC-based system loaded with the
 //! embedded test ROM and provides helpers for stepping/running.
@@ -123,13 +129,25 @@ protected:
         _lastPC(0),
         _lastBkPt(~0u)
     {
+    }
+
+    IArmSystem *createSystem(IHardwareDeviceUPtr &&extraDevice)
+    {
+        if (_system)
+            return _system.get();
+
         Options opts;
         opts.setHardwareArchitecture(SystemModel::Archimedies);
         opts.setProcessorVariant(ProcessorModel::ARM2);
         opts.setSystemRom(SystemROMPreset::Custom);
         opts.setRamSizeKb(RamSizeKb);
 
-        _system = std::make_unique<MemcSystem>(opts, HardwareDevicePool(),
+        HardwareDevicePool devicePool;
+
+        if (extraDevice)
+            devicePool.emplace_back(std::move(extraDevice));
+
+        _system = std::make_unique<MemcSystem>(opts, std::move(devicePool),
                                                AddressMap(), AddressMap());
 
         // Load the embedded test ROM into low ROM.
@@ -141,6 +159,13 @@ protected:
         // Re-reset so that the CPU starts from address 0 with the ROM data
         // in place for the initial page mappings.
         _system->reset();
+
+        return _system.get();
+    }
+
+    IArmSystem *createSystem()
+    {
+        return createSystem({ });
     }
 
     //! @brief Runs the system for up to maxSteps single steps, stopping early
@@ -152,11 +177,13 @@ protected:
     template<typename Predicate>
     uint32_t runUntil(Predicate predicate, uint32_t maxSteps = MaxSteps)
     {
+        auto sysToRun = createSystem();
+
         uint32_t steps = 0;
 
         for (; steps < maxSteps; ++steps)
         {
-            _lastResult = _system->runSingleStep();
+            _lastResult = sysToRun->runSingleStep();
 
             if (_lastResult.ExecResult == ExecutionMetrics::Result::DebugIrq)
             {
@@ -164,7 +191,7 @@ protected:
                 break;
             }
 
-            if (predicate(_system.get()))
+            if (predicate(sysToRun))
             {
                 break;
             }
@@ -179,11 +206,12 @@ protected:
     //! @return The execution result of the last step.
     ExecutionMetrics::Result runSteps(uint32_t count)
     {
+        auto sysToRun = createSystem();
         ExecutionMetrics::Result lastResult = ExecutionMetrics::Result::Unset;
 
         for (uint32_t i = 0; i < count; ++i)
         {
-            _lastResult = _system->runSingleStep();
+            _lastResult = sysToRun->runSingleStep();
             lastResult = _lastResult.ExecResult;
 
             if (lastResult == ExecutionMetrics::Result::DebugIrq)
@@ -201,7 +229,8 @@ protected:
     //! @return True if a BKPT was hit, false if the PC was stuck.
     bool runUntilHaltOrBkpt(int32_t maxSteps = MaxSteps)
     {
-        _lastResult = _system->runLimited(maxSteps);
+        auto sysToRun = createSystem();
+        _lastResult = sysToRun->runLimited(maxSteps);
         analyseExecution();
 
         return (_lastResult.ExecResult == ExecutionMetrics::Result::DebugIrq);
@@ -225,7 +254,6 @@ protected:
 ////////////////////////////////////////////////////////////////////////////////
 // Unit Tests
 ////////////////////////////////////////////////////////////////////////////////
-
 //! @brief Verify that after reset, the PC advances from address 0 into the
 //! ROM branch sequence, confirming low ROM is correctly mapped to logical
 //! address 0.
@@ -480,6 +508,53 @@ TEST_F(MemcRomBootTests, BootRunsToCompletion)
 
     EXPECT_GE(pc, MEMC::HighRomStart)
         << "PC is not in the ROM region at halt.";
+}
+
+//! @brief Run the boot sequence with diagnostic sinks attached and verify
+//! that the trace and boot monitor capture meaningful data.
+TEST_F(MemcRomBootTests, DiagnosticBootTrace)
+{
+    RingBufferTrace trace(4096);
+    BootProgressMonitor monitor;
+    auto compSinkUPtr = std::make_unique<CompositeDiagnosticSink>(CompositeDiagnosticSink({ &trace, &monitor }));
+    auto sys = createSystem(std::move(compSinkUPtr));
+
+    // Ensure the sink was integrated into the system.
+    CompositeDiagnosticSink *compSink = nullptr;
+
+    EXPECT_TRUE(sys->tryFindTypedDevice("DiagnosticSink", compSink));
+    EXPECT_NE(compSink, nullptr);
+
+    // Run the full boot sequence with diagnostics.
+    runUntilHaltOrBkpt(100000000);
+
+    // Verify the trace captured instructions.
+    EXPECT_GT(trace.getInstructionCount(), 0u)
+        << "No instructions were captured by the trace.";
+
+    // Verify the boot monitor detected progress.
+    EXPECT_GT(monitor.getInstructionCount(), 0u)
+        << "Boot monitor did not count any instructions.";
+
+    // We should have seen IOC accesses during boot (the IOC is accessed
+    // through the MMIO path and therefore captured by the diagnostic sink).
+    EXPECT_GT(monitor.getIocAccessCount(), 0u)
+        << "No IOC accesses detected during boot.";
+
+    // Dump the boot progress to test output for inspection.
+    std::ostringstream oss;
+    monitor.printSummary(oss);
+    oss << "\n";
+    trace.dumpToStream(oss);
+
+    // Print to test output so it can be reviewed.
+    std::cout << oss.str() << std::endl;
+
+    // The boot should have reached at least IOCInit.
+    GuestWorkspace workspace;
+    ASSERT_TRUE(tryGetGuestWorkspace(workspace));
+    EXPECT_GE(workspace.State, BootState::IOCInit)
+        << "Boot with diagnostics attached did not reach IOC init.";
 }
 
 } // Anonymous namespace

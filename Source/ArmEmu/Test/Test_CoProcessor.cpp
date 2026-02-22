@@ -144,18 +144,18 @@ const CoreTestParams armV2aCP15Access[] = {
 void registerCoProcessorExecTests()
 {
     // Register tests to show no access to co-processors on the ARM 2.
-    RegisterExecTests<ArmV2TestSystemTraits>("ARM2_CoProcessor", armV2CPAccessDenied,
-                                             std::size(armV2CPAccessDenied));
+    RegisterExecTests<ArmV2TestSystemTraits<false>>("ARM2_CoProcessor", armV2CPAccessDenied,
+                                                    std::size(armV2CPAccessDenied));
 
     // Register tests to show no access to co-processors on the ARM 250.
-    RegisterExecTests<ArmV2aSTestSystemTraits>("ARM250_CoProcessor", armV2CPAccessDenied,
-                                               std::size(armV2CPAccessDenied));
+    RegisterExecTests<ArmV2aSTestSystemTraits<false>>("ARM250_CoProcessor", armV2CPAccessDenied,
+                                                      std::size(armV2CPAccessDenied));
 
     // Repeat the test for the ARMv2a architecture.
-    RegisterExecTests<ArmV2aTestSystemTraits>("ARM3_CoProcessor", armV2CPAccessDenied,
-                                              std::size(armV2CPAccessDenied));
-    RegisterExecTests<ArmV2aTestSystemTraits>("ARM3_CoProcessor", armV2aCP15Access,
-                                              std::size(armV2aCP15Access));
+    RegisterExecTests<ArmV2aTestSystemTraits<false>>("ARM3_CoProcessor", armV2CPAccessDenied,
+                                                     std::size(armV2CPAccessDenied));
+    RegisterExecTests<ArmV2aTestSystemTraits<false>>("ARM3_CoProcessor", armV2aCP15Access,
+                                                     std::size(armV2aCP15Access));
 }
 
 }} // namespace Mo::Arm

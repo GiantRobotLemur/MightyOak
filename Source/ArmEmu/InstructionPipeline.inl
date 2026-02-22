@@ -50,7 +50,10 @@ private:
     Hardware &_hardware;
     RegisterFile &_registers;
     Decoder _decoder;
+    uint32_t _lastInstruction;
+    uint32_t _lastPC;
     uint8_t _flushPending;
+    bool _lastWasExecuted;
 
 public:
     // Construction/Destruction
@@ -58,7 +61,10 @@ public:
         _hardware(hw),
         _registers(regs),
         _decoder(hw, regs),
-        _flushPending(1)
+        _lastInstruction(0),
+        _lastPC(0),
+        _flushPending(1),
+        _lastWasExecuted(false)
     {
     }
 
@@ -70,6 +76,9 @@ public:
     //! @retval false The current PC points to the next instruction to fetch,
     //! 8 bytes beyond the next instruction to execute.
     bool isFlushPending() const { return _flushPending != 0; }
+    uint32_t getLastPC() const { return _lastPC; }
+    uint32_t getLastInstruction() const { return _lastInstruction; }
+    bool getLastWasExecuted() const { return _lastWasExecuted; }
 
     // Operations
     //! @brief Flushes the pre-fetch instruction queue after a direct write to
@@ -103,6 +112,7 @@ public:
     {
         // Run the pipeline as normal.
         uint32_t execResult = 1;
+        bool wasExecuted = false;
 
         // Adjust the PC if the previous action performed a pipeline flush.
         _registers.incrementPC(_flushPending << PipelineShift);
@@ -115,11 +125,15 @@ public:
         if (_hardware.read(pc - PipelineAdjust, instruction))
         {
             // Decode the instruction condition code.
+            // NOTE: Seemingly from the RiscOS 3.10 ROM, if the top bits of an
+            // instruction indicate an NV condition, the instruction will be
+            // skipped whether it is unknown or not.
             if (canExecuteInstruction(instruction,
                                       static_cast<uint8_t>(_registers.getPSR() >> 28)))
             {
                 // Further decode and execute the instruction.
                 execResult = _decoder.decodeAndExecute(instruction);
+                wasExecuted = true;
             }
 
             const uint32_t pcIncrement =
@@ -134,6 +148,11 @@ public:
             // The instruction could not be loaded.
             execResult = _registers.raisePreFetchAbort();
         }
+
+        // Record diagnostic state.
+        _lastPC = pc - PipelineAdjust;
+        _lastInstruction = instruction;
+        _lastWasExecuted = wasExecuted;
 
         // Set _flushPending to either 0 or 1 without branching.
         _flushPending = static_cast<uint8_t>(execResult >> ExecResult::FlushShift) & 1;

@@ -625,26 +625,26 @@ const CoreTestParams armV2aDataTransfer[] = {
 void registerDataTransferExecTests()
 {
     // Register test points against basic ARMv2 implementation.
-    RegisterExecTests<ArmV2TestSystemTraits>("ARMv2_DataTransfer", basicDataTransfer,
-                                             std::size(basicDataTransfer));
-    RegisterExecTests<ArmV2TestSystemTraits>("ARMv2_DataTransfer", basicDataTransfer26Bit,
-                                             std::size(basicDataTransfer26Bit));
+    RegisterExecTests<ArmV2TestSystemTraits<false>>("ARMv2_DataTransfer", basicDataTransfer,
+                                                    std::size(basicDataTransfer));
+    RegisterExecTests<ArmV2TestSystemTraits<false>>("ARMv2_DataTransfer", basicDataTransfer26Bit,
+                                                    std::size(basicDataTransfer26Bit));
 
     // Repeat the test for the ARMv2aS architecture.
-    RegisterExecTests<ArmV2aSTestSystemTraits>("ARMv2aS_DataTransfer", basicDataTransfer,
-                                               std::size(basicDataTransfer));
-    RegisterExecTests<ArmV2aSTestSystemTraits>("ARMv2aS_DataTransfer", basicDataTransfer26Bit,
-                                               std::size(basicDataTransfer26Bit));
-    RegisterExecTests<ArmV2aSTestSystemTraits>("ARMv2aS_DataTransfer", armV2aDataTransfer,
-                                               std::size(armV2aDataTransfer));
+    RegisterExecTests<ArmV2aSTestSystemTraits<false>>("ARMv2aS_DataTransfer", basicDataTransfer,
+                                                      std::size(basicDataTransfer));
+    RegisterExecTests<ArmV2aSTestSystemTraits<false>>("ARMv2aS_DataTransfer", basicDataTransfer26Bit,
+                                                      std::size(basicDataTransfer26Bit));
+    RegisterExecTests<ArmV2aSTestSystemTraits<false>>("ARMv2aS_DataTransfer", armV2aDataTransfer,
+                                                      std::size(armV2aDataTransfer));
 
     // Repeat the test for the ARMv2a architecture.
-    RegisterExecTests<ArmV2aTestSystemTraits>("ARMv2a_DataTransfer", basicDataTransfer,
-                                              std::size(basicDataTransfer));
-    RegisterExecTests<ArmV2aTestSystemTraits>("ARMv2a_DataTransfer", basicDataTransfer26Bit,
-                                              std::size(basicDataTransfer26Bit));
-    RegisterExecTests<ArmV2aTestSystemTraits>("ARMv2a_DataTransfer", armV2aDataTransfer,
-                                              std::size(armV2aDataTransfer));
+    RegisterExecTests<ArmV2aTestSystemTraits<false>>("ARMv2a_DataTransfer", basicDataTransfer,
+                                                     std::size(basicDataTransfer));
+    RegisterExecTests<ArmV2aTestSystemTraits<false>>("ARMv2a_DataTransfer", basicDataTransfer26Bit,
+                                                     std::size(basicDataTransfer26Bit));
+    RegisterExecTests<ArmV2aTestSystemTraits<false>>("ARMv2a_DataTransfer", armV2aDataTransfer,
+                                                     std::size(armV2aDataTransfer));
 }
 
 }} // namespace Mo::Arm

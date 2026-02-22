@@ -33,6 +33,7 @@ namespace Arm {
 class MemcHardware;
 class SystemContext;
 class AcornKeyboardController;
+class IDiagnosticSink;
 class I2CBus;
 
 using SynchronisedByteQueue = moodycamel::ReaderWriterQueue<uint8_t>;
@@ -251,6 +252,7 @@ private:
     SynchronisedByteQueue *_kartRxQueue;
     SynchronisedByteQueue *_kartTxQueue;
     I2CBus *_i2cBus;
+    IDiagnosticSink *_diagnosticSink;
     uint8_t _kartRxByte;
 };
 

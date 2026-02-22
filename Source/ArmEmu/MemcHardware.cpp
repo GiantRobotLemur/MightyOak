@@ -522,7 +522,8 @@ MemcHardware::MemcHardware(const Options &options,
     _soundDMAEnabled(false),
     _physicalRamBlock("Physical RAM", "The system RAM without any logical address mapping"),
     _lowRomBlock("Extension ROM", "The low ROM area, usually containing extensions ROMs."),
-    _highRomBlock("System ROM", "The high ROM area, usually containing the operating system.")
+    _highRomBlock("System ROM", "The high ROM area, usually containing the operating system."),
+    _diagnosticSink(nullptr)
 {
     // Generate random fuzz to use when memory can be accessed, but isn't mapped.
     std::generate_n(_fuzz, std::size(_fuzz), GenerateFuzz());
@@ -983,6 +984,12 @@ void MemcHardware::addIntegralHardware(IHardwareDeviceCollection &devices)
     devices.push_back(&_ioc);
     devices.push_back(&_vidc);
     devices.push_back(&_keyboard);
+}
+
+// Based on GenericHardware::connect().
+void MemcHardware::connect(SystemContext &context)
+{
+    context.tryFindTypedDevice("DiagnosticSink", _diagnosticSink);
 }
 
 }} // namespace Mo::Arm

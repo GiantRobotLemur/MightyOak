@@ -122,23 +122,28 @@ ArmSystem<TSysTraits>
               └── DecoderType  e.g. ARMv2InstructionDecoder<HW, RF>
 ```
 
-Concrete traits are defined in `SystemConfigurations.inl`:
+Concrete traits are defined in `SystemConfigurations.inl`. Each traits struct
+is templated on `bool TAllowDiagnostics = false`, a compile-time gate that
+controls whether `if constexpr` diagnostic branches in `SingleModeExecutionUnit`
+are compiled in or optimised out entirely:
 
 | Traits struct              | Hardware        | Register file    | Decoder               | Use case               |
 |----------------------------|-----------------|------------------|-----------------------|------------------------|
-| `ArmV2TestSystemTraits`    | TestBedHardware | ARMv2CoreRegFile | ARMv2InstructionDecoder | Unit tests            |
-| `ArmV2aTestSystemTraits`   | TestBedHardware | ARMv2aCoreRegFile| ARMv2aInstructionDecoder| ARMv2a unit tests     |
-| `ArmV2aSTestSystemTraits`  | TestBedHardware | ARMv2aCoreRegFile| ARMv2aInstructionDecoder(ARM250)| ARM250 unit tests |
-| `ArmV2MemcSystemTraits`    | MemcHardware    | ARMv2CoreRegFile | ARMv2InstructionDecoder | Archimedes ARM2       |
-| `ArmV2aMemcSystemTraits`   | MemcHardware    | ARMv2aCoreRegFile| ARMv2aInstructionDecoder| A-Series / ARM3       |
-| `ArmV2aSMemcSystemTraits`  | MemcHardware    | ARMv2aCoreRegFile| ARMv2aInstructionDecoder(ARM250)| A3010/A3020 ARM250|
+| `ArmV2TestSystemTraits<>`  | TestBedHardware | ARMv2CoreRegFile | ARMv2InstructionDecoder | Unit tests            |
+| `ArmV2aTestSystemTraits<>` | TestBedHardware | ARMv2aCoreRegFile| ARMv2aInstructionDecoder| ARMv2a unit tests     |
+| `ArmV2aSTestSystemTraits<>`| TestBedHardware | ARMv2aCoreRegFile| ARMv2aInstructionDecoder(ARM250)| ARM250 unit tests |
+| `ArmV2MemcSystemTraits<>`  | MemcHardware    | ARMv2CoreRegFile | ARMv2InstructionDecoder | Archimedes ARM2       |
+| `ArmV2aMemcSystemTraits<>` | MemcHardware    | ARMv2aCoreRegFile| ARMv2aInstructionDecoder| A-Series / ARM3       |
+| `ArmV2aSMemcSystemTraits<>`| MemcHardware    | ARMv2aCoreRegFile| ARMv2aInstructionDecoder(ARM250)| A3010/A3020 ARM250|
 
 `ArmSystemBuilder::createSystem()` selects the traits at runtime based on
 `SystemModel` + `ProcessorModel` and instantiates the correct
-`ArmSystem<Traits>`. ROM loading is handled by `MemcHardware`'s constructor
-which reads the ROM file path from `Options::getRomPath()`.
-`Options::findRomImagePath()` walks up a directory hierarchy to locate a
-`ROMs/` folder relative to the executable or a configured base path.
+`ArmSystem<Traits>`. `ArmSystemBuilder::setDiagnosticsEnabled(true)` causes
+the `<true>` template variant to be instantiated instead, enabling diagnostic
+hooks. ROM loading is handled by `MemcHardware`'s constructor which reads the
+ROM file path from `Options::getRomPath()`. `Options::findRomImagePath()`
+walks up a directory hierarchy to locate a `ROMs/` folder relative to the
+executable or a configured base path.
 
 #### Key `.inl` Files
 
@@ -148,9 +153,9 @@ which reads the ROM file path from `Options::getRomPath()`.
 | `TestBedHardware.inl`           | Minimal hardware for tests (32 KB ROM + 32 KB RAM)   |
 | `ARMv2CoreRegisterFile.inl`     | 26-bit register file, banked registers, mode switching|
 | `ARMv2InstructionDecoder.inl`   | 3-bit major opcode dispatch (bits 27:25)             |
-| `InstructionPipeline.inl`       | Fetch, condition check, decode/execute, PC advance   |
-| `ExecutionUnit.inl`             | IRQ priority loop; cycle-limited or unlimited run    |
-| `ArmSystem.inl`                 | Concrete `IArmSystem`; connectAllDevices, run methods|
+| `InstructionPipeline.inl`       | Fetch, condition check, decode/execute, PC advance; records last PC/opcode/executed for diagnostics |
+| `ExecutionUnit.inl`             | IRQ priority loop; cycle-limited or unlimited run; `TAllowDiagnostics` template parameter gates `if constexpr` diagnostic branches; `connect()` discovers `IDiagnosticSink` via device system |
+| `ArmSystem.inl`                 | Concrete `IArmSystem`; `initialise()` calls `connectAllDevices()` then `_hardware.connect()` and `_execUnit.connect()` for post-init wiring; run methods |
 | `AluInstructions.inl`           | ALU data processing operations                       |
 | `DataTransferInstructions.inl`  | LDR/STR/LDM/STM implementation                      |
 | `SystemConfigurations.inl`      | Traits struct definitions                            |
@@ -185,6 +190,8 @@ which reads the ROM file path from `Options::getRomPath()`.
   for cross-thread keyboard protocol communication.
 - Cache-line alignment on all shared state
   (`std::hardware_destructive_interference_size`).
+- Optional `IDiagnosticSink` for MMIO read/write logging and interrupt state
+  change notifications.
 
 **VIDC10** (`VIDC10.hpp/cpp`) — VL86C310 video controller. Implements
 `IVideoFrameProvider`.
@@ -237,6 +244,56 @@ host-side frame capture, derived from `IMMIOBlock`.
 - Per-BPP scanline renderers (1, 2, 4, 8 BPP).
 - Converts 13-bit VIDC physical colour to ARGB32 via palette lookup.
 
+#### Diagnostic System
+
+An observer-based diagnostic system provides instruction tracing, interrupt
+logging, and MMIO access visibility for boot debugging and system analysis.
+
+**IDiagnosticSink** (`IDiagnosticSink.hpp`) — abstract interface deriving from
+`IHardwareDevice` with four event callbacks: `onInstruction()`,
+`onMemoryAccess()`, `onInterruptChange()`, `onModeChange()`.
+
+Hookup: Diagnostic sinks participate in the standard device lifecycle via
+`ArmSystemBuilder::addDevice()`. The `IDiagnosticSink::registerDevice()`
+override registers the sink under its own name and adds a common alias
+`"DiagnosticSink"` so any concrete sink is discoverable under a single
+well-known name. After `connectAllDevices()`, `ArmSystem::initialise()` calls
+`_execUnit.connect()` which uses
+`SystemContext::tryFindTypedDevice<IDiagnosticSink>("DiagnosticSink", ...)`
+to discover and store the sink pointer. No diagnostic-specific APIs exist on
+`IArmSystem` or `SystemContext` — the sink is purely discovered through the
+device system.
+
+Compile-time gating: All traits structs are templated on
+`bool TAllowDiagnostics`, which is forwarded to `SingleModeExecutionUnit` as
+a template parameter. Diagnostic hooks in `ExecutionUnit.inl` are wrapped in
+`if constexpr (AllowDiagnostics)` so that when `TAllowDiagnostics=false`
+(the default), the diagnostic branches are optimised out entirely — true
+zero overhead. `ArmSystemBuilder::setDiagnosticsEnabled(true)` selects the
+`<true>` template variant at system creation time.
+
+Event sources:
+- **Instruction trace** — `ExecutionUnit.inl` calls `onInstruction()` after
+  each `_pipeline.executeNext()`, populating `InstructionTraceEntry` (PC,
+  opcode, PSR, cycles, executed flag). `InstructionPipeline.inl` records
+  `_lastPC`, `_lastInstruction`, `_lastWasExecuted` as part of its normal
+  fetch/decode flow.
+- **Interrupt events** — `ExecutionUnit.inl` calls `onInterruptChange()` after
+  `handleFirq()` / `handleIrq()`. IOC calls `onInterruptChange()` from
+  `raiseVSyncIrq()`, `setInterruptLow()`, and `setFastHighInterrupt()`.
+- **MMIO access** — IOC `read()` and `write()` call `onMemoryAccess()` with
+  the address, value, and direction.
+
+Concrete implementations (public headers in `Source/Include/ArmEmu/`,
+implementations in `Source/ArmEmu/`):
+- **RingBufferTrace** — fixed-size circular buffers (default 4096 instructions,
+  256 interrupts, 1024 MMIO entries) with `dumpToStream()` for text output.
+- **BootProgressMonitor** — detects boot milestones by observing MMIO address
+  patterns (MEMC 0x3600000, IOC 0x3200000, VIDC 0x3400000, I2C toggling on
+  IOC control register). Tracks per-category access counts and a timestamped
+  milestone list. `printSummary()` for text output.
+- **CompositeDiagnosticSink** — header-only forwarder to multiple child sinks.
+
 #### SystemContext and Scheduling
 
 `SystemContext` tracks emulated time:
@@ -253,7 +310,10 @@ host-side frame capture, derived from `IMMIOBlock`.
 - `AddressMap` — sorted vector with binary-search `tryFindRegion()`. Separate
   read and write maps.
 - Device hierarchy: `IHardwareDevice` → `IAddressRegion` → `IHostBlock`
-  (host RAM/ROM) or `IMMIOBlock` (register dispatch).
+  (host RAM/ROM) or `IMMIOBlock` (register dispatch). `IDiagnosticSink` also
+  derives from `IHardwareDevice`, allowing diagnostic sinks to participate in
+  the device lifecycle via `ArmSystemBuilder::addDevice()` and be discovered
+  at runtime via `tryFindTypedDevice<IDiagnosticSink>("DiagnosticSink")`.
 - Two-phase device startup managed by `SystemContext::connectAllDevices()`:
   1. **Phase 1 (`registerDevice`)**: each device registers itself (and any
      aliases) into `SystemContext`'s name-indexed `HardwareMap`.
@@ -370,9 +430,20 @@ Supported platforms: Visual Studio 2022 x64 (Windows), gcc 11 x64 (Linux).
   RISC OS 3.10 ROM via `ArmSystemBuilder`, runs millions of cycles, and
   verifies the PC advances past reset, I2C probe, and hardware init.
   ROM files are copied to the test output directory at build time.
-- 21 AsmTools test files covering each pipeline stage; 28 ArmEmu test files
-  covering CPU, hardware, and integration (including ARM250 variant tests for
-  ALU, co-processor, and data transfer).
+- **Diagnostic system tests** (`Test_Diagnostics.cpp`) — tests covering
+  `RingBufferTrace` (capture, wrap, clear, dump), `BootProgressMonitor`
+  (milestone detection for MEMC/IOC/VIDC/I2C), `CompositeDiagnosticSink`
+  (forwarding), null-sink safety (using `<false>` template variant),
+  live instruction trace integration (using `<true>` variant with
+  `tryFindTypedDevice`), `IHardwareDevice` name/description verification,
+  and `ArmSystemBuilder` integration (`setDiagnosticsEnabled(true)`,
+  auto-connect via `addDevice()`, device name discovery).
+- **Diagnostic boot trace** (`Test_MemcRomBoot.cpp::DiagnosticBootTrace`) —
+  attaches a `CompositeDiagnosticSink` (RingBufferTrace + BootProgressMonitor)
+  to the test ROM boot, verifies trace capture, and outputs boot progress.
+- 21 AsmTools test files covering each pipeline stage; 29 ArmEmu test files
+  covering CPU, hardware, diagnostics, and integration (including ARM250
+  variant tests for ALU, co-processor, and data transfer).
 - `EmuPerfTest` benchmark target for performance measurement.
 
 ## Technical Debt

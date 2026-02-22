@@ -45,6 +45,10 @@ struct GenericSystemTraits
     //! in terms of register contents, this includes co-processor state.
     using RegisterFileType = ARMv2CoreRegisterFile<typename GenericSystemTraits::HardwareType>;
 
+    //! @brief Used with if constexpr to determine of IDiagnosticSink branches
+    //! should be taken - otherwise they will be optimised out.
+    static constexpr bool AllowDiagnostics = false;
+
     //! @brief Specifies the traits of the primary mode of operation intended
     //! to create an appropriate instruction pipeline type.
     struct PrimaryPipelineTraits
@@ -69,10 +73,14 @@ struct GenericSystemTraits
     //! pipeline modes.
     using ExecutionUnitType = SingleModeExecutionUnit<typename GenericSystemTraits::HardwareType,
                                                       typename GenericSystemTraits::RegisterFileType,
-                                                      typename GenericSystemTraits::PrimaryPipelineType>;
+                                                      typename GenericSystemTraits::PrimaryPipelineType,
+                                                      AllowDiagnostics>;
 };
 
 //! @brief Defines the traits of a basic ARMv2-based system with test bed hardware.
+//! @tparam TAllowDiagnostics True to allow branches to be taken which consume
+//! the optional IDiagnosticSink interface.
+template<bool TAllowDiagnostics = false>
 struct ArmV2TestSystemTraits
 {
     // Public Types
@@ -83,6 +91,10 @@ struct ArmV2TestSystemTraits
     //! @brief The data type of the object which holds state of the processor
     //! in terms of register contents, this includes co-processor state.
     using RegisterFileType = ARMv2CoreRegisterFile<typename ArmV2TestSystemTraits::HardwareType>;
+
+    //! @brief Used with if constexpr to determine of IDiagnosticSink branches
+    //! should be taken - otherwise they will be optimised out.
+    static constexpr bool AllowDiagnostics = TAllowDiagnostics;
 
     struct PrimaryPipelineTraits
     {
@@ -97,12 +109,15 @@ struct ArmV2TestSystemTraits
 
     using ExecutionUnitType = SingleModeExecutionUnit<typename ArmV2TestSystemTraits::HardwareType,
                                                       typename ArmV2TestSystemTraits::RegisterFileType,
-                                                      typename ArmV2TestSystemTraits::PrimaryPipelineType>;
+                                                      typename ArmV2TestSystemTraits::PrimaryPipelineType,
+                                                      AllowDiagnostics>;
 };
-
 
 //! @brief Defines the traits of a basic ARMv2aS-based (ARM250 core) system
 //! with test bed hardware.
+//! @tparam TAllowDiagnostics True to allow branches to be taken which consume
+//! the optional IDiagnosticSink interface.
+template<bool TAllowDiagnostics = false>
 struct ArmV2aSTestSystemTraits
 {
     // Public Types
@@ -113,6 +128,10 @@ struct ArmV2aSTestSystemTraits
     //! @brief The data type of the object which holds state of the processor
     //! in terms of register contents, this includes co-processor state.
     using RegisterFileType = ARMv2CoreRegisterFile<typename ArmV2aSTestSystemTraits::HardwareType>;
+
+    //! @brief Used with if constexpr to determine of IDiagnosticSink branches
+    //! should be taken - otherwise they will be optimised out.
+    static constexpr bool AllowDiagnostics = TAllowDiagnostics;
 
     struct PrimaryPipelineTraits
     {
@@ -126,11 +145,15 @@ struct ArmV2aSTestSystemTraits
     using PrimaryPipelineType = InstructionPipeline<typename ArmV2aSTestSystemTraits::PrimaryPipelineTraits>;
 
     using ExecutionUnitType = SingleModeExecutionUnit<typename ArmV2aSTestSystemTraits::HardwareType,
-        typename ArmV2aSTestSystemTraits::RegisterFileType,
-        typename ArmV2aSTestSystemTraits::PrimaryPipelineType>;
+                                                      typename ArmV2aSTestSystemTraits::RegisterFileType,
+                                                      typename ArmV2aSTestSystemTraits::PrimaryPipelineType,
+                                                      AllowDiagnostics>;
 };
 
 //! @brief Defines the traits of a basic ARMv2a-based (ARM3) system with test bed hardware.
+//! @tparam TAllowDiagnostics True to allow branches to be taken which consume
+//! the optional IDiagnosticSink interface.
+template<bool TAllowDiagnostics = false>
 struct ArmV2aTestSystemTraits
 {
     // Public Types
@@ -140,7 +163,11 @@ struct ArmV2aTestSystemTraits
 
     //! @brief The data type of the object which holds state of the processor
     //! in terms of register contents, this includes co-processor state.
-    using RegisterFileType = ARMv2aCoreRegisterFile<typename ArmV2TestSystemTraits::HardwareType>;
+    using RegisterFileType = ARMv2aCoreRegisterFile<typename ArmV2aTestSystemTraits::HardwareType>;
+
+    //! @brief Used with if constexpr to determine of IDiagnosticSink branches
+    //! should be taken - otherwise they will be optimised out.
+    static constexpr bool AllowDiagnostics = TAllowDiagnostics;
 
     struct PrimaryPipelineTraits
     {
@@ -155,11 +182,15 @@ struct ArmV2aTestSystemTraits
 
     using ExecutionUnitType = SingleModeExecutionUnit<typename ArmV2aTestSystemTraits::HardwareType,
                                                       typename ArmV2aTestSystemTraits::RegisterFileType,
-                                                      typename ArmV2aTestSystemTraits::PrimaryPipelineType>;
+                                                      typename ArmV2aTestSystemTraits::PrimaryPipelineType,
+                                                      AllowDiagnostics>;
 };
 
 //! @brief Defines the traits of an ARMv2-based system with
 //! MEMC/IOC/VIDC hardware.
+//! @tparam TAllowDiagnostics True to allow branches to be taken which consume
+//! the optional IDiagnosticSink interface.
+template<bool TAllowDiagnostics = false>
 struct ArmV2MemcSystemTraits
 {
     // Public Types
@@ -170,6 +201,10 @@ struct ArmV2MemcSystemTraits
     //! @brief The data type of the object which holds state of the processor
     //! in terms of register contents, this includes co-processor state.
     using RegisterFileType = ARMv2CoreRegisterFile<MemcHardware>;
+
+    //! @brief Used with if constexpr to determine of IDiagnosticSink branches
+    //! should be taken - otherwise they will be optimised out.
+    static constexpr bool AllowDiagnostics = TAllowDiagnostics;
 
     struct PrimaryPipelineTraits
     {
@@ -184,11 +219,15 @@ struct ArmV2MemcSystemTraits
 
     using ExecutionUnitType = SingleModeExecutionUnit<ArmV2MemcSystemTraits::HardwareType,
                                                       ArmV2MemcSystemTraits::RegisterFileType,
-                                                      ArmV2MemcSystemTraits::PrimaryPipelineType>;
+                                                      ArmV2MemcSystemTraits::PrimaryPipelineType,
+                                                      AllowDiagnostics>;
 };
 
 //! @brief Defines the traits of an ARMv2aS-based (ARM250 core) system with
 //! MEMC/IOC/VIDC hardware.
+//! @tparam TAllowDiagnostics True to allow branches to be taken which consume
+//! the optional IDiagnosticSink interface.
+template<bool TAllowDiagnostics = false>
 struct ArmV2aSMemcSystemTraits
 {
     // Public Types
@@ -199,6 +238,10 @@ struct ArmV2aSMemcSystemTraits
     //! @brief The data type of the object which holds state of the processor
     //! in terms of register contents, this includes co-processor state.
     using RegisterFileType = ARMv2CoreRegisterFile<MemcHardware>;
+
+    //! @brief Used with if constexpr to determine of IDiagnosticSink branches
+    //! should be taken - otherwise they will be optimised out.
+    static constexpr bool AllowDiagnostics = TAllowDiagnostics;
 
     struct PrimaryPipelineTraits
     {
@@ -212,12 +255,16 @@ struct ArmV2aSMemcSystemTraits
     using PrimaryPipelineType = InstructionPipeline<ArmV2aSMemcSystemTraits::PrimaryPipelineTraits>;
 
     using ExecutionUnitType = SingleModeExecutionUnit<ArmV2aSMemcSystemTraits::HardwareType,
-        ArmV2aSMemcSystemTraits::RegisterFileType,
-        ArmV2aSMemcSystemTraits::PrimaryPipelineType>;
+                                                      ArmV2aSMemcSystemTraits::RegisterFileType,
+                                                      ArmV2aSMemcSystemTraits::PrimaryPipelineType,
+                                                      AllowDiagnostics>;
 };
 
 //! @brief Defines the traits of a basic ARMv2a-based (ARM3) system with 
 //! MEMC/IOC/VIDC hardware.
+//! @tparam TAllowDiagnostics True to allow branches to be taken which consume
+//! the optional IDiagnosticSink interface.
+template<bool TAllowDiagnostics = false>
 struct ArmV2aMemcSystemTraits
 {
     // Public Types
@@ -228,6 +275,10 @@ struct ArmV2aMemcSystemTraits
     //! @brief The data type of the object which holds state of the processor
     //! in terms of register contents, this includes co-processor state.
     using RegisterFileType = ARMv2aCoreRegisterFile<ArmV2aMemcSystemTraits::HardwareType>;
+
+    //! @brief Used with if constexpr to determine of IDiagnosticSink branches
+    //! should be taken - otherwise they will be optimised out.
+    static constexpr bool AllowDiagnostics = TAllowDiagnostics;
 
     struct PrimaryPipelineTraits
     {
@@ -243,7 +294,8 @@ struct ArmV2aMemcSystemTraits
 
     using ExecutionUnitType = SingleModeExecutionUnit<ArmV2aMemcSystemTraits::HardwareType,
                                                       ArmV2aMemcSystemTraits::RegisterFileType,
-                                                      ArmV2aMemcSystemTraits::PrimaryPipelineType>;
+                                                      ArmV2aMemcSystemTraits::PrimaryPipelineType,
+                                                      AllowDiagnostics>;
 };
 
 }} // namespace Mo::Arm

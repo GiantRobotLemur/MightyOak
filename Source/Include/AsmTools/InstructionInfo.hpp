@@ -2,7 +2,7 @@
 //! @brief The declaration of data structures which describe any assembly
 //! language instruction.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2022-2024
+//! @date 2022-2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -799,8 +799,12 @@ public:
         //! always be interpreted in terms of stack operations.
         UseStackModesAlways = 0x40,
 
+        //! @brief Assumes a 32-bit PC when calculating PC relative addresses
+        //! for branches or data transfer operations.
+        Is32Bit = 0x80,
+
         //! @brief Enables all instruction interpretation.
-        All                 = 0x7F,
+        All                 = 0xFF,
     };
 
     // Construction/Destruction
