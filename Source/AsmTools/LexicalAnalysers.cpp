@@ -1,7 +1,7 @@
 //! @file AsmTools/LexicalAnalysers.cpp
 //! @brief The definition of various ILexicalContext implementations.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2021-2023
+//! @date 2021-2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -29,6 +29,7 @@
 #include "LexicalAnalysers.hpp"
 #include "LexicalContext.hpp"
 #include "MultiTransferInstructionNode.hpp"
+#include "ProcStatements.hpp"
 #include "RegisterListNode.hpp"
 #include "SimpleInstructionStatements.hpp"
 #include "StatementListNode.hpp"
@@ -1481,6 +1482,7 @@ Token interpretMnemonic(const Location &position, std::u32string &buffer)
         // Somewhat harder now: use the first three characters as a key
         // into a hash map.
         static std::unordered_map<Ag::String, MnemonicMapping> mnemonicParsersById;
+        static std::unordered_map<Ag::String, TokenClass> keywordsById;
 
         if (mnemonicParsersById.empty())
         {
@@ -1621,6 +1623,10 @@ Token interpretMnemonic(const Location &position, std::u32string &buffer)
             mnemonicParsersById["ASR"] = MnemonicMapping(TokenClass::ArithmeticShiftRight);
             mnemonicParsersById["ROR"] = MnemonicMapping(TokenClass::RotateRightShift);
             mnemonicParsersById["RRX"] = MnemonicMapping(TokenClass::RotateRightWithExtendShift);
+
+            // Keywords
+            keywordsById["PROC"] = TokenClass::KeywordProc;
+            keywordsById["ENDPROC"] = TokenClass::KeywordEndProc;
         }
 
         Ag::String key = makeKey(buffer, 3);
@@ -1647,16 +1653,17 @@ Token interpretMnemonic(const Location &position, std::u32string &buffer)
             // recognised instruction mnemonic.
             context.verifyComplete(result);
         }
-    }
+        else
+        {
+            // Perhaps it's a keyword?
+            key = makeKey(buffer, buffer.length());
+            auto mapping = keywordsById.find(key);
 
-    if (result.getClass() == TokenClass::Empty)
-    {
-        Ag::String mnemonic(buffer);
-        Ag::String message = Ag::String::format("Unknown mnemonic '{0}' at "
-                                                "the beginning of a statement.",
-                                                { mnemonic });
-
-        result = Token(position, TokenClass::Error, message);
+            if (mapping != keywordsById.end())
+            {
+                result = Token(position, mapping->second);
+            }
+        }
     }
 
     return result;
@@ -1811,62 +1818,71 @@ public:
 
                 hasToken = (token.getClass() != TokenClass::Empty);
             }
-            else if (next == U'%') // Directives start with '%'.
-            {
-                std::u32string buffer;
-                buffer.reserve(32);
-
-                accumulateSymbol(input, buffer);
-
-                token = interpretDirective(position, buffer);
-            }
-            else if (next == U'.') // Labels start with '.'.
-            {
-                std::u32string buffer;
-                buffer.reserve(32);
-
-                accumulateSymbol(input, buffer);
-
-                token = interpretLabelDefinition(position, buffer);
-            }
-            else if (Ag::CodePoint::isLetter(next))
-            {
-                // It could be an instruction mnemonic or keyword of
-                // some kind?
-                std::u32string buffer;
-                buffer.reserve(32);
-
-                buffer.push_back(next);
-                accumulateSymbol(input, buffer);
-
-                token = interpretMnemonic(position, buffer);
-            }
             else
             {
-                // Accumulate characters until the end of the statement or input
-                // an return an error token.
+                // It's possibly a multi-character token, create a common buffer.
                 std::u32string buffer;
                 buffer.reserve(32);
 
-                buffer.push_back(next);
-
-                while (input.tryGetNextCharacter(next))
+                if (next == U'%') // Directives start with '%'.
                 {
-                    if ((next == U'\n') || (next == U':') || (next == U';'))
+                    accumulateSymbol(input, buffer);
+
+                    token = interpretDirective(position, buffer);
+                }
+                else if (next == U'.') // Labels start with '.'.
+                {
+                    accumulateSymbol(input, buffer);
+
+                    token = interpretLabelDefinition(position, buffer);
+                }
+                else if (next == U'_')
+                {
+                    // It's definitely a symbol.
+                    buffer.push_back(next);
+                    accumulateSymbol(input, buffer);
+
+                    token = Token(position, TokenClass::Symbol, buffer);
+                }
+                else if (Ag::CodePoint::isLetter(next))
+                {
+                    // It could be an instruction mnemonic or keyword of
+                    // some kind?
+                    buffer.push_back(next);
+                    accumulateSymbol(input, buffer);
+
+                    token = interpretMnemonic(position, buffer);
+
+                    if (token.getClass() == TokenClass::Empty)
                     {
-                        input.ungetCharacter();
-                        break;
-                    }
-                    else
-                    {
-                        buffer.push_back(next);
+                        // Treat the token as a symbol.
+                        token = Token(position, TokenClass::Symbol, buffer);
                     }
                 }
+                else
+                {
+                    // Accumulate characters until the end of the statement or input
+                    // an return an error token.
+                    buffer.push_back(next);
 
-                Ag::String message = Ag::String::format("Unknown statement text '{0}'.",
-                                                        { Ag::String(buffer) });
+                    while (input.tryGetNextCharacter(next))
+                    {
+                        if ((next == U'\n') || (next == U':') || (next == U';'))
+                        {
+                            input.ungetCharacter();
+                            break;
+                        }
+                        else
+                        {
+                            buffer.push_back(next);
+                        }
+                    }
 
-                token.reset(position, TokenClass::Error, message);
+                    Ag::String message = Ag::String::format("Unknown statement text '{0}'.",
+                                                            { Ag::String(buffer) });
+
+                    token.reset(position, TokenClass::Error, message);
+                }
             }
         }
 
@@ -1982,6 +1998,14 @@ public:
 
         case TokenClass::MnemonicCoProcDataTransfer:
             node = new CoProcDataTransferInstructionNode(context, token);
+            break;
+
+        case TokenClass::KeywordProc:
+            node = new ProcStatementNode(context, token.getLocation());
+            break;
+
+        case TokenClass::KeywordEndProc:
+            node = new EndProcStatementNode(context, token.getLocation());
             break;
 
         default:

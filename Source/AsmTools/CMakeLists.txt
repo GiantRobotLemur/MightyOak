@@ -64,6 +64,8 @@ ag_add_library(AsmTools FOLDER      ARM
                                     AssemblyDirectiveStatement.cpp
                                     IncludeStatement.hpp
                                     IncludeStatement.cpp
+                                    ProcStatements.cpp
+                                    ProcStatements.hpp
                                     InstructionStatement.hpp
                                     InstructionStatement.cpp
                                     SimpleInstructionStatements.hpp
@@ -165,8 +167,9 @@ source_group("Syntax Tree" FILES
     DataDirectiveStatement.cpp
     AssemblyDirectiveStatement.hpp
     AssemblyDirectiveStatement.cpp
+    ProcStatements.cpp
+    ProcStatements.hpp
 )
-
 
 source_group("Instructions" FILES
     InstructionStatement.hpp
@@ -214,7 +217,8 @@ ag_add_test_app(AsmTools_Tests TEST_LIB AsmTools
                                         Test_AssemblyLabel.cpp
                                         Test_AddressDirective.cpp
                                         Test_InstructionInfo.cpp
-                                        Test_SimpleInstructions.cpp)
+                                        Test_SimpleInstructions.cpp
+                                        Test_Subroutine.cpp)
 
 ag_add_cli_app(AAsm FOLDER ARM
                  NAME        AAsm

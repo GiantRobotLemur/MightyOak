@@ -2,7 +2,7 @@
 //! @brief The definition of various implementations of the IEvalContext
 //! interface.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2022-2023
+//! @date 2022-2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -30,7 +30,7 @@ RootEvalContext::RootEvalContext(uint32_t baseAddress) :
 {
 }
 
-//! @brief Gets the table of symbols defined in the current context.
+// Inherited from IEvalContext.
 const SymbolTable &RootEvalContext::getSymbols() const
 {
     return _globalSymbols;
@@ -96,6 +96,13 @@ void RootEvalContext::defineSymbol(Ag::string_cref_t id, const Location &source,
     _globalSymbols.defineSymbol(id, source, value, isAddress);
 }
 
+// Inherited from IScopedContext.
+void RootEvalContext::promoteSymbols(Ag::string_cref_t prefix,
+                                     const SymbolTable &symbols)
+{
+    _globalSymbols.integrateNestedSymbols(prefix, symbols);
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // InnerEvalContext Member Function Definitions
 ////////////////////////////////////////////////////////////////////////////////
@@ -113,6 +120,12 @@ InnerEvalContext::InnerEvalContext(IScopedContext *parentContext,
     {
         throw Ag::ArgumentException("name");
     }
+}
+
+// Inherited from IEvalContext.
+const SymbolTable &InnerEvalContext::getSymbols() const
+{
+    return _localSymbols;
 }
 
 // Inherited from IEvalContext.
@@ -190,6 +203,13 @@ void InnerEvalContext::defineSymbol(Ag::string_cref_t id, const Location &source
                                     const Value &value, bool isAddress)
 {
     _localSymbols.defineSymbol(id, source, value, isAddress);
+}
+
+// Inherited from IScopedContext.
+void InnerEvalContext::promoteSymbols(Ag::string_cref_t prefix,
+                                      const SymbolTable &symbols)
+{
+    _localSymbols.integrateNestedSymbols(prefix, symbols);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
