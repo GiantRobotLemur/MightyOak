@@ -2,7 +2,7 @@
 //! @brief The declaration of various implementations of the IEvalContext
 //! interface.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2022-2023
+//! @date 2022-2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -40,6 +40,9 @@ public:
     //! @brief Gets the address at which the object code is expected to be loaded.
     virtual uint32_t getBaseAddress() const = 0;
 
+    //! @brief Gets the table of symbols defined in the current context.
+    virtual const SymbolTable &getSymbols() const =0;
+
     //! @brief Determines if a symbol is defined, and if so, where.
     //! @param[in] id The identifier of the symbol to look up.
     //! @param[in] scope Receives the name of the scope containing the
@@ -66,6 +69,14 @@ public:
     //! in code, false if it represent an arbitrary value.
     virtual void defineSymbol(Ag::string_cref_t id, const Location &source,
                               const Value &value, bool isAddress) = 0;
+
+    //! @brief Adds a group of symbols from a child scope to the symbol table
+    //! but prefixed with a specified symbol.
+    //! @param[in] prefix The prefix to prepend to added symbols, separated by
+    //! a dot.
+    //! @param[in] symbols The table of child scope symbols to add.
+    virtual void promoteSymbols(Ag::string_cref_t prefix,
+                                const SymbolTable &symbols) = 0;
 };
 
 //! @brief An alias for a shared pointer to a scoped expression evaluation context.
@@ -79,10 +90,8 @@ public:
     RootEvalContext(uint32_t baseAddress);
     virtual ~RootEvalContext() = default;
 
-    // Accessors
-    const SymbolTable &getSymbols() const;
-
     // Overrides
+    virtual const SymbolTable &getSymbols() const override;
     virtual bool tryLookupSymbol(Ag::string_cref_t &id, Value &value) const override;
     virtual uint32_t getAssemblyOffset() const override;
     virtual uint32_t getAssemblyAddress() const override;
@@ -94,6 +103,8 @@ public:
     virtual void setAssemblyOffset(uint32_t offset) override;
     virtual void defineSymbol(Ag::string_cref_t id, const Location &source,
                               const Value &value, bool isAddress) override;
+    virtual void promoteSymbols(Ag::string_cref_t prefix,
+                                const SymbolTable &symbols) override;
 private:
     // Internal Fields
     SymbolTable _globalSymbols;
@@ -110,9 +121,8 @@ public:
     InnerEvalContext(IScopedContext *parentContext, Ag::string_cref_t name);
     virtual ~InnerEvalContext() = default;
 
-    // Accessors
-
     // Overrides
+    virtual const SymbolTable &getSymbols() const override;
     virtual bool tryLookupSymbol(Ag::string_cref_t &id, Value &value) const override;
     virtual uint32_t getAssemblyOffset() const override;
     virtual uint32_t getAssemblyAddress() const override;
@@ -124,6 +134,8 @@ public:
     virtual void setAssemblyOffset(uint32_t offset) override;
     virtual void defineSymbol(Ag::string_cref_t id, const Location &source,
                               const Value &value, bool isAddress) override;
+    virtual void promoteSymbols(Ag::string_cref_t prefix,
+                                const SymbolTable &symbols) override;
 private:
     // Internal Fields
     IScopedContext *_parentContext;

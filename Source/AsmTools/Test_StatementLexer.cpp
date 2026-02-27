@@ -1,7 +1,7 @@
 //! @file Test_StatementLexer.cpp
 //! @brief The definition of unit tests for the statement lexical analyser.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2021-2023
+//! @date 2021-2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -323,6 +323,29 @@ GTEST_TEST(StatementLexer, RecogniseIncludeDirective)
 
     ASSERT_TRUE(tryGetTokenEnum(next, TokenProperty::DirectiveType, directiveType));
     EXPECT_EQ(directiveType, AssemblyDirectiveType::Include);
+
+    // Verify end of stream.
+    EXPECT_FALSE(specimen->tryGetNextToken(input, next));
+}
+
+GTEST_TEST(StatementLexer, RecogniseKeywords)
+{
+    ILexicalContext *specimen = getStatementLexer();
+    InputContext input = createInput("   PrOC  endPROC ");
+
+    Token next;
+
+    // Get the PROC keyword token.
+    EXPECT_TRUE(specimen->tryGetNextToken(input, next));
+    EXPECT_EQ(next.getClass(), TokenClass::KeywordProc);
+    EXPECT_EQ(next.getLocation().LineNo, 1);
+    EXPECT_EQ(next.getLocation().Offset, 4);
+
+    // Get the ENDPROC keyword token.
+    EXPECT_TRUE(specimen->tryGetNextToken(input, next));
+    EXPECT_EQ(next.getClass(), TokenClass::KeywordEndProc);
+    EXPECT_EQ(next.getLocation().LineNo, 1);
+    EXPECT_EQ(next.getLocation().Offset, 10);
 
     // Verify end of stream.
     EXPECT_FALSE(specimen->tryGetNextToken(input, next));

@@ -2,7 +2,7 @@
 //! @brief The declaration of an object representing a set of characters
 //! recognised with a specific classification.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2021-2023
+//! @date 2021-2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -128,6 +128,9 @@ enum class TokenClass
     MnemonicFpaLoadRegOp,
     MnemonicFpaStoreRegOp,
     MnemonicFpaCoreRegOp,
+
+    KeywordProc,
+    KeywordEndProc,
 
     //! @brief A warning passed from the lexical analyser to be converted into
     //! a warning message by the parser and then ignored.

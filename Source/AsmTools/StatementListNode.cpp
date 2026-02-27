@@ -2,7 +2,7 @@
 //! @brief The definition of an ISyntaxNode implementation which holds the
 //! top level collection of statements.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2021-2023
+//! @date 2021-2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -11,6 +11,8 @@
 ////////////////////////////////////////////////////////////////////////////////
 // Header File Includes
 ////////////////////////////////////////////////////////////////////////////////
+#include "Ag/Core/Utils.hpp"
+
 #include "ExprContexts.hpp"
 #include "IncludeStatement.hpp"
 #include "LabelStatement.hpp"
@@ -18,6 +20,7 @@
 #include "ParseContext.hpp"
 #include "Parser.hpp"
 #include "SimpleInstructionStatements.hpp"
+#include "ProcStatements.hpp"
 #include "StatementListNode.hpp"
 
 namespace Mo {
@@ -136,6 +139,18 @@ public:
     virtual ~DeferredBlock() = default;
 
     // Accessors
+
+    //! @brief Determines whether an assembly state and scope matches that of
+    //! the current block.
+    //! @param[in] state The assembly state to match.
+    //! @param[in] scope The assembly scope to match.
+    //! @retval true The state and scope of the block match the parameters.
+    //! @retval false Either of the input parameters don't match the block.
+    bool isMatching(const AssemblyStateSPtr &state,
+                    const IScopedContextSPtr &scope) const
+    {
+        return (state == _state) && (scope == _scope);
+    }
 
     // Operations
     //! @brief Takes ownership of an assembly language statement which requires
@@ -312,8 +327,8 @@ void StatementBlock::finalise()
 //! the first statement begins.
 //! @param[in] scope The variable evaluation stop at the top level.
 //! @param[in] baseAddress The load address of the object code.
-//! @param[in] assemblyOffset A bytes offset of the first bytes of object code
-//! from the beginning produced by the current object.
+//! @param[in] assemblyOffset An offset of the first byte from the beginning of
+//! object code, produced by the current object.
 StatementListNode::StatementListNode(const AssemblyStateSPtr &initialState,
                                      const IScopedContextSPtr &scope,
                                      uint32_t baseAddress,
@@ -516,61 +531,9 @@ void StatementListNode::processStatementNode(ParseContext &context,
             }
         } break;
 
-        case StatementType::Label: {
-            // Add the label definition to the current context.
-            LabelStatement *label = static_cast<LabelStatement *>(statement.get());
-            IScopedContext *currentContext = getScope();
-            Ag::String existingScope;
-            Location existingLocation;
-
-            // Determine if the label is already defined.
-            if (currentContext->isSymbolDefined(label->getID(),
-                                                existingScope,
-                                                existingLocation))
-            {
-                Ag::String message =
-                    Ag::String::format("Symbol '{0}' was already "
-                                       "defined at {1}({2})",
-                                       { label->getID(),
-                                         existingLocation.FileName,
-                                         existingLocation.LineNo });
-
-                context.getMessages().appendError(label->getSourcePosition(),
-                                                  message);
-            }
-            else
-            {
-                if (label->getValueExpr() == nullptr)
-                {
-                    // Tag the current assembly position with the label.
-                    currentContext->defineSymbol(label->getID(),
-                                                 label->getSourcePosition(),
-                                                 Value(getAssemblyAddress()),
-                                                 true);
-                }
-                else
-                {
-                    Ag::String error;
-                    Value result;
-
-                    if (label->getValueExpr()->tryEvaluate(currentContext,
-                                                           result,
-                                                           error))
-                    {
-                        // Define the symbol with an explicit value.
-                        currentContext->defineSymbol(label->getID(),
-                                                     label->getSourcePosition(),
-                                                     result, false);
-                    }
-                    else
-                    {
-                        // Perhaps we could evaluate the expression on the
-                        // final pass.
-                        deferAssembly(std::move(statement), 0);
-                    }
-                }
-            }
-        } break;
+        case StatementType::Label:
+            processLabel(context.getMessages(), std::move(statement));
+            break;
 
         case StatementType::Include: {
             // Parse the new input source and append the statement blocks it
@@ -599,13 +562,12 @@ void StatementListNode::processStatementNode(ParseContext &context,
             // TODO: End recording of a named macro.
 
         case StatementType::ProcedureStart:
-            // TODO: Add the procedure start as a label definition.
-            // TODO: Push a new symbol context to capture local symbols.
-            // TODO: Note that we are recording a procedure.
+            processSubroutineStart(context.getMessages(), statement.get());
+            break;
 
         case StatementType::ProcedureEnd:
-            // TODO: Pop the current expression context.
-            // TODO: Stop recording a procedure.
+            processSubroutineEnd(context.getMessages(), statement.get());
+            break;
 
         default:
             // Allow the statement to be silently disposed of.
@@ -686,6 +648,143 @@ void StatementListNode::processIncludedFile(ParseContext &parentContext,
     }
 }
 
+//! @brief Processes the appearance of an assembly label statement.
+//! @param[in] messages The collection to add errors and warnings to.
+//! @param[in] statement The statement being processed.
+void StatementListNode::processLabel(Messages &messages, StatementUPtr &&statement)
+{
+    // Add the label definition to the current context.
+    LabelStatement *label = static_cast<LabelStatement *>(statement.get());
+    IScopedContext *currentContext = getScope();
+    Ag::String existingScope;
+    Location existingLocation;
+
+    // Determine if the label is already defined.
+    if (currentContext->isSymbolDefined(label->getID(),
+                                        existingScope,
+                                        existingLocation) &&
+        (currentContext->getScopeName() == existingScope))
+    {
+        Ag::String message =
+            Ag::String::format("Symbol '{0}' was already defined in the "
+                               "current scope at {1}({2})",
+                               { label->getID(),
+                                 existingLocation.FileName,
+                                 existingLocation.LineNo });
+
+        messages.appendError(label->getSourcePosition(), message);
+    }
+    else
+    {
+        if (label->getValueExpr() == nullptr)
+        {
+            // Tag the current assembly position with the label.
+            currentContext->defineSymbol(label->getID(),
+                                         label->getSourcePosition(),
+                                         Value(getAssemblyAddress()),
+                                         true);
+        }
+        else
+        {
+            Ag::String error;
+            Value result;
+
+            if (label->getValueExpr()->tryEvaluate(currentContext,
+                                                   result,
+                                                   error))
+            {
+                // Define the symbol with an explicit value.
+                currentContext->defineSymbol(label->getID(),
+                                             label->getSourcePosition(),
+                                             result, false);
+            }
+            else
+            {
+                // Perhaps we could evaluate the expression on the
+                // final pass.
+                deferAssembly(std::move(statement), 0);
+            }
+        }
+    }
+}
+
+//! @brief Processes the statement marking the beginning of a subroutine.
+//! @param[in] messages A collection of messages which can be appended to.
+//! @param[in] parsedStatement The statement marking the start of the subroutine.
+void StatementListNode::processSubroutineStart(Messages &messages,
+                                               Statement *parsedStatement)
+{
+    ProcStatement *statement;
+
+    if (!Ag::tryCast(parsedStatement, statement))
+        return;
+
+    IScopedContext *currentSymbolScope = getScope();
+    Value existingValue;
+
+    if (currentSymbolScope->tryLookupSymbol(statement->getId(), existingValue))
+    {
+        std::string message;
+        message.assign("The subroutine cannot be defined as a symbol '");
+        Ag::appendAgString(message, statement->getId());
+        message.append("' already exists.");
+
+        messages.appendError(statement->getLocation(), message);
+        return;
+    }
+
+    AssemblyStateSPtr updatedState = std::make_shared<AssemblyState>(*_currentState);
+
+    if (updatedState->tryBeginSubroutine(messages, statement->getLocation(),
+                                         statement->getId(), _currentState))
+    {
+        // Update the assembly state to indicate that we have started defining
+        // a subroutine.
+        _currentState = updatedState;
+
+        // Define a symbol for the subroutine visible in the current scope.
+        currentSymbolScope->defineSymbol(statement->getId(), statement->getLocation(),
+                                         Value(getAssemblyAddress()),
+                                         true);
+
+        // Create a scope for the contents of the subroutine.
+        IScopedContextSPtr procScope = std::make_shared<InnerEvalContext>(currentSymbolScope,
+                                                                          statement->getId());
+        procScope->setAssemblyOffset(getAssemblyOffset());
+        _scopeStack.push_back(procScope);
+    }
+}
+
+//! @brief Processes the statement marking the end of a subroutine.
+//! @param[in] messages A collection of messages which can be appended to.
+//! @param[in] parsedStatement The statement marking the end of the subroutine.
+void StatementListNode::processSubroutineEnd(Messages &messages,
+                                             Statement *parsedStatement)
+{
+    EndProcStatement *statement;
+
+    if (!Ag::tryCast(parsedStatement, statement))
+        return;
+
+    // Stop recording a procedure.
+    if (_currentState->tryEndSubroutine(messages, statement->getLocation()))
+    {
+        // Remove the symbol scope from the stack.
+        auto subroutineScope = _scopeStack.back();
+        _scopeStack.pop_back();
+
+        // Promote the subroutine symbols into the parent scope, suitably
+        // prefixed to make them inaccessible to code.
+        IScopedContext *parentContext = _scopeStack.back().get();
+        parentContext->promoteSymbols(subroutineScope->getScopeName(),
+                                      subroutineScope->getSymbols());
+
+        // Restore the assembly state to that which it was when the subroutine
+        // definition started.
+        _currentState = _currentState->getParentState();
+    }
+}
+
 //! @brief Append a block of pre-assembled source code to the object code stream.
 //! @param[in] objectCode The assembled object code.
 void StatementListNode::appendObjectCode(const ObjectCodeBuilder &objectCode)
@@ -717,9 +816,24 @@ void StatementListNode::deferAssembly(StatementUPtr &&statement,
 {
     if (statement)
     {
-        if (_blocks.empty() ||
+        DeferredBlock *lastBlock;
+        bool startNewDeferredBlock = false;
+
+        if (_blocks.empty() || _blocks.back()->isPreAssembled() ||
             _blocks.back()->isClosed() ||
-            _blocks.back()->isPreAssembled())
+            (Ag::tryCast(_blocks.back().get(), lastBlock) == false))
+        {
+            startNewDeferredBlock = true;
+        }
+        else
+        {
+            // Ensure the statement to defer is being assembled in the same
+            // environment as previously deferred statements.
+            startNewDeferredBlock = lastBlock->isMatching(_currentState,
+                                                          _scopeStack.back());
+        }
+
+        if (startNewDeferredBlock)
         {
             // Create a new deferred statement block and add it to the end
             // of the collection.

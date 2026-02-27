@@ -2,7 +2,7 @@
 //! @brief The declaration of an object representing an assembly language
 //! statement which defines one or more data elements to embed in code.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2021-2023
+//! @date 2021-2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -17,20 +17,12 @@
 #include <memory>
 #include <vector>
 
-//#include "AsmEnums.hpp"
 #include "Expr.hpp"
 #include "ExpressionNode.hpp"
 #include "StatementListNode.hpp"
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
 
 namespace Mo {
 namespace Asm {
-
-////////////////////////////////////////////////////////////////////////////////
-// Data Type Declarations
-////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////
 // Class Declarations
@@ -44,10 +36,6 @@ public:
     DataDirectiveNode(ParseContext &context, DirectiveDataType dataType,
                       const Location &start);
     virtual ~DataDirectiveNode() = default;
-
-    // Accessors
-
-    // Operations
 
     // Overrides
     virtual bool isComplete() const override;
@@ -69,8 +57,6 @@ private:
         Complete
     };
 
-    // Internal Functions
-
     // Internal Fields
     State _state;
     DirectiveDataType _dataType;
@@ -87,8 +73,6 @@ public:
     DataDirectiveStatement(const Location &at,
                            IExprUPtrCollection &&expressions);
     virtual ~DataDirectiveStatement() = default;
-
-    // Accessors
 
     // Overrides
     virtual bool assemble(const AssemblyState &state, IEvalContext *context,
@@ -111,14 +95,6 @@ private:
     Location _at;
     IExprUPtrCollection _values;
 };
-
-////////////////////////////////////////////////////////////////////////////////
-// Function Declarations
-////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////
-// Templates
-////////////////////////////////////////////////////////////////////////////////
 
 }} // namespace Mo::Asm
 

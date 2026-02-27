@@ -1,7 +1,7 @@
 //! @file SymbolTable.hpp
 //! @brief The declaration of an object representing an indexed set of symbols.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2022-2023
+//! @date 2022-2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -34,6 +34,7 @@ public:
     SymbolDefinition(Ag::string_cref_t id, const Location &source);
     SymbolDefinition(Ag::string_cref_t id, const Location &source,
                      const Value &value, bool isAddress);
+    SymbolDefinition(Ag::string_cref_t newId, const SymbolDefinition &symbol);
 
     // Accessors
     Ag::string_cref_t getId() const;
@@ -89,6 +90,8 @@ public:
     bool declareSymbol(Ag::string_cref_t id, const Location &source);
     bool defineSymbol(Ag::string_cref_t id, const Location &source,
                       const Value &value, bool isAddress);
+    void integrateNestedSymbols(Ag::string_cref_t &prefix,
+                                const SymbolTable &nestedSymbols);
 private:
     // Internal Fields
     Symbols _symbols;
