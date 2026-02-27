@@ -941,12 +941,18 @@ void IOC::onKartCounterReachesZero(SystemContext &guestContext,
     if (kartCounter.isActive())
     {
         // Check for bytes received from the keyboard, or the host
-        // implementation thereof.
-        if (ioc->_kartRxQueue->try_dequeue(ioc->_kartRxByte))
+        // implementation thereof. Only deliver if the previous Rx byte
+        // has been read by the host (KartRxIrq is clear). This matches
+        // real hardware behaviour where the KART Rx register holds only
+        // one byte and won't accept a new one until it's been read.
+        if (!(ioc->_irqState->getIrqState() & (1u << KartRxIrq)))
         {
-            // A byte was received in IOC from the keyboard,
-            // raise an interrupt.
-            ioc->_parent.setGuestIrq(ioc->_irqState->raiseIrq(KartRxIrq));
+            if (ioc->_kartRxQueue->try_dequeue(ioc->_kartRxByte))
+            {
+                // A byte was received in IOC from the keyboard,
+                // raise an interrupt.
+                ioc->_parent.setGuestIrq(ioc->_irqState->raiseIrq(KartRxIrq));
+            }
         }
 
         // Check for bytes we need to send to the keyboard, or the host

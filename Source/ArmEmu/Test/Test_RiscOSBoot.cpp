@@ -84,11 +84,12 @@ TEST_F(RiscOSBootTests, ResetVectorExecutes)
 //! polling loop. Running 1M cycles should be sufficient to pass this point.
 TEST_F(RiscOSBootTests, AdvancesPastI2CProbe)
 {
-    // Run 1 million cycles. This should be enough to get past the I2C probe.
+    // Run 50 million cycles. The I2C probe begins at ~28M cycles,
+    // after the RAM test and keyboard initialisation complete.
     auto sinkPtr = std::make_unique<BootProgressMonitor>();
     auto sink = sinkPtr.get();
     auto specimen = createSystem(std::move(sinkPtr));
-    auto result = specimen->runLimited(1000000);
+    auto result = specimen->runLimited(50000000);
 
     uint32_t pc = specimen->getCoreRegister(CoreRegister::PC);
     EXPECT_GT(sink->getI2cToggleCount(), 1u) << "PC at 0x" << std::hex << pc;

@@ -2,7 +2,7 @@
 //! @brief The declaration of template implementations of ARM data transfer
 //! instructions.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2023
+//! @date 2023-2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -97,9 +97,16 @@ uint32_t execLoad(THardware &hardware, TRegisterFile &regs,
         {
             if (instruction & 0x200000)
             {
-                // Write-back.
-                result = regs.setRn(Ag::Bin::extractEnum<GeneralRegister, 16, 4>(instruction),
-                                    effectiveAddr) | 3;
+                // Write-back, but only if Rn != Rd. On ARM2/ARM3, when
+                // the base and destination registers are the same, the
+                // loaded value takes priority over base register writeback.
+                auto rd = Ag::Bin::extractEnum<GeneralRegister, 12, 4>(instruction);
+                auto rn = Ag::Bin::extractEnum<GeneralRegister, 16, 4>(instruction);
+
+                if (rd != rn)
+                {
+                    result = regs.setRn(rn, effectiveAddr) | 3;
+                }
             }
         }
         else
@@ -166,9 +173,16 @@ uint32_t execLoad(THardware &hardware, TRegisterFile &regs,
 
         if (isOK)
         {
-            // Write-back to base register.
-            result = regs.setRn(Ag::Bin::extractEnum<GeneralRegister, 16, 4>(instruction),
-                                effectiveAddr) | 3;
+            // Write-back to base register, but only if Rn != Rd. On
+            // ARM2/ARM3, the loaded value takes priority over writeback
+            // when both target the same register.
+            auto rd = Ag::Bin::extractEnum<GeneralRegister, 12, 4>(instruction);
+            auto rn = Ag::Bin::extractEnum<GeneralRegister, 16, 4>(instruction);
+
+            if (rd != rn)
+            {
+                result = regs.setRn(rn, effectiveAddr) | 3;
+            }
         }
         else
         {

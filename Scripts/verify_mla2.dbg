@@ -1,0 +1,31 @@
+# verify_mla2.dbg - Step past the old MLA crash point and see where we go
+config model Archimedies
+config cpu ARM2
+config rom RiscOS_3_10
+config ram 4096
+init
+
+run 137340000
+step 3852
+echo === PC just past the old MLA crash ===
+pc
+regs
+
+echo === Step 500 more to see what code executes ===
+step 500
+pc
+regs
+
+echo === Step 2000 more ===
+step 2000
+pc
+
+echo === Step 5000 more ===
+step 5000
+pc
+
+echo === Step 10000 more ===
+step 10000
+pc
+regs
+trace 30

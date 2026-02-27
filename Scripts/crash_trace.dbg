@@ -1,0 +1,65 @@
+# crash_trace.dbg - Capture the trace right at the crash point
+config model Archimedies
+config cpu ARM2
+config rom RiscOS_3_10
+config ram 4096
+init
+
+echo === Running to 135M cycles ===
+run 135000000
+
+echo === State at 135M ===
+pc
+regs
+
+echo === Running 500K more cycles ===
+run 500000
+pc
+reg r8
+
+echo === Running 500K more cycles (136M) ===
+run 500000
+pc
+reg r8
+
+echo === Running 500K more cycles (136.5M) ===
+run 500000
+pc
+reg r8
+
+echo === Running 500K more cycles (137M) ===
+run 500000
+pc
+reg r8
+
+echo === Running 500K more cycles (137.5M) ===
+run 500000
+pc
+reg r8
+
+echo === Running 500K more cycles (138M) ===
+run 500000
+pc
+reg r8
+
+echo === Running 500K more cycles (138.5M) ===
+run 500000
+pc
+reg r8
+
+echo === Running 500K more cycles (139M) ===
+run 500000
+pc
+reg r8
+
+echo === Full trace at current point ===
+trace 100
+
+echo === Full register dump ===
+regs
+
+echo === Exception vectors (logical) ===
+disasm 0x00000000 8
+
+echo === Exception handler addresses at 0x100 ===
+mem 0x00000100 64

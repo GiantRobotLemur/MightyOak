@@ -1,0 +1,13 @@
+# verify_short.dbg - Verify past MLA crash point (137M)
+config model Archimedies
+config cpu ARM2
+config rom RiscOS_3_10
+config ram 4096
+init
+
+echo === Running 150M cycles ===
+run 150000000
+echo === 150M: ===
+pc
+regs
+trace 20

@@ -1,0 +1,23 @@
+# verify_fix.dbg - Verify the R14 pipeline offset fix resolves the boot stall
+config model Archimedies
+config cpu ARM2
+config rom RiscOS_3_10
+config ram 4096
+init
+
+echo === Running to 137M cycles (old crash point) ===
+run 137000000
+pc
+regs
+
+echo === Running another 13M cycles past the old crash point ===
+run 13000000
+pc
+regs
+
+echo === If we got here without crashing, the fix works ===
+echo === Running to 200M cycles ===
+run 50000000
+pc
+regs
+trace 30

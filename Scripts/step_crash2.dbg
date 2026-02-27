@@ -1,0 +1,33 @@
+# step_crash2.dbg - Step through crash point to find exact instruction
+config model Archimedies
+config cpu ARM2
+config rom RiscOS_3_10
+config ram 4096
+init
+
+run 137340000
+echo === 137.34M: ===
+pc
+regs
+
+echo === Stepping 1000 instructions ===
+step 1000
+pc
+
+echo === Stepping 1000 more ===
+step 1000
+pc
+
+echo === Stepping 1000 more ===
+step 1000
+pc
+
+echo === Stepping 1000 more ===
+step 1000
+pc
+
+echo === Stepping 1000 more ===
+step 1000
+pc
+regs
+trace 50

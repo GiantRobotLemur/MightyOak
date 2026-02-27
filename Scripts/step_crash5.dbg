@@ -1,0 +1,51 @@
+# step_crash5.dbg - Find exact crash instruction, stepping 1 at a time
+config model Archimedies
+config cpu ARM2
+config rom RiscOS_3_10
+config ram 4096
+init
+
+run 137340000
+step 3850
+echo === After 3850 steps ===
+pc
+regs
+
+step 1
+echo === +1 ===
+pc
+
+step 1
+echo === +2 ===
+pc
+
+step 1
+echo === +3 ===
+pc
+
+step 1
+echo === +4 ===
+pc
+
+step 1
+echo === +5 ===
+pc
+
+step 1
+echo === +6 ===
+pc
+
+step 1
+echo === +7 ===
+pc
+
+step 1
+echo === +8 ===
+pc
+regs
+
+step 1
+echo === +9 ===
+pc
+regs
+trace 30

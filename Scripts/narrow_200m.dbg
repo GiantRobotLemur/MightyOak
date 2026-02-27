@@ -1,0 +1,52 @@
+# narrow_200m.dbg - Narrow crash between 100M and 200M
+config model Archimedies
+config cpu ARM2
+config rom RiscOS_3_10
+config ram 4096
+init
+
+run 100000000
+echo === 100M: ===
+pc
+
+run 10000000
+echo === 110M: ===
+pc
+
+run 10000000
+echo === 120M: ===
+pc
+
+run 10000000
+echo === 130M: ===
+pc
+
+run 10000000
+echo === 140M: ===
+pc
+
+run 5000000
+echo === 145M: ===
+pc
+
+run 5000000
+echo === 150M: ===
+pc
+
+run 5000000
+echo === 155M: ===
+pc
+
+run 5000000
+echo === 160M: ===
+pc
+
+run 5000000
+echo === 165M: ===
+pc
+
+run 5000000
+echo === 170M: ===
+pc
+regs
+trace 50

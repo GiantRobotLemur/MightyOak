@@ -1,0 +1,39 @@
+# step_precise5.dbg - Inspect state at the LDMIA R10 that causes the crash
+config model Archimedies
+config cpu ARM2
+config rom RiscOS_3_10
+config ram 4096
+init
+
+run 137000000
+
+echo === Skip to just before crash: 13650 instructions ===
+step 13650
+
+echo === State at LDMIA R10, {R10,R12,R15} ===
+pc
+regs
+
+echo === What does R10 point to? (this is the error handler block) ===
+reg r10
+
+echo === Step 1 to execute the LDMIA ===
+step 1
+regs
+pc
+
+echo === What is SWI 0x2001D? Check ROM SWI dispatch table ===
+echo === Examining memory at logical 0x790 (module SWI table base from trace) ===
+mem 0x00000780 64
+
+echo === What is at the error handler chain? ===
+echo === Memory around R10 before LDMIA (need to check what 0x00000000 or actual R10 value maps to) ===
+
+echo === Check logical memory at 0 ===
+mem 0x00000000 64
+
+echo === Examine the SWI instruction at the call site ===
+disasm 0x03811DA0 16
+
+echo === Disassemble the keyboard init code that calls SWI ===
+disasm 0x03811D70 32

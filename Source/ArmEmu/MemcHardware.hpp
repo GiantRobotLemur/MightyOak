@@ -104,6 +104,8 @@ private:
     std::vector<uint8_t> _lowRom;
     std::vector<uint8_t> _highRom;
     std::vector<uint16_t> _pageMappings;
+    std::vector<uint16_t> _camLogicalPage; //!< CAM entries indexed by physical page.
+    std::vector<uint8_t> _camPPL;          //!< PPL per CAM entry.
     uint8_t _fuzz[FuzzSize];
     uint32_t _pageOffsetMask;
     uint16_t _physicalPageCount;
@@ -121,6 +123,7 @@ private:
     // Internal Functions
     void setPageSize(uint8_t pageSizePow2);
     void writeMEMC(uint32_t offset, uint32_t value);
+    void rebuildInverseMapping(uint16_t logicalPage);
 
     uint8_t translateAddress(uint32_t logicalAddr, uint32_t &physAddr, bool isWrite) const;
     uint8_t tryGetReadHostMapping(uint32_t physAddr, void *&hostBlock,

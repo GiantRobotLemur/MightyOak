@@ -1,0 +1,38 @@
+# stall_break.dbg - Use breakpoints to trace the calling flow
+config model Archimedies
+config cpu ARM2
+config rom RiscOS_3_10
+config ram 4096
+init
+
+run 150000000
+
+echo === Set breakpoint at function entry and return point ===
+break 0x0380A1A4
+break 0x03811DB8
+
+echo === Continue to next hit ===
+continue
+pc
+regs
+
+echo === Continue again ===
+continue
+pc
+regs
+
+echo === Continue again ===
+continue
+pc
+regs
+
+echo === Continue again ===
+continue
+pc
+regs
+
+echo === Continue again ===
+continue
+pc
+regs
+trace 50

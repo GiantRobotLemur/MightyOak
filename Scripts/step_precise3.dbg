@@ -1,0 +1,54 @@
+# step_precise3.dbg - Narrow crash between 13500 and 14000 instructions after 137M
+config model Archimedies
+config cpu ARM2
+config rom RiscOS_3_10
+config ram 4096
+init
+
+run 137000000
+
+echo === Skip 13500 instructions ===
+step 13500
+pc
+
+echo === +50 (13550) ===
+step 50
+pc
+
+echo === +50 (13600) ===
+step 50
+pc
+
+echo === +50 (13650) ===
+step 50
+pc
+
+echo === +50 (13700) ===
+step 50
+pc
+
+echo === +50 (13750) ===
+step 50
+pc
+
+echo === +50 (13800) ===
+step 50
+pc
+
+echo === +50 (13850) ===
+step 50
+pc
+
+echo === +50 (13900) ===
+step 50
+pc
+
+echo === +50 (13950) ===
+step 50
+pc
+
+echo === +50 (14000) ===
+step 50
+pc
+regs
+trace 50

@@ -1,0 +1,18 @@
+# verify_fix2.dbg - Check boot progress beyond 200M cycles
+config model Archimedies
+config cpu ARM2
+config rom RiscOS_3_10
+config ram 4096
+init
+
+echo === Running to 300M cycles ===
+run 300000000
+pc
+regs
+
+echo === Running to 500M cycles ===
+run 200000000
+pc
+regs
+trace 30
+irq

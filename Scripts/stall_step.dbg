@@ -1,0 +1,24 @@
+# stall_step.dbg - Step through to see actual flow
+config model Archimedies
+config cpu ARM2
+config rom RiscOS_3_10
+config ram 4096
+init
+
+run 150000000
+
+echo === Step 200 instructions, should cover one full function call ===
+step 200
+pc
+regs
+
+echo === Step 200 more ===
+step 200
+pc
+regs
+
+echo === Check what MOV R0, #48 sets R0 to after return ===
+echo === Step only 50 to see early part of function ===
+step 50
+pc
+regs

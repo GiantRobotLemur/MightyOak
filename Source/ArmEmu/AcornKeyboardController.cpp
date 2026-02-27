@@ -81,16 +81,19 @@ void AcornKeyboardController::receiveKARTByte(uint8_t nextByte)
 
     bool hasError = true;
 
+    // HRST is always accepted regardless of state and resets the protocol.
+    if (nextByte == HRST)
+    {
+        _state = ControllerState::ReceivedHRST;
+        _ioController->writeKartByte(HRST);
+        return;
+    }
+
     switch (_state)
     {
     case ControllerState::PreReset:
     default:
-        if (nextByte == HRST)
-        {
-            _state = ControllerState::ReceivedHRST;
-            _ioController->writeKartByte(HRST);
-            hasError = false;
-        }
+        // Only HRST is accepted in PreReset (handled above).
         break;
 
     case ControllerState::ReceivedHRST:
@@ -115,13 +118,7 @@ void AcornKeyboardController::receiveKARTByte(uint8_t nextByte)
     case ControllerState::Initialised:
         hasError = false;
 
-        if (nextByte == HRST)
-        {
-            // Host requested a hard reset.
-            _state = ControllerState::ReceivedHRST;
-            _ioController->writeKartByte(RAK1);
-        }
-        else if (nextByte == PRST)
+        if (nextByte == PRST)
         {
             // Protocol reset - restart the handshake.
             _state = ControllerState::PreReset;
@@ -139,15 +136,21 @@ void AcornKeyboardController::receiveKARTByte(uint8_t nextByte)
         }
         else if (nextByte <= LEDS_Mask)
         {
-            // LED state control (0x00-0x07). Acknowledge and send status.
-            _ioController->writeKartByte(getStatusByte());
+            // LED state control (0x00-0x07). No response needed; the
+            // host does not wait for one.
         }
-        else if (nextByte == SACK || nextByte == NACK ||
-                 nextByte == MACK || nextByte == SMAK ||
-                 nextByte == BACK)
+        else if (nextByte == NACK || nextByte == SACK ||
+                 nextByte == MACK || nextByte == SMAK)
         {
-            // Host acknowledgement. Send any pending key/mouse data
-            // or a status byte.
+            // Host enable/acknowledge bytes. These configure which data
+            // the keyboard should report (keys, mouse, both, or neither)
+            // but do not elicit a response. The host does not wait for
+            // one; sending a response would desynchronise the protocol.
+        }
+        else if (nextByte == BACK)
+        {
+            // Host requests the second byte of the current key/mouse
+            // exchange, or sends pending key/mouse data.
             sendPendingData();
         }
         else if ((nextByte & ~RQPD_Mask) == RQPD_Bits)

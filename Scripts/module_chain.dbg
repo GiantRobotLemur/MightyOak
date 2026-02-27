@@ -1,0 +1,33 @@
+# module_chain.dbg - Examine the module linked list that the SWI dispatcher scans
+config model Archimedies
+config cpu ARM2
+config rom RiscOS_3_10
+config ram 4096
+init
+
+# Run to just before the stall point
+run 137000000
+step 13650
+
+echo === State when entering module SWI dispatch ===
+pc
+regs
+
+echo === Module chain head pointer at 0x108 ===
+mem 0x00000108 4
+
+echo === Step to enter the loop ===
+step 20
+pc
+regs
+
+echo === Module chain: follow the linked list ===
+echo === Each module node: [+0]=next, [+28]=SWI handler addr ===
+echo === Examining first few modules in chain ===
+mem 0x00000108 4
+
+echo === Disassemble the full SWI dispatch loop ===
+disasm 0x03807940 40
+
+echo === Memory around the module chain base ===
+mem 0x00000100 64

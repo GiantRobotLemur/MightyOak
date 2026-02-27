@@ -1,0 +1,20 @@
+# verify_r14.dbg - Check R14 value after SWI to verify the +4 hypothesis
+# Run to a point early in boot where SWIs are being called, then trace
+config model Archimedies
+config cpu ARM2
+config rom RiscOS_3_10
+config ram 4096
+init
+
+# Run to 10M cycles (past checksum, into early init)
+run 10000000
+
+echo === State at 10M cycles ===
+pc
+regs
+
+# Step a large number to find a SWI in the trace
+step 5000
+
+echo === After 5000 steps, check trace for SWI calls ===
+trace 200

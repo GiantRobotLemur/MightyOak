@@ -1,0 +1,36 @@
+# crash_pinpoint.dbg - Pinpoint crash between 137M and 137.5M
+config model Archimedies
+config cpu ARM2
+config rom RiscOS_3_10
+config ram 4096
+init
+
+run 137000000
+
+echo === 137.0M - check state ===
+pc
+
+echo === +100K ===
+run 100000
+pc
+reg r8
+
+echo === +100K (137.2M) ===
+run 100000
+pc
+reg r8
+
+echo === +100K (137.3M) ===
+run 100000
+pc
+reg r8
+
+echo === +100K (137.4M) ===
+run 100000
+pc
+reg r8
+
+echo === +100K (137.5M) ===
+run 100000
+pc
+reg r8

@@ -138,6 +138,37 @@ void MemcHardware::setPageSize(uint8_t pageSizePow2)
     _pageOffsetMask = Ag::Bin::makeMask<uint32_t>(_pageSizePow2);
 }
 
+//! @brief Rebuilds the inverse page mapping for a specific logical page by
+//! scanning the CAM entries. On real MEMC hardware, the CAM is searched in
+//! parallel; when multiple physical pages claim the same logical page, the
+//! lowest physical page number wins (priority encoder behaviour).
+//! @param[in] logicalPage The logical page number to rebuild.
+void MemcHardware::rebuildInverseMapping(uint16_t logicalPage)
+{
+    // Scan CAM entries (indexed by physical page) to find the highest
+    // physical page that claims this logical page. The MEMC1a priority
+    // encoder appears to select the highest-numbered matching entry when
+    // multiple physical pages map to the same logical page.
+    uint16_t camEntryCount = static_cast<uint16_t>(_camLogicalPage.size());
+
+    for (uint16_t p = camEntryCount; p-- > 0; )
+    {
+        if (_camLogicalPage[p] == logicalPage)
+        {
+            // Found a match — highest physical page wins.
+            uint16_t encoded = p;
+            encoded |= static_cast<uint16_t>(_camPPL[p]) << MemcMapping::PPLShift;
+            encoded |= MemcMapping::PagePresentBit;
+
+            _pageMappings[logicalPage] = encoded;
+            return;
+        }
+    }
+
+    // No CAM entry maps to this logical page — mark as not present.
+    _pageMappings[logicalPage] = 0;
+}
+
 //! @brief Causes a write to the CAM associated with the MEMC/VIDC registers.
 //! @param[in] offset The 26-bit address written to.
 void MemcHardware::writeMEMC(uint32_t offset, uint32_t value)
@@ -175,6 +206,7 @@ void MemcHardware::writeMEMC(uint32_t offset, uint32_t value)
             break;
 
         case 7: // MEMC Control Register
+        //{
             setPageSize(Ag::Bin::extractBits<uint8_t, 2, 2>(offset) + 12);
             _videoDMAEnabled = Ag::Bin::extractBit<10>(offset);
             _soundDMAEnabled = Ag::Bin::extractBit<11>(offset);
@@ -189,6 +221,7 @@ void MemcHardware::writeMEMC(uint32_t offset, uint32_t value)
                 throw Ag::OperationException("MEMC test mode enabled!");
             }
             break;
+        //}
         }
     }
     else if (offset >= MEMC::AddrTransStart)
@@ -237,8 +270,8 @@ void MemcHardware::writeMEMC(uint32_t offset, uint32_t value)
             memcId |= static_cast<uint8_t>(offset >> 11) & 2;
             physicalPage = Ag::Bin::extractBits<uint16_t, 3, 4>(offset);
             physicalPage |= Ag::Bin::extractAndShiftBits<uint16_t, 0, 4, 1>(offset);
-            physicalPage |= Ag::Bin::extractAndShiftBits<uint16_t, 2, 5, 1>(offset);
-            physicalPage |= Ag::Bin::extractAndShiftBits<uint16_t, 1, 6, 1>(offset);
+            physicalPage |= Ag::Bin::extractAndShiftBits<uint16_t, 1, 5, 1>(offset);
+            physicalPage |= Ag::Bin::extractAndShiftBits<uint16_t, 2, 6, 1>(offset);
             logicalPage = Ag::Bin::extractBits<uint16_t, 15, 8>(offset);
             logicalPage |= Ag::Bin::extractAndShiftBits<uint16_t, 10, 8, 2>(offset);
             break;
@@ -249,18 +282,34 @@ void MemcHardware::writeMEMC(uint32_t offset, uint32_t value)
             break;
         }
 
-        // Apply the new mapping.
+        // Each MEMC chip provides up to 4 MB of DRAM. Ignore CAM writes
+        // addressed to non-existent chips. RISC OS broadcasts CAM writes
+        // to all four chip-select addresses; only the chips that physically
+        // exist should update the page table.
+        size_t memcChipCount = std::max<size_t>(1, _ram.size() >> 22);
 
-        // Apply the ID of the MEMC chip being programmed.
+        if (memcId >= memcChipCount)
+            return;
+
+        // Apply the new mapping using the CAM model.
+        // Each MEMC physical page has a CAM entry storing its logical page.
+        // The inverse mapping (_pageMappings) is rebuilt from the CAM entries.
+
+        // Compute the absolute physical page index (across MEMC chips).
         physicalPage |= static_cast<uint16_t>(memcId) << 7;
 
-        // Encode the page protection level.
-        physicalPage |= static_cast<uint16_t>(pageProtectionLevel) << MemcMapping::PPLShift;
+        // Update the CAM entry for this physical page.
+        uint16_t oldLogicalPage = _camLogicalPage[physicalPage];
+        _camLogicalPage[physicalPage] = logicalPage;
+        _camPPL[physicalPage] = pageProtectionLevel;
 
-        // Mark the mapping as valid.
-        physicalPage |= MemcMapping::PagePresentBit;
+        // Rebuild the inverse mapping for both the old and new logical pages.
+        if (oldLogicalPage != 0xFFFF && oldLogicalPage != logicalPage)
+        {
+            rebuildInverseMapping(oldLogicalPage);
+        }
 
-        _pageMappings[logicalPage] = physicalPage;
+        rebuildInverseMapping(logicalPage);
     }
 }
 
@@ -460,6 +509,13 @@ uint8_t MemcHardware::tryGetWriteHostMapping(uint32_t logicalAddr, void *&hostBl
 
         if (result == AddrMapResult::Success)
         {
+            if (physAddr >= MEMC::LowRomStart)
+            {
+                // The page table maps to ROM space — writes should be
+                // silently dropped as ROM is read-only.
+                return AddrMapResult::NotMapped;
+            }
+
             // The address was mapped and could be accessed.
             // Calculate the offset based on the fact that the physical RAM
             // repeats throughout the physical address space.
@@ -567,6 +623,12 @@ MemcHardware::MemcHardware(const Options &options,
 
     // Set up one mapping for each possible logical page.
     _pageMappings.resize(8192, 0);
+
+    // Allocate the CAM arrays: 128 entries per MEMC chip, up to 4 chips.
+    // Use 0xFFFF as "no mapping" sentinel for logical page numbers.
+    size_t camSize = std::max<size_t>(128, _ram.size() >> 15);
+    _camLogicalPage.resize(camSize, 0xFFFF);
+    _camPPL.resize(camSize, 0);
 
     // On reset the page mappings will be initialised to a state where the
     // ROM is "continually enabled" to map it to the bottom of the logical
@@ -698,6 +760,11 @@ void MemcHardware::reset()
 
     // Mark the rest of the page entries as not present.
     std::fill(lastMapped, _pageMappings.end(), static_cast<uint16_t>(0));
+
+    // Clear the CAM entries (all physical pages unmapped).
+    std::fill(_camLogicalPage.begin(), _camLogicalPage.end(),
+              static_cast<uint16_t>(0xFFFF));
+    std::fill(_camPPL.begin(), _camPPL.end(), static_cast<uint8_t>(0));
 
     // Set the POR interrupt so that the OS knows it was a hard reset.
     _ioc.powerOnReset();

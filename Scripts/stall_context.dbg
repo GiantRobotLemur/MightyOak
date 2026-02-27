@@ -1,0 +1,29 @@
+# stall_context.dbg - Understand the calling context of the error handler init loop
+config model Archimedies
+config cpu ARM2
+config rom RiscOS_3_10
+config ram 4096
+init
+
+run 150000000
+
+echo === Disassemble caller at 0x03811D90 (32 instructions) ===
+disasm 0x03811D90 32
+
+echo === Disassemble error handler init at 0x0380A180 (32 instructions) ===
+disasm 0x0380A180 32
+
+echo === Disassemble SWI handler dispatch at 0x01F033C0 (20 instructions) ===
+disasm 0x01F033C0 20
+
+echo === Run a little further and step out of the inner loop to see the outer loop ===
+step 5000
+pc
+regs
+
+echo === Stack at SP (0x01C02000 area) ===
+mem 0x01C01FC0 64
+
+echo === Exception vectors ===
+mem 0x00000000 32
+disasm 0x00000000 8

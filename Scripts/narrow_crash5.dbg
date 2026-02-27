@@ -1,0 +1,40 @@
+# narrow_crash5.dbg - Narrow between 241.1M and 242M
+config model Archimedies
+config cpu ARM2
+config rom RiscOS_3_10
+config ram 4096
+init
+
+run 241100000
+echo === 241.1M: ===
+pc
+
+run 100000
+echo === 241.2M: ===
+pc
+
+run 100000
+echo === 241.3M: ===
+pc
+
+run 100000
+echo === 241.4M: ===
+pc
+
+run 100000
+echo === 241.5M: ===
+pc
+
+run 100000
+echo === 241.6M: ===
+pc
+
+run 50000
+echo === 241.65M: ===
+pc
+
+run 50000
+echo === 241.7M: ===
+pc
+regs
+trace 200

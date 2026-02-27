@@ -13,16 +13,18 @@ MightyOak/
 │   ├── Ag/                  Git submodule — "Silver" cross-platform runtime
 │   ├── AsmTools/            ARM assembler & disassembler library
 │   ├── ArmEmu/              ARM CPU + Archimedes hardware emulation
+│   ├── ArmDbg/              Scriptable debugger library
+│   ├── ArmDbgCli/           CLI debugger application
 │   ├── ArmDebugger/         Optional Qt6 GUI debugger
 │   ├── MightyOakLib/        Shared emulator application logic (SDL3)
 │   ├── EmulatorApp/         GUI application entry point
 │   └── Include/             All public headers
 │       ├── AsmTools/
 │       ├── ArmEmu/
+│       ├── ArmDbg/
 │       └── MightyOakLib/
 ├── Tests/                   ARM assembly source for test ROMs
-├── Doc/                     Doxygen configuration
-└── cmake/                   CMake utility scripts
+├── Doc/                     Component documentation and Doxygen configuration
 ```
 
 ## Dependency Graph
@@ -35,6 +37,12 @@ MightyOak (SDL3 GUI app)
         │     └── AgCore
         └── Sdl3Tools
               └── AgCore
+
+ArmDbgCli (scriptable CLI debugger)
+  └── ArmDbg
+        ├── ArmEmu
+        ├── AsmTools
+        └── AgCore
 
 ArmDebugger (optional Qt6 debugger)
   ├── ArmEmu
@@ -329,6 +337,49 @@ implementations in `Source/ArmEmu/`):
   now owns the persistent device registry, which remains accessible at runtime
   via `IArmSystem::tryFindDevice()` and `tryFindTypedDevice<T>()`.
 
+### ArmDbg / ArmDbgCli — Scriptable Debugger
+
+Namespace `Mo::Arm`. A non-interactive, script-driven debugger for inspecting
+emulator state without modifying code or rebuilding. The architecture is split
+into a library (`ArmDbg`) containing all core logic and a thin CLI wrapper
+(`ArmDbgCli`) that reads a script file and writes to stdout.
+
+**Workflow.** Write a `.dbg` script, run `ArmDbg --script boot.dbg`, read
+output, refine the script, repeat. No code changes or rebuilds needed between
+iterations.
+
+**Script language.** Line-oriented, `#` comments, case-insensitive commands.
+Commands cover system configuration (`config model/cpu/rom/ram`),
+initialisation (`init`), execution control (`run`, `step`, `continue`,
+`break`), state inspection (`regs`, `reg`, `mem`, `disasm`, `pc`, `irq`,
+`memc`, `ioc`, `trace`), and output (`echo`). Addresses accept `0x` hex or
+decimal notation. See `Doc/ArmDbgCli.md` for the full command reference.
+
+**Internal architecture:**
+
+| Class | Role |
+|-------|------|
+| `ScriptLexer` | Tokenises script lines; special-cases `echo` to preserve message text |
+| `CommandParser` | Converts tokens to `ParsedCommand` (command enum + arguments); handles `config` two-word dispatch |
+| `StateFormatter` | Pure static formatting functions (`formatRegisters`, `formatMemoryDump`, `formatDisassembly`, `formatIrqState`, `formatTrace`, `formatPcContext`) writing to `std::ostream&`; no emulator dependency, testable with hardcoded values |
+| `DebugSession` | Central class: holds `Options`, `IArmSystemUPtr`, `RingBufferTrace*`; config commands set fields, `init` creates the system via `ArmSystemBuilder` with diagnostics, execution commands call `runLimited()`/`runSingleStep()`, inspection commands read via `getCoreRegister()`/`readFromLogicalAddress()`/`tryFindTypedDevice<IOC>()` etc. |
+| `ScriptRunner` | Thin pipeline: reads lines from `std::istream`, tokenises, parses, dispatches to `DebugSession`; reports errors with line numbers |
+
+**Diagnostic integration.** `DebugSession::executeInit()` creates a
+`RingBufferTrace` (owned by the session) and wraps it in a
+`CompositeDiagnosticSink` which is added as a device to the builder. Only the
+composite is added as a device — the trace is kept as a raw pointer for direct
+access by the `trace` command. This avoids the "DiagnosticSink" alias conflict
+that would occur if both were registered as separate devices.
+
+**CLI application.** `ArmDbgCli_Main.cpp` follows the `EmuPerfTestApp` pattern:
+`ArmDbgArgs` extends `Ag::Cli::ProgramArguments` (`--script`, `--rom` options),
+`ArmDbgApp` extends `Ag::App` with `IMPLEMENT_MAIN`. ROM path resolution
+reuses `Options::findRomImagePath()`.
+
+**Public headers** in `Source/Include/ArmDbg/`: `CommandDefs.hpp`,
+`DebugSession.hpp`, `ScriptRunner.hpp`. Umbrella header: `ArmDbg.hpp`.
+
 ### MightyOakLib — Application Layer
 
 Namespace `Mo`. SDL3-based application framework:
@@ -378,8 +429,9 @@ Doxygen comments throughout: `//!`, `@file`, `@brief`, `@author`, `@date`,
 
 ### File Organisation
 
-- Public headers in `Source/Include/{AsmTools,ArmEmu,MightyOakLib}/`.
-- Umbrella headers: `AsmTools.hpp`, `ArmEmu.hpp`, `MightyOakLib.hpp`.
+- Public headers in `Source/Include/{AsmTools,ArmEmu,ArmDbg,MightyOakLib}/`.
+- Umbrella headers: `AsmTools.hpp`, `ArmEmu.hpp`, `ArmDbg.hpp`,
+  `MightyOakLib.hpp`.
 - Template implementations in `.inl` files (listed as sources in CMake for IDE
   visibility but included via `#include` in `.cpp` files).
 - Test files follow the pattern `Test_*.cpp` using Google Test.
@@ -452,6 +504,16 @@ Supported platforms: Visual Studio 2022 x64 (Windows), gcc 11 x64 (Linux).
   investigate where RISC OS 3.10 boot stalls: stall detection with
   disassembly, boot progress with trace, exception vector integrity, MEMC
   page table dump, I2C/IOC activity analysis, and PC progression timeline.
+- **ArmDbg tests** (`Source/ArmDbg/Test/`) — 47 tests across 5 suites:
+  `Test_ScriptLexer` (12 tests: tokenisation, comments, echo special case,
+  whitespace handling), `Test_CommandParser` (15 tests: all command verbs,
+  config sub-dispatch, case insensitivity, unknown commands),
+  `Test_StateFormatter` (6 tests: register dump, memory hex dump, disassembly
+  with/without highlight, IRQ state formatting), `Test_DebugSession` (8 tests:
+  init lifecycle, config validation, echo, run/regs/mem after init, hex address
+  parsing), `Test_ScriptRunner` (6 tests: empty/comment scripts, echo pipeline,
+  full boot script, single-line processing, unknown command failure). Tests
+  requiring a ROM image use `GTEST_SKIP` when unavailable.
 - 21 AsmTools test files covering each pipeline stage; 29 ArmEmu test files
   covering CPU, hardware, diagnostics, and integration (including ARM250
   variant tests for ALU, co-processor, and data transfer).

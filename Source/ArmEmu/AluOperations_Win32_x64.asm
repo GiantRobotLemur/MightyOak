@@ -199,7 +199,7 @@ ALU_Mul endp
 ALU_Mla proc
     mov eax,edx     ; Move one multiplicand to the accumulator
     mul ecx         ; perform 32-bit multiply.
-    add eax,dword ptr [r8]  ; Accumulate
+    add eax,r8d     ; Accumulate (r8 = op3 value, not a pointer)
     CAPTURE_AND_MERGE_LOGIC_PSR r9
     ret
 ALU_Mla endp

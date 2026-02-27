@@ -1,0 +1,52 @@
+# step_precise2.dbg - Narrow crash between 10K and 15K instructions after 137M
+config model Archimedies
+config cpu ARM2
+config rom RiscOS_3_10
+config ram 4096
+init
+
+run 137000000
+
+echo === Skip first 10K instructions ===
+step 10000
+pc
+
+echo === Batch 1: +500 (10500) ===
+step 500
+pc
+
+echo === Batch 2: +500 (11000) ===
+step 500
+pc
+
+echo === Batch 3: +500 (11500) ===
+step 500
+pc
+
+echo === Batch 4: +500 (12000) ===
+step 500
+pc
+
+echo === Batch 5: +500 (12500) ===
+step 500
+pc
+
+echo === Batch 6: +500 (13000) ===
+step 500
+pc
+
+echo === Batch 7: +500 (13500) ===
+step 500
+pc
+
+echo === Batch 8: +500 (14000) ===
+step 500
+pc
+
+echo === Batch 9: +500 (14500) ===
+step 500
+pc
+
+echo === Batch 10: +500 (15000) ===
+step 500
+pc

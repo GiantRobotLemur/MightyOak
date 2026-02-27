@@ -1,7 +1,7 @@
 //! @file Test_RegisterFile.cpp
 //! @brief The definition of unit tests of RegisterFile-based templates.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2023
+//! @date 2023-2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -124,9 +124,10 @@ TYPED_TEST_P(RegisterFile26, UndefinedInstruction)
 
     uint32_t resetResult = specimen.raiseUndefinedInstruction();
 
+    // R14 = PC - 4 (pipeline adjustment: instruction_addr + 4).
     EXPECT_EQ(resetResult & ExecResult::PipelineChange, ExecResult::PipelineChange);
     EXPECT_EQ(specimen.getPC(), 0x00000004u);
-    EXPECT_TRUE(isEqualHex(specimen.getRn(GeneralRegister::R14), 0x00008000u));
+    EXPECT_TRUE(isEqualHex(specimen.getRn(GeneralRegister::R14), 0x00007FFCu));
     EXPECT_EQ(specimen.getPSR() & PsrMask26::IrqDisableBits, PsrMask26::IrqDisableBit);
     EXPECT_EQ(specimen.getMode(), ProcessorMode::Svc26);
     EXPECT_EQ(platform.IrqMask, IrqState::IrqPending);
@@ -145,9 +146,10 @@ TYPED_TEST_P(RegisterFile26, UndefinedInstructionNoModeChange)
 
     uint32_t resetResult = specimen.raiseUndefinedInstruction();
 
+    // R14 = (PC - 4) | PSR. PC=0x8000, PSR=0x03 (SVC26), so R14=0x7FFF.
     EXPECT_EQ(resetResult & ExecResult::PipelineChange, ExecResult::FlushPipeline);
     EXPECT_EQ(specimen.getPC(), 0x00000004u);
-    EXPECT_TRUE(isEqualHex(specimen.getRn(GeneralRegister::R14), 0x00008003u));
+    EXPECT_TRUE(isEqualHex(specimen.getRn(GeneralRegister::R14), 0x00007FFFu));
     EXPECT_EQ(specimen.getPSR() & PsrMask26::IrqDisableBits, PsrMask26::IrqDisableBit);
     EXPECT_EQ(specimen.getMode(), ProcessorMode::Svc26);
     EXPECT_EQ(platform.IrqMask, IrqState::IrqPending);
@@ -166,9 +168,10 @@ TYPED_TEST_P(RegisterFile26, SoftwareInterrupt)
 
     uint32_t resetResult = specimen.raiseSoftwareInterrupt();
 
+    // R14 = PC - 4 (pipeline adjustment: instruction_addr + 4).
     EXPECT_EQ(resetResult & ExecResult::PipelineChange, ExecResult::PipelineChange);
     EXPECT_EQ(specimen.getPC(), 0x00000008u);
-    EXPECT_TRUE(isEqualHex(specimen.getRn(GeneralRegister::R14), 0x00008000u));
+    EXPECT_TRUE(isEqualHex(specimen.getRn(GeneralRegister::R14), 0x00007FFCu));
     EXPECT_EQ(specimen.getPSR() & PsrMask26::IrqDisableBits, PsrMask26::IrqDisableBit);
     EXPECT_EQ(specimen.getMode(), ProcessorMode::Svc26);
     EXPECT_EQ(platform.IrqMask, IrqState::IrqPending);
@@ -187,9 +190,10 @@ TYPED_TEST_P(RegisterFile26, SoftwareInterruptNoModeChange)
 
     uint32_t resetResult = specimen.raiseSoftwareInterrupt();
 
+    // R14 = (PC - 4) | PSR. PC=0x8000, PSR=0x03 (SVC26), so R14=0x7FFF.
     EXPECT_EQ(resetResult & ExecResult::PipelineChange, ExecResult::FlushPipeline);
     EXPECT_EQ(specimen.getPC(), 0x00000008u);
-    EXPECT_TRUE(isEqualHex(specimen.getRn(GeneralRegister::R14), 0x00008003u));
+    EXPECT_TRUE(isEqualHex(specimen.getRn(GeneralRegister::R14), 0x00007FFFu));
     EXPECT_EQ(specimen.getPSR() & PsrMask26::IrqDisableBits, PsrMask26::IrqDisableBit);
     EXPECT_EQ(specimen.getMode(), ProcessorMode::Svc26);
     EXPECT_EQ(platform.IrqMask, IrqState::IrqPending);
@@ -208,9 +212,10 @@ TYPED_TEST_P(RegisterFile26, PreFetchAbort)
 
     uint32_t resetResult = specimen.raisePreFetchAbort();
 
+    // R14 = PC - 4 (pipeline adjustment: instruction_addr + 4).
     EXPECT_EQ(resetResult & ExecResult::PipelineChange, ExecResult::PipelineChange);
     EXPECT_EQ(specimen.getPC(), 0x0000000Cu);
-    EXPECT_TRUE(isEqualHex(specimen.getRn(GeneralRegister::R14), 0x00008000u));
+    EXPECT_TRUE(isEqualHex(specimen.getRn(GeneralRegister::R14), 0x00007FFCu));
     EXPECT_EQ(specimen.getPSR() & PsrMask26::IrqDisableBits, PsrMask26::IrqDisableBit);
     EXPECT_EQ(specimen.getMode(), ProcessorMode::Svc26);
     EXPECT_EQ(platform.IrqMask, IrqState::IrqPending);
@@ -229,9 +234,10 @@ TYPED_TEST_P(RegisterFile26, PreFetchAbortNoModeChange)
 
     uint32_t resetResult = specimen.raisePreFetchAbort();
 
+    // R14 = (PC - 4) | PSR. PC=0x8000, PSR=0x03 (SVC26), so R14=0x7FFF.
     EXPECT_EQ(resetResult & ExecResult::PipelineChange, ExecResult::FlushPipeline);
     EXPECT_EQ(specimen.getPC(), 0x0000000Cu);
-    EXPECT_TRUE(isEqualHex(specimen.getRn(GeneralRegister::R14), 0x00008003u));
+    EXPECT_TRUE(isEqualHex(specimen.getRn(GeneralRegister::R14), 0x00007FFFu));
     EXPECT_EQ(specimen.getPSR() & PsrMask26::IrqDisableBits, PsrMask26::IrqDisableBit);
     EXPECT_EQ(specimen.getMode(), ProcessorMode::Svc26);
     EXPECT_EQ(platform.IrqMask, IrqState::IrqPending);
@@ -334,9 +340,10 @@ TYPED_TEST_P(RegisterFile26, HandleInterrupt)
 
     uint32_t resetResult = specimen.handleIrq();
 
+    // R14 = PC - 4 (pipeline adjustment).
     EXPECT_EQ(resetResult & ExecResult::PipelineChange, ExecResult::PipelineChange);
     EXPECT_EQ(specimen.getPC(), 0x00000018u);
-    EXPECT_TRUE(isEqualHex(specimen.getRn(GeneralRegister::R14), 0x00008000u));
+    EXPECT_TRUE(isEqualHex(specimen.getRn(GeneralRegister::R14), 0x00007FFCu));
     EXPECT_EQ(specimen.getPSR() & PsrMask26::IrqDisableBits, PsrMask26::IrqDisableBit);
     EXPECT_EQ(specimen.getMode(), ProcessorMode::Irq26);
     EXPECT_EQ(platform.IrqMask, IrqState::IrqPending);
@@ -355,9 +362,10 @@ TYPED_TEST_P(RegisterFile26, HandleInterruptNoModeChange)
 
     uint32_t resetResult = specimen.handleIrq();
 
+    // R14 = (PC - 4) | PSR. PC=0x8000, PSR=0x02 (Irq26), so R14=0x7FFE.
     EXPECT_EQ(resetResult & ExecResult::PipelineChange, ExecResult::FlushPipeline);
     EXPECT_EQ(specimen.getPC(), 0x00000018u);
-    EXPECT_TRUE(isEqualHex(specimen.getRn(GeneralRegister::R14), 0x00008002u));
+    EXPECT_TRUE(isEqualHex(specimen.getRn(GeneralRegister::R14), 0x00007FFEu));
     EXPECT_EQ(specimen.getPSR() & PsrMask26::IrqDisableBits, PsrMask26::IrqDisableBit);
     EXPECT_EQ(specimen.getMode(), ProcessorMode::Irq26);
     EXPECT_EQ(platform.IrqMask, IrqState::IrqPending);
@@ -376,9 +384,10 @@ TYPED_TEST_P(RegisterFile26, HandleFastInterrupt)
 
     uint32_t resetResult = specimen.handleFirq();
 
+    // R14 = PC - 4 (pipeline adjustment).
     EXPECT_EQ(resetResult & ExecResult::PipelineChange, ExecResult::PipelineChange);
     EXPECT_EQ(specimen.getPC(), 0x0000001Cu);
-    EXPECT_TRUE(isEqualHex(specimen.getRn(GeneralRegister::R14), 0x00008000u));
+    EXPECT_TRUE(isEqualHex(specimen.getRn(GeneralRegister::R14), 0x00007FFCu));
     EXPECT_EQ(specimen.getPSR() & PsrMask26::IrqDisableBits, PsrMask26::IrqDisableBits);
     EXPECT_EQ(specimen.getMode(), ProcessorMode::FastIrq26);
     EXPECT_EQ(platform.IrqMask, IrqState::GuestIrqsMask);
@@ -398,8 +407,9 @@ TYPED_TEST_P(RegisterFile26, HandleFastInterruptNoModeChange)
     uint32_t resetResult = specimen.handleFirq();
 
     EXPECT_EQ(resetResult & ExecResult::PipelineChange, ExecResult::FlushPipeline);
+    // R14 = (PC - 4) | PSR. PC=0x8000, PSR=0x01 (FastIrq26), so R14=0x7FFD.
     EXPECT_EQ(specimen.getPC(), 0x0000001Cu);
-    EXPECT_TRUE(isEqualHex(specimen.getRn(GeneralRegister::R14), 0x00008001u));
+    EXPECT_TRUE(isEqualHex(specimen.getRn(GeneralRegister::R14), 0x00007FFDu));
     EXPECT_EQ(specimen.getPSR() & PsrMask26::IrqDisableBits, PsrMask26::IrqDisableBits);
     EXPECT_EQ(specimen.getMode(), ProcessorMode::FastIrq26);
     EXPECT_EQ(platform.IrqMask, IrqState::GuestIrqsMask);
@@ -597,10 +607,11 @@ TYPED_TEST_P(RegisterFile26, GetUserRn)
     // Switch mode.
     EXPECT_EQ(specimen.handleFirq(), ExecResult::PipelineChange);
 
-    // Verify differences in banked register contents while in User mode.
+    // Verify differences in banked register contents while in FIQ mode.
+    // R14_fiq = (PC - 4) | PSR = (0 - 4) | 0 = 0xFFFFFFFC.
     EXPECT_EQ(specimen.getRn(GeneralRegister::R7), 0xDEADBEEF);
     EXPECT_EQ(specimen.getRn(GeneralRegister::R8), 0u);
-    EXPECT_EQ(specimen.getRn(GeneralRegister::R14), 0u);
+    EXPECT_TRUE(isEqualHex(specimen.getRn(GeneralRegister::R14), 0xFFFFFFFCu));
     EXPECT_EQ(specimen.getUserRn(GeneralRegister::R7), 0xDEADBEEF);
     EXPECT_EQ(specimen.getUserRn(GeneralRegister::R8), 0x42694269u);
     EXPECT_EQ(specimen.getUserRn(GeneralRegister::R14), 0xCAFEBABE);

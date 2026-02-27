@@ -81,13 +81,13 @@ protected:
     void completeHandshake()
     {
         _keyboard->receiveKARTByte(AcornKeyboardController::HRST);
-        drainRxQueue(); // discard RAK1
+        drainRxQueue(); // discard HRST echo
 
         _keyboard->receiveKARTByte(AcornKeyboardController::RAK1);
-        drainRxQueue(); // discard RAK2
+        drainRxQueue(); // discard RAK1 echo
 
         _keyboard->receiveKARTByte(AcornKeyboardController::RAK2);
-        drainRxQueue(); // discard initial status byte (NACK)
+        drainRxQueue(); // discard RAK2 echo
     }
 };
 
@@ -165,18 +165,16 @@ TEST_F(KeyboardControllerTest, RQID_ReturnsKeyboardId)
     EXPECT_EQ(response[0], AcornKeyboardController::KBID_Bits | 1);
 }
 
-TEST_F(KeyboardControllerTest, LEDS_AcknowledgesWithStatus)
+TEST_F(KeyboardControllerTest, LEDS_NoResponse)
 {
     completeHandshake();
 
     // Send LEDS command (all LEDs off = 0x00).
+    // The host does not wait for a response; none should be sent.
     _keyboard->receiveKARTByte(0x00);
 
     auto response = drainRxQueue();
-    ASSERT_EQ(response.size(), 1u);
-
-    // No pending data → NACK.
-    EXPECT_EQ(response[0], AcornKeyboardController::NACK);
+    EXPECT_TRUE(response.empty());
 }
 
 TEST_F(KeyboardControllerTest, PRST_ResetsProtocol)
@@ -195,11 +193,12 @@ TEST_F(KeyboardControllerTest, HRST_InInitialisedState_Resets)
     completeHandshake();
 
     // Sending HRST while initialised restarts the handshake.
+    // HRST is always echoed regardless of state (Acorn keyboard protocol).
     _keyboard->receiveKARTByte(AcornKeyboardController::HRST);
 
     auto response = drainRxQueue();
     ASSERT_EQ(response.size(), 1u);
-    EXPECT_EQ(response[0], AcornKeyboardController::RAK1);
+    EXPECT_EQ(response[0], AcornKeyboardController::HRST);
 }
 
 TEST_F(KeyboardControllerTest, RQPD_ReturnsEmptyPDAT)
@@ -217,7 +216,7 @@ TEST_F(KeyboardControllerTest, RQPD_ReturnsEmptyPDAT)
 ////////////////////////////////////////////////////////////////////////////////
 // Unit Tests — Key Event Queuing
 ////////////////////////////////////////////////////////////////////////////////
-TEST_F(KeyboardControllerTest, KeyDown_QueuedAndSentOnAck)
+TEST_F(KeyboardControllerTest, KeyDown_QueuedAndSentOnBACK)
 {
     completeHandshake();
 
@@ -228,8 +227,8 @@ TEST_F(KeyboardControllerTest, KeyDown_QueuedAndSentOnAck)
     // Press a key.
     _keyboard->keyDown(0x1E);
 
-    // Ask for status with an ack — should get key data.
-    _keyboard->receiveKARTByte(AcornKeyboardController::SACK);
+    // BACK requests the pending key/mouse data exchange.
+    _keyboard->receiveKARTByte(AcornKeyboardController::BACK);
 
     auto response = drainRxQueue();
 
@@ -240,7 +239,7 @@ TEST_F(KeyboardControllerTest, KeyDown_QueuedAndSentOnAck)
     EXPECT_EQ(response[2], AcornKeyboardController::NACK);             // no more data
 }
 
-TEST_F(KeyboardControllerTest, KeyUp_QueuedAndSentOnAck)
+TEST_F(KeyboardControllerTest, KeyUp_QueuedAndSentOnBACK)
 {
     completeHandshake();
 
@@ -249,7 +248,7 @@ TEST_F(KeyboardControllerTest, KeyUp_QueuedAndSentOnAck)
 
     _keyboard->keyUp(0x1E);
 
-    _keyboard->receiveKARTByte(AcornKeyboardController::SACK);
+    _keyboard->receiveKARTByte(AcornKeyboardController::BACK);
 
     auto response = drainRxQueue();
     ASSERT_EQ(response.size(), 3u);
@@ -258,7 +257,7 @@ TEST_F(KeyboardControllerTest, KeyUp_QueuedAndSentOnAck)
     EXPECT_EQ(response[2], AcornKeyboardController::NACK);
 }
 
-TEST_F(KeyboardControllerTest, MultipleKeys_SentOnePerAck)
+TEST_F(KeyboardControllerTest, MultipleKeys_SentOnePerBACK)
 {
     completeHandshake();
 
@@ -271,8 +270,8 @@ TEST_F(KeyboardControllerTest, MultipleKeys_SentOnePerAck)
     _keyboard->keyDown(0x10);
     _keyboard->keyDown(0x11);
 
-    // First ack: get first key event.
-    _keyboard->receiveKARTByte(AcornKeyboardController::SACK);
+    // First BACK: get first key event.
+    _keyboard->receiveKARTByte(AcornKeyboardController::BACK);
     auto response1 = drainRxQueue();
 
     ASSERT_EQ(response1.size(), 3u);
@@ -281,8 +280,8 @@ TEST_F(KeyboardControllerTest, MultipleKeys_SentOnePerAck)
     // Status should indicate more data pending (SACK = key data available).
     EXPECT_EQ(response1[2], AcornKeyboardController::SACK);
 
-    // Second ack: get second key event.
-    _keyboard->receiveKARTByte(AcornKeyboardController::SACK);
+    // Second BACK: get second key event.
+    _keyboard->receiveKARTByte(AcornKeyboardController::BACK);
     auto response2 = drainRxQueue();
 
     ASSERT_EQ(response2.size(), 3u);
@@ -298,7 +297,7 @@ TEST_F(KeyboardControllerTest, UnmappedKey_NotQueued)
     // No key mappings set. keyDown should have no effect.
     _keyboard->keyDown(0xFF);
 
-    _keyboard->receiveKARTByte(AcornKeyboardController::SACK);
+    _keyboard->receiveKARTByte(AcornKeyboardController::BACK);
     auto response = drainRxQueue();
 
     // Only status byte, no key data.
@@ -315,7 +314,7 @@ TEST_F(KeyboardControllerTest, MouseButtonDown_CorrectScancodes)
 
     _keyboard->mouseButtonDown(IKeyboardController::LeftButton);
 
-    _keyboard->receiveKARTByte(AcornKeyboardController::SACK);
+    _keyboard->receiveKARTByte(AcornKeyboardController::BACK);
     auto response = drainRxQueue();
 
     // Left button = scancode 0x70 → row 7, col 0.
@@ -331,7 +330,7 @@ TEST_F(KeyboardControllerTest, MouseButtonUp_CorrectScancodes)
 
     _keyboard->mouseButtonUp(IKeyboardController::RightButton);
 
-    _keyboard->receiveKARTByte(AcornKeyboardController::SACK);
+    _keyboard->receiveKARTByte(AcornKeyboardController::BACK);
     auto response = drainRxQueue();
 
     // Right button = scancode 0x72 → row 7, col 2.
@@ -347,7 +346,7 @@ TEST_F(KeyboardControllerTest, MiddleMouseButton_CorrectScancode)
 
     _keyboard->mouseButtonDown(IKeyboardController::MiddleButton);
 
-    _keyboard->receiveKARTByte(AcornKeyboardController::SACK);
+    _keyboard->receiveKARTByte(AcornKeyboardController::BACK);
     auto response = drainRxQueue();
 
     // Middle button = scancode 0x71 → row 7, col 1.
@@ -433,7 +432,8 @@ TEST_F(KeyboardControllerTest, StatusByte_NACKWhenIdle)
 {
     completeHandshake();
 
-    _keyboard->receiveKARTByte(AcornKeyboardController::SACK);
+    // BACK with no pending data returns just a status byte.
+    _keyboard->receiveKARTByte(AcornKeyboardController::BACK);
     auto response = drainRxQueue();
 
     ASSERT_EQ(response.size(), 1u);
@@ -448,12 +448,13 @@ TEST_F(KeyboardControllerTest, StatusByte_SACKWithKeyData)
     _keyboard->setKeyMapping(&mapping, 1);
     _keyboard->keyDown(0x01);
 
-    // Send LEDS, which responds with status.
-    _keyboard->receiveKARTByte(0x00); // LEDS all off
+    // BACK delivers the key event and appends a status byte.
+    _keyboard->receiveKARTByte(AcornKeyboardController::BACK);
     auto response = drainRxQueue();
 
-    ASSERT_EQ(response.size(), 1u);
-    EXPECT_EQ(response[0], AcornKeyboardController::SACK);
+    // Key event (2 bytes) + status (NACK since queue is now empty).
+    ASSERT_EQ(response.size(), 3u);
+    EXPECT_EQ(response[2], AcornKeyboardController::NACK);
 }
 
 TEST_F(KeyboardControllerTest, StatusByte_MACKWithMouseData)
@@ -462,7 +463,8 @@ TEST_F(KeyboardControllerTest, StatusByte_MACKWithMouseData)
 
     _keyboard->mouseDelta(5, 0);
 
-    _keyboard->receiveKARTByte(0x00); // LEDS → status
+    // BACK with no key data but mouse data pending reports MACK.
+    _keyboard->receiveKARTByte(AcornKeyboardController::BACK);
     auto response = drainRxQueue();
 
     ASSERT_EQ(response.size(), 1u);
@@ -478,11 +480,14 @@ TEST_F(KeyboardControllerTest, StatusByte_SMAKWithBothPending)
     _keyboard->keyDown(0x01);
     _keyboard->mouseDelta(1, 1);
 
-    _keyboard->receiveKARTByte(0x00); // LEDS → status
+    // BACK delivers key event; status byte should reflect remaining data.
+    // After dequeuing the key event, mouse data is still pending → MACK.
+    _keyboard->receiveKARTByte(AcornKeyboardController::BACK);
     auto response = drainRxQueue();
 
-    ASSERT_EQ(response.size(), 1u);
-    EXPECT_EQ(response[0], AcornKeyboardController::SMAK);
+    // Key event (2 bytes) + status byte.
+    ASSERT_EQ(response.size(), 3u);
+    EXPECT_EQ(response[2], AcornKeyboardController::MACK);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -514,17 +519,21 @@ TEST_F(KeyboardControllerTest, FullBootSequence)
     ASSERT_EQ(r4.size(), 1u);
     EXPECT_EQ(r4[0], AcornKeyboardController::KBID_Bits | 1);
 
-    // 3. Set LEDs.
+    // 3. Set LEDs — no response expected.
     _keyboard->receiveKARTByte(0x00); // All LEDs off.
     auto r5 = drainRxQueue();
-    ASSERT_EQ(r5.size(), 1u);
-    EXPECT_EQ(r5[0], AcornKeyboardController::NACK);
+    EXPECT_TRUE(r5.empty());
 
-    // 4. Poll for key data (idle).
-    _keyboard->receiveKARTByte(AcornKeyboardController::SACK);
+    // 4. Enable keyboard and mouse (SMAK) — no response expected.
+    _keyboard->receiveKARTByte(AcornKeyboardController::SMAK);
     auto r6 = drainRxQueue();
-    ASSERT_EQ(r6.size(), 1u);
-    EXPECT_EQ(r6[0], AcornKeyboardController::NACK);
+    EXPECT_TRUE(r6.empty());
+
+    // 5. Poll for key data via BACK (idle).
+    _keyboard->receiveKARTByte(AcornKeyboardController::BACK);
+    auto r7 = drainRxQueue();
+    ASSERT_EQ(r7.size(), 1u);
+    EXPECT_EQ(r7[0], AcornKeyboardController::NACK);
 }
 
 } // Anonymous namespace
