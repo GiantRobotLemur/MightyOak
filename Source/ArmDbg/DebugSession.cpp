@@ -709,8 +709,8 @@ bool DebugSession::executePc(const ParsedCommand & /*cmd*/)
     uint32_t baseAddr = (pc >= 32) ? (pc - 32) : 0;
     std::vector<uint32_t> words(windowSize);
 
-    readFromPhysicalAddress(_system.get(), baseAddr,
-                             words.data(), windowSize * 4);
+    readFromLogicalAddress(_system.get(), baseAddr,
+                            words.data(), windowSize * 4);
 
     StateFormatter::formatPcContext(_output, pc, words.data(),
                                     baseAddr, windowSize);

@@ -295,7 +295,7 @@ GTEST_TEST(Subroutine, ScopedNamesOverrideGlobal)
     const auto &symbols = code.getSymbols();
     EXPECT_EQ(symbols.size(), 3u);
     const uint32_t *words = reinterpret_cast<const uint32_t *>(code.getCode());
-    uint32_t wordCount = code.getCodeSize() / 4;
+    uint32_t wordCount = static_cast<uint32_t>(code.getCodeSize() / 4u);
     uint32_t base = opts.getLoadAddress();
 
     auto pos = symbols.find("myProc");

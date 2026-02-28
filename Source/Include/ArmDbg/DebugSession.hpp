@@ -34,7 +34,7 @@ namespace Arm {
 ////////////////////////////////////////////////////////////////////////////////
 class RingBufferTrace;
 
-//! @brief Manages the lifecycle of a debugger session: configuration,
+//! @brief Manages the life cycle of a debugger session: configuration,
 //! system creation, command execution, and output.
 class DebugSession
 {
