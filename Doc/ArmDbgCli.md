@@ -137,6 +137,68 @@ Set a breakpoint at the given address.
 
 Output: `Breakpoint set at 0xXXXXXXXX.`
 
+### watch \<addr\> \[read\|write\|both\]
+
+Set a memory watchpoint at the given address. The optional type specifies
+which access triggers a break. Default is `write`.
+
+```
+watch 0x854 write              # Break on write to address 0x854
+watch 0x80854 both             # Break on read or write to address 0x80854
+watch 0x1000 read              # Break on read from address 0x1000
+```
+
+Output: `Watchpoint #1: write at 0x00000854`
+
+When execution stops due to a watchpoint hit, the run/continue output
+includes details:
+
+```
+Watchpoint #1 hit: write at 0x00000854, value = 0x00001234
+```
+
+### watch reg \<name\> \[\<value\>\]
+
+Set a register watchpoint. Registers are `R0`–`R15`, `SP`, `LR`, `PC`
+(case-insensitive). If a value is given, the watchpoint triggers only when
+the register takes that specific value. Without a value, any change triggers.
+
+```
+watch reg R12 0x0380A4EC       # Break when R12 becomes 0x0380A4EC
+watch reg R12                  # Break on any change to R12
+```
+
+Output: `Watchpoint #2: register R12 == 0x0380A4EC`
+
+When execution stops due to a register watchpoint hit:
+
+```
+Watchpoint #2 hit: R12 changed from 0x00000000 to 0x0380A4EC
+```
+
+### watch list
+
+List all active watchpoints.
+
+```
+=== Watchpoints ===
+  #1  memory 0x00000854  write
+  #2  register R12 == 0x0380A4EC
+  #3  register R5 (any change)
+```
+
+### watch delete \<id\>
+
+Delete a watchpoint by its ID number.
+
+Output: `Watchpoint #1 removed.`
+
+### watch clear
+
+Delete all watchpoints.
+
+Output: `All watchpoints cleared.`
+
 ## State Inspection
 
 All inspection commands require `init`.
@@ -285,6 +347,12 @@ memc
 echo === Last 30 instructions ===
 trace 30
 
+echo === Set watchpoint and continue ===
+watch 0x854 write
+run 50000000
+watch list
+watch clear
+
 echo === ROM entry point disassembly ===
 disasm 0x03800000 16 phys
 
@@ -297,7 +365,7 @@ mem 0x00000000 64
 | Target | Type | Description |
 |--------|------|-------------|
 | `ArmDbg` | Static library | Core debugger logic (parsing, session, formatting) |
-| `ArmDbg_Tests` | Test executable | 47 unit tests (GTest) |
+| `ArmDbg_Tests` | Test executable | 50 unit tests (GTest) |
 | `ArmDbgCli` | CLI executable | Thin wrapper, outputs to stdout |
 
 ```

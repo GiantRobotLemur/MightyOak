@@ -21,6 +21,7 @@
 #include "ArmEmu/AddressMap.hpp"
 #include "ArmEmu/IOC.hpp"
 #include "ArmEmu/VIDC10.hpp"
+#include "ArmEmu/WatchpointManager.hpp"
 
 #include "ArmCore.hpp"
 #include "Hardware.inl"
@@ -61,6 +62,13 @@ struct MEMC
 
     //! @brief Marks the beginning of the high ROM which overlaps CAM.
     static constexpr uint32_t HighRomStart      = 0x3800000;    // 56MB for 8 MB
+
+    //! @brief The start of the Content Addressable Memory, where data
+    //! written doesn't matter, the address bits specify the data.
+    static constexpr uint32_t CAMStart          = 0x3400000;    // 52 MB
+
+    //! @brief The end of the Content Addressable Memory region.
+    static constexpr uint32_t CAMEnd            = AddrSpaceEnd; // 64 MB
 };
 
 //! @brief Defines results of the MemcHardware address translation functions.
@@ -113,12 +121,14 @@ private:
     bool _osMode;
     bool _videoDMAEnabled;
     bool _soundDMAEnabled;
+    bool _romContinuallyEnabled; //!< After reset, ROM overrides MEMC page table.
 
     // Non-cache intensive.
     GenericHostBlock _physicalRamBlock;
     GenericHostBlock _lowRomBlock;
     GenericHostBlock _highRomBlock;
     IDiagnosticSink *_diagnosticSink;
+    WatchpointManager *_watchpoints;
 private:
     // Internal Functions
     void setPageSize(uint8_t pageSizePow2);
@@ -172,6 +182,14 @@ public:
             // The block maps to host memory and the processor has enough
             // privileges to write to it.
             *reinterpret_cast<T *>(hostBlock) = value;
+
+            if (_watchpoints != nullptr &&
+                _watchpoints->checkMemoryWrite(logicalAddr, sizeof(T),
+                                               static_cast<uint32_t>(value)))
+            {
+                setDebugIrq(true);
+            }
+
             isWritten = true;
         }
         else if (result == AddrMapResult::AccessAllowed)
@@ -224,6 +242,13 @@ public:
             // The block maps to host memory and the processor has enough
             // privileges to read from it.
             value = *reinterpret_cast<T *>(hostBlock);
+
+            if (_watchpoints != nullptr &&
+                _watchpoints->checkMemoryRead(logicalAddr, sizeof(T),
+                                              static_cast<uint32_t>(value)))
+            {
+                setDebugIrq(true);
+            }
         }
         else if (result == AddrMapResult::AccessAllowed)
         {

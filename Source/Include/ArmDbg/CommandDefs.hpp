@@ -47,6 +47,7 @@ enum class DbgCommand : uint8_t
     Disasm,         //!< disasm <addr> <count> [phys|log]
     Irq,            //!< irq
     Memc,           //!< memc
+    Cam,            //!< cam [physPage]
     Ioc,            //!< ioc
     Trace,          //!< trace <count>
     Pc,             //!< pc

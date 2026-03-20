@@ -282,5 +282,93 @@ void StateFormatter::formatPcContext(std::ostream &out,
     formatDisassembly(out, baseAddr, surroundingWords, count, pc);
 }
 
+void StateFormatter::formatWatchpointHit(std::ostream &out,
+                                         const WatchpointHit &hit)
+{
+    if (!hit.IsValid)
+        return;
+
+    if (hit.IsRegister)
+    {
+        static const char *regNames[] = {
+            "R0", "R1", "R2", "R3", "R4", "R5", "R6", "R7",
+            "R8", "R9", "R10", "R11", "R12", "R13", "R14", "R15"
+        };
+
+        const char *name = (hit.Address < 16) ? regNames[hit.Address] : "R??";
+        out << "Watchpoint #" << hit.Id << " hit: " << name
+            << " changed from 0x" << std::hex << std::setfill('0')
+            << std::setw(8) << hit.OldValue
+            << " to 0x" << std::setw(8) << hit.NewValue
+            << std::dec << std::setfill(' ') << "\n";
+    }
+    else
+    {
+        out << "Watchpoint #" << hit.Id << " hit: "
+            << (hit.IsWrite ? "write" : "read")
+            << " at 0x" << std::hex << std::setfill('0')
+            << std::setw(8) << hit.Address
+            << ", value = 0x" << std::setw(8) << hit.NewValue
+            << std::dec << std::setfill(' ') << "\n";
+    }
+}
+
+void StateFormatter::formatWatchpointList(std::ostream &out,
+                                          const WatchpointManager &mgr)
+{
+    const auto &memWps = mgr.getMemoryWatchpoints();
+    const auto &regWps = mgr.getRegisterWatchpoints();
+
+    if (memWps.empty() && regWps.empty())
+    {
+        out << "No watchpoints set.\n";
+        return;
+    }
+
+    out << "=== Watchpoints ===\n";
+
+    for (const auto &wp : memWps)
+    {
+        const char *typeStr;
+        switch (wp.Type)
+        {
+        case WatchpointType::Read:  typeStr = "read";  break;
+        case WatchpointType::Write: typeStr = "write"; break;
+        case WatchpointType::Both:  typeStr = "both";  break;
+        default:                    typeStr = "?";     break;
+        }
+
+        out << "  #" << wp.Id << "  memory 0x" << std::hex << std::setfill('0')
+            << std::setw(8) << wp.Address
+            << std::dec << std::setfill(' ')
+            << "  " << typeStr << "\n";
+    }
+
+    static const char *regNames[] = {
+        "R0", "R1", "R2", "R3", "R4", "R5", "R6", "R7",
+        "R8", "R9", "R10", "R11", "R12", "R13", "R14", "R15"
+    };
+
+    for (const auto &wp : regWps)
+    {
+        const char *name = (wp.RegisterId < 16) ? regNames[wp.RegisterId] : "R??";
+
+        out << "  #" << wp.Id << "  register " << name;
+
+        if (wp.MatchSpecific)
+        {
+            out << " == 0x" << std::hex << std::setfill('0')
+                << std::setw(8) << wp.MatchValue
+                << std::dec << std::setfill(' ');
+        }
+        else
+        {
+            out << " (any change)";
+        }
+
+        out << "\n";
+    }
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 }} // namespace Mo::Arm

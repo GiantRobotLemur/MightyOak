@@ -10,6 +10,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 // Header File Includes
 ////////////////////////////////////////////////////////////////////////////////
+#include <cctype>
 #include <cstdlib>
 #include <iomanip>
 #include <sstream>
@@ -19,6 +20,7 @@
 #include "ArmEmu/ArmSystemBuilder.hpp"
 #include "ArmEmu/RingBufferTrace.hpp"
 #include "ArmEmu/CompositeDiagnosticSink.hpp"
+#include "ArmEmu/WatchpointManager.hpp"
 #include "ArmEmu/IOC.hpp"
 
 #include "ArmDbg/DebugSession.hpp"
@@ -35,6 +37,7 @@ namespace Arm {
 DebugSession::DebugSession(std::ostream &output) :
     _output(output),
     _trace(nullptr),
+    _watchpoints(nullptr),
     _initialised(false)
 {
     // Set reasonable defaults.
@@ -67,12 +70,14 @@ bool DebugSession::executeCommand(const ParsedCommand &cmd)
     case DbgCommand::Step:        return executeStep(cmd);
     case DbgCommand::Continue:    return executeContinue(cmd);
     case DbgCommand::Break:       return executeBreak(cmd);
+    case DbgCommand::Watch:       return executeWatch(cmd);
     case DbgCommand::Regs:        return executeRegs(cmd);
     case DbgCommand::Reg:         return executeReg(cmd);
     case DbgCommand::Mem:         return executeMem(cmd);
     case DbgCommand::Disasm:      return executeDisasm(cmd);
     case DbgCommand::Irq:         return executeIrq(cmd);
     case DbgCommand::Memc:        return executeMemc(cmd);
+    case DbgCommand::Cam:         return executeCam(cmd);
     case DbgCommand::Ioc:         return executeIoc(cmd);
     case DbgCommand::Trace:       return executeTrace(cmd);
     case DbgCommand::Pc:          return executePc(cmd);
@@ -260,6 +265,9 @@ bool DebugSession::executeInit(const ParsedCommand & /*cmd*/)
     composite->addSink(_trace);
     builder.addDevice(std::move(composite));
 
+    auto watchMgr = std::make_unique<WatchpointManager>();
+    _watchpoints = watchMgr.get();
+    builder.addDevice(std::move(watchMgr));
 
     _system = builder.createSystem();
 
@@ -295,9 +303,28 @@ bool DebugSession::executeRun(const ParsedCommand &cmd)
     }
 
     ExecutionMetrics result = _system->runLimited(static_cast<int32_t>(cycles));
+    double mips = static_cast<double>(_options.getProcessorSpeedMHz()) *
+        static_cast<double>(result.InstructionCount) / static_cast<double>(result.CycleCount);
 
     _output << "Executed " << result.InstructionCount << " instructions in "
-            << result.CycleCount << " cycles.\n";
+            << result.CycleCount << " cycles (~" << std::setprecision(2)
+            << std::fixed << mips << " simulated MIPs).\n";
+
+    if (result.ExecResult == ExecutionMetrics::Result::DebugIrq &&
+        _watchpoints != nullptr)
+    {
+        if (_watchpoints->getLastHit().IsValid)
+        {
+            StateFormatter::formatWatchpointHit(_output, _watchpoints->getLastHit());
+        }
+        else if (_watchpoints->hasBreakpoints())
+        {
+            uint32_t pc = _system->getCoreRegister(CoreRegister::PC);
+            _output << "Breakpoint hit near PC = 0x" << std::hex
+                    << std::setfill('0') << std::setw(8) << pc
+                    << std::dec << std::setfill(' ') << ".\n";
+        }
+    }
 
     return true;
 }
@@ -340,6 +367,22 @@ bool DebugSession::executeContinue(const ParsedCommand & /*cmd*/)
     _output << "Stopped after " << result.InstructionCount << " instructions, "
             << result.CycleCount << " cycles.\n";
 
+    if (result.ExecResult == ExecutionMetrics::Result::DebugIrq &&
+        _watchpoints != nullptr)
+    {
+        if (_watchpoints->getLastHit().IsValid)
+        {
+            StateFormatter::formatWatchpointHit(_output, _watchpoints->getLastHit());
+        }
+        else if (_watchpoints->hasBreakpoints())
+        {
+            uint32_t pc = _system->getCoreRegister(CoreRegister::PC);
+            _output << "Breakpoint hit near PC = 0x" << std::hex
+                    << std::setfill('0') << std::setw(8) << pc
+                    << std::dec << std::setfill(' ') << ".\n";
+        }
+    }
+
     return true;
 }
 
@@ -361,6 +404,11 @@ bool DebugSession::executeBreak(const ParsedCommand &cmd)
         _output << "Error (line " << cmd.LineNumber
                 << "): Invalid address '" << cmd.Arguments[0] << "'.\n";
         return false;
+    }
+
+    if (_watchpoints != nullptr)
+    {
+        _watchpoints->addBreakpoint(addr);
     }
 
     _output << "Breakpoint set at 0x" << std::hex << std::setfill('0')
@@ -638,6 +686,130 @@ bool DebugSession::executeMemc(const ParsedCommand & /*cmd*/)
     return true;
 }
 
+bool DebugSession::executeCam(const ParsedCommand &cmd)
+{
+    if (!requireInit("cam")) return false;
+
+    // Determine page size from the first mapped logical page.
+    uint32_t pageSize = 0x8000; // Default to 32KB.
+
+    for (uint32_t probe = 0; probe < 0x02000000; probe += 0x1000)
+    {
+        PageMapping mapping;
+
+        if (_system->logicalToPhysicalAddress(probe, mapping) &&
+            (mapping.Access & PageMapping::IsPresent))
+        {
+            pageSize = mapping.PageSize;
+            break;
+        }
+    }
+
+    uint32_t ramBytes = static_cast<uint32_t>(_options.getRamSizeKb()) * 1024;
+    uint32_t physPageCount = ramBytes / pageSize;
+    uint32_t logicalPageCount = 0x02000000 / pageSize; // 32MB logical space.
+
+    // Build reverse map: physPage -> logicalAddr (UINT32_MAX if unmapped).
+    std::vector<uint32_t> physToLogical(physPageCount, UINT32_MAX);
+    std::vector<uint8_t> physPPL(physPageCount, 0);
+
+    for (uint32_t logAddr = 0; logAddr < 0x02000000; logAddr += pageSize)
+    {
+        PageMapping mapping;
+
+        if (_system->logicalToPhysicalAddress(logAddr, mapping) &&
+            (mapping.Access & PageMapping::IsPresent))
+        {
+            // Convert physical address to page number.
+            uint32_t physPageNo = (mapping.PageBaseAddr - 0x02000000) / pageSize;
+
+            if (physPageNo < physPageCount)
+            {
+                physToLogical[physPageNo] = logAddr;
+                physPPL[physPageNo] = static_cast<uint8_t>(mapping.Access & PageMapping::Mask);
+            }
+        }
+    }
+
+    // Handle optional argument: cam [physPage]
+    if (!cmd.Arguments.empty())
+    {
+        uint32_t physPage;
+
+        if (!parseUint32(cmd.Arguments[0], physPage))
+        {
+            _output << "Error: invalid physical page number '"
+                    << cmd.Arguments[0] << "'.\n";
+            return false;
+        }
+
+        if (physPage >= physPageCount)
+        {
+            _output << "Error: physical page " << physPage
+                    << " out of range (0-" << (physPageCount - 1) << ").\n";
+            return false;
+        }
+
+        uint32_t physAddr = 0x02000000 + physPage * pageSize;
+
+        _output << "Physical page " << physPage << " (0x" << std::hex
+                << std::setfill('0') << std::setw(8) << physAddr << "): ";
+
+        if (physToLogical[physPage] != UINT32_MAX)
+        {
+            _output << "-> logical 0x" << std::setw(8) << physToLogical[physPage]
+                    << std::dec << std::setfill(' ')
+                    << "  PPL=" << static_cast<unsigned>(physPPL[physPage])
+                    << "\n";
+        }
+        else
+        {
+            _output << std::dec << std::setfill(' ') << "UNMAPPED\n";
+        }
+
+        return true;
+    }
+
+    // Full CAM dump.
+    _output << "=== CAM State ===\n";
+    _output << "  Page size: " << std::dec << (pageSize / 1024) << " KB, "
+            << physPageCount << " physical pages\n";
+    _output << "  Phys Page  Phys Addr    Logical Addr  PPL\n";
+    _output << "  ---------  ---------    ------------  ---\n";
+
+    int unmappedCount = 0;
+
+    for (uint32_t p = 0; p < physPageCount; ++p)
+    {
+        uint32_t physAddr = 0x02000000 + p * pageSize;
+
+        _output << "  " << std::dec << std::setfill(' ') << std::setw(7)
+                << p << "    0x" << std::hex << std::setfill('0')
+                << std::setw(8) << physAddr << "  ";
+
+        if (physToLogical[p] != UINT32_MAX)
+        {
+            _output << "  0x" << std::setw(8) << physToLogical[p]
+                    << "  " << std::dec << std::setfill(' ')
+                    << std::setw(3) << static_cast<unsigned>(physPPL[p]);
+        }
+        else
+        {
+            _output << "  --UNMAPPED--";
+            ++unmappedCount;
+        }
+
+        _output << "\n";
+    }
+
+    _output << std::dec << std::setfill(' ');
+    _output << "  Mapped: " << (physPageCount - unmappedCount)
+            << "  Unmapped: " << unmappedCount
+            << "  Total: " << physPageCount << "\n";
+
+    return true;
+}
+
 bool DebugSession::executeIoc(const ParsedCommand & /*cmd*/)
 {
     if (!requireInit("ioc")) return false;
@@ -732,6 +904,193 @@ bool DebugSession::executeEcho(const ParsedCommand &cmd)
     {
         _output << "\n";
     }
+
+    return true;
+}
+
+bool DebugSession::executeWatch(const ParsedCommand &cmd)
+{
+    if (cmd.Arguments.empty())
+    {
+        _output << "Usage:\n"
+                << "  watch <addr> [read|write|both]   - Memory watchpoint\n"
+                << "  watch reg <name> [<value>]       - Register watchpoint\n"
+                << "  watch list                       - List watchpoints\n"
+                << "  watch delete <id>                - Delete watchpoint\n"
+                << "  watch clear                      - Delete all\n";
+        return true;
+    }
+
+    const std::string &sub = cmd.Arguments[0];
+
+    if (sub == "list")
+    {
+        if (_watchpoints == nullptr)
+        {
+            _output << "No watchpoint manager (not initialised).\n";
+            return true;
+        }
+
+        StateFormatter::formatWatchpointList(_output, *_watchpoints);
+        return true;
+    }
+
+    if (sub == "clear")
+    {
+        if (_watchpoints != nullptr)
+            _watchpoints->clearAll();
+
+        _output << "All watchpoints cleared.\n";
+        return true;
+    }
+
+    if (sub == "delete")
+    {
+        if (cmd.Arguments.size() < 2)
+        {
+            _output << "Error (line " << cmd.LineNumber
+                    << "): 'watch delete' requires a watchpoint ID.\n";
+            return false;
+        }
+
+        uint32_t id;
+
+        if (!parseUint32(cmd.Arguments[1], id))
+        {
+            _output << "Error (line " << cmd.LineNumber
+                    << "): Invalid watchpoint ID '" << cmd.Arguments[1] << "'.\n";
+            return false;
+        }
+
+        if (_watchpoints != nullptr && _watchpoints->removeWatchpoint(id))
+        {
+            _output << "Watchpoint #" << id << " removed.\n";
+        }
+        else
+        {
+            _output << "Watchpoint #" << id << " not found.\n";
+        }
+
+        return true;
+    }
+
+    if (sub == "reg")
+    {
+        if (!requireInit("watch")) return false;
+
+        if (cmd.Arguments.size() < 2)
+        {
+            _output << "Error (line " << cmd.LineNumber
+                    << "): 'watch reg' requires a register name.\n";
+            return false;
+        }
+
+        // Parse register name (R0-R15, SP, LR, PC).
+        std::string regName = cmd.Arguments[1];
+
+        // Convert to uppercase for comparison.
+        for (auto &c : regName) c = static_cast<char>(std::toupper(c));
+
+        int regId = -1;
+
+        if (regName == "SP")       regId = 13;
+        else if (regName == "LR")  regId = 14;
+        else if (regName == "PC")  regId = 15;
+        else if (regName.size() >= 2 && regName[0] == 'R')
+        {
+            char *end;
+            long num = std::strtol(regName.c_str() + 1, &end, 10);
+
+            if (*end == '\0' && num >= 0 && num <= 15)
+                regId = static_cast<int>(num);
+        }
+
+        if (regId < 0)
+        {
+            _output << "Error (line " << cmd.LineNumber
+                    << "): Unknown register '" << cmd.Arguments[1] << "'.\n";
+            return false;
+        }
+
+        bool matchSpecific = false;
+        uint32_t matchValue = 0;
+
+        if (cmd.Arguments.size() >= 3)
+        {
+            if (!parseUint32(cmd.Arguments[2], matchValue))
+            {
+                _output << "Error (line " << cmd.LineNumber
+                        << "): Invalid match value '" << cmd.Arguments[2] << "'.\n";
+                return false;
+            }
+
+            matchSpecific = true;
+        }
+
+        uint32_t id = _watchpoints->addRegisterWatchpoint(
+            static_cast<uint8_t>(regId), matchValue, matchSpecific);
+
+        _output << "Watchpoint #" << id << ": register " << cmd.Arguments[1];
+
+        if (matchSpecific)
+        {
+            _output << " == 0x" << std::hex << std::setfill('0')
+                    << std::setw(8) << matchValue
+                    << std::dec << std::setfill(' ');
+        }
+        else
+        {
+            _output << " (any change)";
+        }
+
+        _output << "\n";
+        return true;
+    }
+
+    // Memory watchpoint: watch <addr> [read|write|both]
+    if (!requireInit("watch")) return false;
+
+    uint32_t addr;
+
+    if (!parseAddress(sub, addr))
+    {
+        _output << "Error (line " << cmd.LineNumber
+                << "): Invalid address or subcommand '" << sub << "'.\n";
+        return false;
+    }
+
+    WatchpointType type = WatchpointType::Write;
+
+    if (cmd.Arguments.size() >= 2)
+    {
+        const std::string &typeStr = cmd.Arguments[1];
+
+        if (typeStr == "read")       type = WatchpointType::Read;
+        else if (typeStr == "write") type = WatchpointType::Write;
+        else if (typeStr == "both")  type = WatchpointType::Both;
+        else
+        {
+            _output << "Error (line " << cmd.LineNumber
+                    << "): Invalid watchpoint type '" << typeStr
+                    << "'. Use 'read', 'write', or 'both'.\n";
+            return false;
+        }
+    }
+
+    uint32_t id = _watchpoints->addMemoryWatchpoint(addr, type);
+
+    const char *typeLabel;
+    switch (type)
+    {
+    case WatchpointType::Read:  typeLabel = "read";  break;
+    case WatchpointType::Write: typeLabel = "write"; break;
+    case WatchpointType::Both:  typeLabel = "both";  break;
+    default:                    typeLabel = "?";     break;
+    }
+
+    _output << "Watchpoint #" << id << ": " << typeLabel << " at 0x"
+            << std::hex << std::setfill('0') << std::setw(8) << addr
+            << std::dec << std::setfill(' ') << "\n";
 
     return true;
 }

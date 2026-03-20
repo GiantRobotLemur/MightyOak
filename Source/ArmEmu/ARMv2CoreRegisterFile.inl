@@ -312,13 +312,14 @@ public:
             }
             else if (regId < GeneralRegister::R13)
             {
-                // The user mode register is in the current bank.
+                // The user mode register is in the current bank because
+                // we're in IRQ or SVC mode.
                 value = _coreRegisters[Ag::toScalar(regId)];
             }
             else
             {
                 // Get banked user mode R13 or R14.
-                value = _userModeRegBank[Ag::toScalar(regId) - 13];
+                value = _userModeRegBank[Ag::toScalar(regId) - 8];
             }
         }
 

@@ -88,6 +88,16 @@ public:
         _flushPending = 1;
     }
 
+    //! @brief Applies any pending pipeline flush by advancing the PC to the
+    //! pipelined state (instruction_addr + 8). Must be called before
+    //! checking interrupts so that handleIrq()/handleFirq() compute the
+    //! correct return address in R14.
+    void applyPendingFlush()
+    {
+        _registers.incrementPC(_flushPending << PipelineShift);
+        _flushPending = 0;
+    }
+
     //! @brief Resets the PC to point to the next instruction and prepares to
     //! run as if the PC was just updated.
     void unflushPipeline()
@@ -114,7 +124,9 @@ public:
         uint32_t execResult = 1;
         bool wasExecuted = false;
 
-        // Adjust the PC if the previous action performed a pipeline flush.
+        // NOTE: The pending flush has already been applied by
+        // applyPendingFlush() at the top of the execution loop, so
+        // _flushPending is always 0 here and this is a no-op.
         _registers.incrementPC(_flushPending << PipelineShift);
 
         // Load and decode the next instruction.

@@ -595,10 +595,11 @@ uint32_t execStoreMultiple(THardware &hardware, TRegisterFile &regs,
     // Attempt to write the words to memory.
     if (hardware.writeWords(blockStart, values, regCount))
     {
-        // Perform write-back if required.
-        if ((instruction & 0x208000) == 0x200000)
+        // Perform write-back if the W bit is set and the base register
+        // is not R15 (writing back to the PC would be invalid).
+        if ((instruction & 0x200000) &&
+            (Ag::Bin::extractEnum<GeneralRegister, 16, 4>(instruction) != GeneralRegister::R15))
         {
-            // Write-back, but not to R15.
             regs.setRn(Ag::Bin::extractEnum<GeneralRegister, 16, 4>(instruction),
                        blockEnd);
         }

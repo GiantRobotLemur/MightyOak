@@ -132,10 +132,25 @@ static constexpr size_t HighRomSize = 0x800000;
 //! and 15 inclusive.
 void MemcHardware::setPageSize(uint8_t pageSizePow2)
 {
+    if (_pageSizePow2 == pageSizePow2)
+        return;
+
     _pageSizePow2 = pageSizePow2;
     _physicalPageCount = static_cast<uint16_t>(std::max(_ram.size() >> _pageSizePow2,
                                                         Ag::toSize(1)));
     _pageOffsetMask = Ag::Bin::makeMask<uint32_t>(_pageSizePow2);
+
+    // Invalidate all page mappings. The logical page numbers stored in
+    // _camLogicalPage were decoded from CAM write addresses using the old
+    // page size's bit extraction logic. After a page size change, those
+    // decoded values are meaningless. On real MEMC hardware, the CAM
+    // contents become garbled until software rewrites all entries.
+    std::fill(_pageMappings.begin(), _pageMappings.end(),
+              static_cast<uint16_t>(0));
+    std::fill(_camLogicalPage.begin(), _camLogicalPage.end(),
+              static_cast<uint16_t>(0xFFFF));
+    std::fill(_camPPL.begin(), _camPPL.end(),
+              static_cast<uint8_t>(0));
 }
 
 //! @brief Rebuilds the inverse page mapping for a specific logical page by
@@ -145,28 +160,38 @@ void MemcHardware::setPageSize(uint8_t pageSizePow2)
 //! @param[in] logicalPage The logical page number to rebuild.
 void MemcHardware::rebuildInverseMapping(uint16_t logicalPage)
 {
-    // Scan CAM entries (indexed by physical page) to find the highest
-    // physical page that claims this logical page. The MEMC1a priority
-    // encoder appears to select the highest-numbered matching entry when
-    // multiple physical pages map to the same logical page.
+    // Scan CAM entries (indexed by physical page) to find which physical
+    // page claims this logical page. Per MEMC1a datasheet section 6.6.2,
+    // duplicate entries produce invalid results, so we pick the lowest
+    // matching entry (lowest physical page wins).
     uint16_t camEntryCount = static_cast<uint16_t>(_camLogicalPage.size());
+    uint16_t firstMatch = 0xFFFF;
 
-    for (uint16_t p = camEntryCount; p-- > 0; )
+    for (uint16_t p = 0; p < camEntryCount; ++p)
     {
         if (_camLogicalPage[p] == logicalPage)
         {
-            // Found a match — highest physical page wins.
-            uint16_t encoded = p;
-            encoded |= static_cast<uint16_t>(_camPPL[p]) << MemcMapping::PPLShift;
-            encoded |= MemcMapping::PagePresentBit;
-
-            _pageMappings[logicalPage] = encoded;
-            return;
+            if (firstMatch == 0xFFFF)
+            {
+                firstMatch = p;
+            }
         }
     }
 
-    // No CAM entry maps to this logical page — mark as not present.
-    _pageMappings[logicalPage] = 0;
+    if (firstMatch != 0xFFFF)
+    {
+        // Use the lowest-numbered matching physical page.
+        uint16_t encoded = firstMatch;
+        encoded |= static_cast<uint16_t>(_camPPL[firstMatch]) << MemcMapping::PPLShift;
+        encoded |= MemcMapping::PagePresentBit;
+
+        _pageMappings[logicalPage] = encoded;
+    }
+    else
+    {
+        // No CAM entry maps to this logical page — mark as not present.
+        _pageMappings[logicalPage] = 0;
+    }
 }
 
 //! @brief Causes a write to the CAM associated with the MEMC/VIDC registers.
@@ -206,11 +231,16 @@ void MemcHardware::writeMEMC(uint32_t offset, uint32_t value)
             break;
 
         case 7: // MEMC Control Register
-        //{
-            setPageSize(Ag::Bin::extractBits<uint8_t, 2, 2>(offset) + 12);
-            _videoDMAEnabled = Ag::Bin::extractBit<10>(offset);
-            _soundDMAEnabled = Ag::Bin::extractBit<11>(offset);
-            _osMode = Ag::Bin::extractBit<12>(offset);
+        {
+            uint8_t newPageSizePow2 = Ag::Bin::extractBits<uint8_t, 2, 2>(offset) + 12;
+            bool newOsMode = Ag::Bin::extractBit<12>(offset);
+            bool newVideoDMA = Ag::Bin::extractBit<10>(offset);
+            bool newSoundDMA = Ag::Bin::extractBit<11>(offset);
+
+            setPageSize(newPageSizePow2);
+            _videoDMAEnabled = newVideoDMA;
+            _soundDMAEnabled = newSoundDMA;
+            _osMode = newOsMode;
 
             if (Ag::Bin::extractBit<13>(offset))
             {
@@ -220,9 +250,8 @@ void MemcHardware::writeMEMC(uint32_t offset, uint32_t value)
                 // processor."
                 throw Ag::OperationException("MEMC test mode enabled!");
             }
-            break;
-        //}
-        }
+        } break;
+        } // switch (registerId)
     }
     else if (offset >= MEMC::AddrTransStart)
     {
@@ -300,6 +329,7 @@ void MemcHardware::writeMEMC(uint32_t offset, uint32_t value)
 
         // Update the CAM entry for this physical page.
         uint16_t oldLogicalPage = _camLogicalPage[physicalPage];
+
         _camLogicalPage[physicalPage] = logicalPage;
         _camPPL[physicalPage] = pageProtectionLevel;
 
@@ -352,11 +382,11 @@ uint8_t MemcHardware::translateAddress(uint32_t logicalAddr, uint32_t &physAddr,
         physAddr += logicalAddr & _pageOffsetMask;
 
         // Perform branchless access check.
-        // 
+        //
         // Use the access mode, PPL and operation type (read or write) to
         // define a scalar value 0-31. Look up whether access is allowed
         // based on that value using a pre-calculated set of bits.
-        // 
+        //
         // See unit test CoreLogic.MemcAccess for how the bits were
         // pre-calculated.
         uint8_t bit = (static_cast<uint8_t>(isPrivilegedMode()) << 1) |
@@ -369,7 +399,10 @@ uint8_t MemcHardware::translateAddress(uint32_t logicalAddr, uint32_t &physAddr,
         // Use the access mode, access type and PPL to extract a single bit
         // indicating whether access is allowed or not and use that
         // to merge in AddrMapResult::AccessAllowed (which is 0x01).
-        result |= static_cast<uint8_t>(perms >> bit) & 1;
+        // Only grant access if the page is actually present (HasMapping set).
+        uint8_t accessBit = static_cast<uint8_t>(perms >> bit) & 1;
+        accessBit &= static_cast<uint8_t>(result >> AddrMapResult::HasMappingShift);
+        result |= accessBit;
     }
 
     return result;
@@ -395,6 +428,28 @@ uint8_t MemcHardware::tryGetReadHostMapping(uint32_t logicalAddr, void *&hostBlo
 
     if (logicalAddr < MEMC::PhysRamStart)
     {
+        if (_romContinuallyEnabled)
+        {
+            // After reset, the ROM is "continually enabled" — all reads
+            // from the logical address space (0-32 MB) return high ROM data.
+            // MEMC Data Sheet page 12: this overrides when a read is made
+            // from an address of 0x02000000 or higher.
+            size_t romOffset = logicalAddr % _highRom.size();
+
+            if (!_highRom.empty())
+            {
+                hostBlock = _highRom.data() + romOffset;
+                length = static_cast<uint32_t>(_highRom.size() - romOffset);
+            }
+            else
+            {
+                hostBlock = _fuzz;
+                length = static_cast<uint32_t>(std::size(_fuzz));
+            }
+
+            return AddrMapResult::Success;
+        }
+
         // It's a translated logical address and so *may* map to host RAM.
         uint32_t physAddr;
 
@@ -402,6 +457,10 @@ uint8_t MemcHardware::tryGetReadHostMapping(uint32_t logicalAddr, void *&hostBlo
 
         if (result == AddrMapResult::Success)
         {
+            // Ensure the ROM is disabled in low address space after a
+            // read to high address space.
+            _romContinuallyEnabled &= (physAddr < MEMC::PhysRamStart);
+
             if (physAddr < MEMC::LowRomStart)
             {
                 // The address was mapped and could be accessed.
@@ -418,8 +477,8 @@ uint8_t MemcHardware::tryGetReadHostMapping(uint32_t logicalAddr, void *&hostBlo
             }
             else
             {
-                // After a reset, the ROM is mapped to the bottom of the
-                // logical address space. Allow address decoding to continue.
+                // The page table mapped a logical address to the ROM area.
+                // Allow address decoding to continue using the physical address.
                 logicalAddr = physAddr;
             }
         }
@@ -429,6 +488,12 @@ uint8_t MemcHardware::tryGetReadHostMapping(uint32_t logicalAddr, void *&hostBlo
             // didn't have the privileges to access the page.
             return result;
         }
+    }
+    else
+    {
+        // Accessing an address with Addr[25] high will disable ROM
+        // activation caused by reset.
+        _romContinuallyEnabled = false;
     }
 
     if (logicalAddr < MEMC::IOAddrStart)
@@ -542,14 +607,14 @@ uint8_t MemcHardware::tryGetWriteHostMapping(uint32_t logicalAddr, void *&hostBl
         hostBlock = _ram.data() + offset;
         length = static_cast<uint32_t>(_ram.size() - offset);
     }
-    else
+    else // if (logicalAddr < MEMC::CAMStart)
     {
         // It's an Memory mapped I/O or CAM address. It can only be accessed
         // in a privileged mode, and doesn't map to host memory.
         result = isPrivilegedMode() ? AddrMapResult::AccessAllowed :
                                       AddrMapResult::NotMapped;
         hostBlock = nullptr;
-        length = 0;
+        length = MEMC::CAMEnd - logicalAddr;
     }
 
     return result;
@@ -576,10 +641,12 @@ MemcHardware::MemcHardware(const Options &options,
     _osMode(false),
     _videoDMAEnabled(false),
     _soundDMAEnabled(false),
+    _romContinuallyEnabled(false),
     _physicalRamBlock("Physical RAM", "The system RAM without any logical address mapping"),
     _lowRomBlock("Extension ROM", "The low ROM area, usually containing extensions ROMs."),
     _highRomBlock("System ROM", "The high ROM area, usually containing the operating system."),
-    _diagnosticSink(nullptr)
+    _diagnosticSink(nullptr),
+    _watchpoints(nullptr)
 {
     // Generate random fuzz to use when memory can be accessed, but isn't mapped.
     std::generate_n(_fuzz, std::size(_fuzz), GenerateFuzz());
@@ -652,11 +719,24 @@ MemcHardware::MemcHardware(const Options &options,
 
     if (romPath.isEmpty() == false)
     {
-        // Open the file and read up to the first 4 MB.
+        // Open the file and read up to 8 MB.
         if (auto romFile = Ag::IFileStream::open(romPath, Ag::FileAccess::Read |
                                                           Ag::FileAccess::OpenExisting))
         {
-            romFile->read(_highRom.data(), _highRom.size());
+            size_t romSize = romFile->read(_highRom.data(), _highRom.size());
+
+            // On real hardware, ROM addresses wrap because higher address
+            // lines aren't connected to the ROM chips. Replicate the ROM
+            // data to fill the entire 8 MB address space so that aliased
+            // addresses return the correct data.
+            if (romSize > 0 && romSize < HighRomSize)
+            {
+                for (size_t dest = romSize; dest < HighRomSize; dest += romSize)
+                {
+                    size_t count = std::min(romSize, HighRomSize - dest);
+                    std::memcpy(_highRom.data() + dest, _highRom.data(), count);
+                }
+            }
         }
 
         _highRomBlock.updateHostMapping(_highRom.data(),
@@ -707,6 +787,16 @@ void MemcHardware::setLowRom(const uint8_t *romBytes, size_t byteCount)
     _lowRom.resize(LowRomSize, 0);
     std::memcpy(_lowRom.data(), romBytes, byteCount);
 
+    // Replicate ROM data to fill 4 MB, matching hardware aliasing behavior.
+    if (byteCount > 0 && byteCount < LowRomSize)
+    {
+        for (size_t dest = byteCount; dest < LowRomSize; dest += byteCount)
+        {
+            size_t count = std::min(byteCount, LowRomSize - dest);
+            std::memcpy(_lowRom.data() + dest, _lowRom.data(), count);
+        }
+    }
+
     _lowRomBlock.updateHostMapping(_lowRom.data(), LowRomSize);
 }
 
@@ -724,42 +814,45 @@ void MemcHardware::setHighRom(const uint8_t *romBytes, size_t byteCount)
     _highRom.resize(HighRomSize, 0);
     std::memcpy(_highRom.data(), romBytes, byteCount);
 
+    // Replicate ROM data to fill 8 MB, matching hardware aliasing behavior.
+    if (byteCount > 0 && byteCount < HighRomSize)
+    {
+        for (size_t dest = byteCount; dest < HighRomSize; dest += byteCount)
+        {
+            size_t count = std::min(byteCount, HighRomSize - dest);
+            std::memcpy(_highRom.data() + dest, _highRom.data(), count);
+        }
+    }
+
     _highRomBlock.updateHostMapping(_highRom.data(), HighRomSize);
 }
 
 // Based on GenericHardware::reset().
 void MemcHardware::reset()
 {
-    // HACK: The MEMC data sheet says the page size on reset is 4 KB (2^12),
-    // however, our filthy hack of remapping the page tables to point the
-    // lowest logical pages to the Low ROM only works with a larger page size
-    // as we don't have enough bits in each page mapping entry to map such
-    // large offsets with 4 KB pages.
+    // MEMC Data Sheet page 12: After reset the page size is 4 KB and the
+    // ROM is "continually enabled" — reads from the logical address space
+    // (0-32 MB) return high ROM data until the first access to an address
+    // with bit 25 set (>= 0x2000000).
+    _pageSizePow2 = 12;
+    _physicalPageCount = static_cast<uint16_t>(std::max(_ram.size() >> _pageSizePow2,
+                                                        Ag::toSize(1)));
+    _pageOffsetMask = Ag::Bin::makeMask<uint32_t>(_pageSizePow2);
 
-    // We'll create 1 x 4 MB page mapping logical address 0x0000 to
-    // physical address 0x3800000.
-    constexpr uint8_t InitialPageSizePow2 = 22;
-
-    setPageSize(InitialPageSizePow2);
+    // It is assumed that the first read will be from address 0x00000000, the
+    // reset vector. The next read from a 0x02000000 address will disable
+    // the ROM activation.
+    _romContinuallyEnabled = true;
     _osMode = false;
 
     // MEMC Data Sheet page 25: Sound DMA operations are disabled when RESET is
     // asserted. Video/Cursor operations are unaffected by RESET.
-    _videoDMAEnabled = false;
     _soundDMAEnabled = false;
     _vidc.reset();
 
-    // Generate a set of mappings which map logical addresses from 0x0000
-    // to physical addresses 0x3800000 where the high ROM is positioned.
-    // The PPL is set so that the pages are read-only in user mode.
-    constexpr uint32_t HighRomPageCount = HighRomSize >> InitialPageSizePow2;
-    auto lastMapped = _pageMappings.begin() + HighRomPageCount;
-
-    std::generate(_pageMappings.begin(), lastMapped,
-                  GenerateRomMemcMapping(MEMC::HighRomStart, InitialPageSizePow2, 1));
-
-    // Mark the rest of the page entries as not present.
-    std::fill(lastMapped, _pageMappings.end(), static_cast<uint16_t>(0));
+    // Mark all page entries as not present. During "continually enabled"
+    // mode, reads bypass the page table and return ROM data directly.
+    std::fill(_pageMappings.begin(), _pageMappings.end(), static_cast<uint16_t>(0));
 
     // Clear the CAM entries (all physical pages unmapped).
     std::fill(_camLogicalPage.begin(), _camLogicalPage.end(),
@@ -796,6 +889,21 @@ bool MemcHardware::writeWords(uint32_t logicalAddr, const uint32_t *values,
 
             std::copy_n(values + wordsWritten, wordsToWrite,
                         reinterpret_cast<uint32_t *>(hostBlock));
+
+            if (_watchpoints != nullptr)
+            {
+                uint32_t writeAddr = logicalAddr + (wordsWritten * 4);
+
+                for (uint32_t i = 0; i < wordsToWrite; ++i)
+                {
+                    if (_watchpoints->checkMemoryWrite(writeAddr + (i * 4),
+                                                       4, values[wordsWritten + i]))
+                    {
+                        setDebugIrq(true);
+                        break;
+                    }
+                }
+            }
 
             wordsWritten += static_cast<uint8_t>(wordsToWrite);
         }
@@ -887,6 +995,21 @@ bool MemcHardware::readWords(uint32_t logicalAddr, uint32_t *results, uint8_t co
 
             std::copy_n(reinterpret_cast<uint32_t *>(hostBlock),
                         wordsToRead, results + wordsRead);
+
+            if (_watchpoints != nullptr)
+            {
+                uint32_t readAddr = logicalAddr + (wordsRead * 4);
+
+                for (uint32_t i = 0; i < wordsToRead; ++i)
+                {
+                    if (_watchpoints->checkMemoryRead(readAddr + (i * 4),
+                                                      4, results[wordsRead + i]))
+                    {
+                        setDebugIrq(true);
+                        break;
+                    }
+                }
+            }
 
             // Update the count.
             wordsRead += static_cast<uint8_t>(wordsToRead);
@@ -1057,6 +1180,7 @@ void MemcHardware::addIntegralHardware(IHardwareDeviceCollection &devices)
 void MemcHardware::connect(SystemContext &context)
 {
     context.tryFindTypedDevice("DiagnosticSink", _diagnosticSink);
+    context.tryFindTypedDevice("WatchpointManager", _watchpoints);
 }
 
 }} // namespace Mo::Arm

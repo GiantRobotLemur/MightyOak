@@ -33,6 +33,7 @@ namespace Arm {
 // Class Declarations
 ////////////////////////////////////////////////////////////////////////////////
 class RingBufferTrace;
+class WatchpointManager;
 
 //! @brief Manages the life cycle of a debugger session: configuration,
 //! system creation, command execution, and output.
@@ -70,10 +71,12 @@ private:
     bool executeDisasm(const ParsedCommand &cmd);
     bool executeIrq(const ParsedCommand &cmd);
     bool executeMemc(const ParsedCommand &cmd);
+    bool executeCam(const ParsedCommand &cmd);
     bool executeIoc(const ParsedCommand &cmd);
     bool executeTrace(const ParsedCommand &cmd);
     bool executePc(const ParsedCommand &cmd);
     bool executeEcho(const ParsedCommand &cmd);
+    bool executeWatch(const ParsedCommand &cmd);
 
     bool requireInit(const char *commandName);
     bool parseAddress(const std::string &text, uint32_t &addr);
@@ -85,6 +88,7 @@ private:
     IArmSystemUPtr _system;
     std::unique_ptr<RingBufferTrace> _traceOwner;
     RingBufferTrace *_trace;
+    WatchpointManager *_watchpoints;
     Ag::Fs::Path _romSearchPath;
     bool _initialised;
 };

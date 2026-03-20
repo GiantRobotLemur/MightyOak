@@ -30,7 +30,7 @@ namespace Arm {
 ////////////////////////////////////////////////////////////////////////////////
 // Class Declarations
 ////////////////////////////////////////////////////////////////////////////////
-class MemcHardware;
+class BasicIrqManagerHardware;
 class SystemContext;
 class AcornKeyboardController;
 class IDiagnosticSink;
@@ -146,7 +146,7 @@ public:
     IOC &operator=(const IOC &) = delete;
     IOC &operator=(IOC &&) = delete;
 
-    IOC(MemcHardware &parent);
+    IOC(BasicIrqManagerHardware &parent);
     virtual ~IOC() = default;
 
     // Accessors
@@ -238,7 +238,7 @@ private:
 
     // Internal Fields
     IocSyncStatePtr _synchronisedData;
-    MemcHardware &_parent;
+    BasicIrqManagerHardware &_parent;
     SystemContext *_context;
     IocIrqState *_irqState;
     AcornKeyboardController *_keyboard;

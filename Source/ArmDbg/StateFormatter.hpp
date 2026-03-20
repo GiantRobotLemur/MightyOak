@@ -17,6 +17,7 @@
 #include <ostream>
 
 #include "ArmEmu/ArmSystem.hpp"
+#include "ArmEmu/WatchpointManager.hpp"
 
 namespace Mo {
 namespace Arm {
@@ -65,6 +66,14 @@ public:
                                 const uint32_t *surroundingWords,
                                 uint32_t baseAddr,
                                 uint32_t count);
+
+    //! @brief Writes details of a watchpoint hit.
+    static void formatWatchpointHit(std::ostream &out,
+                                    const WatchpointHit &hit);
+
+    //! @brief Writes a list of active watchpoints.
+    static void formatWatchpointList(std::ostream &out,
+                                     const WatchpointManager &mgr);
 };
 
 ////////////////////////////////////////////////////////////////////////////////

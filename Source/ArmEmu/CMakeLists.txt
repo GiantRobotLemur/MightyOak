@@ -57,6 +57,8 @@ ag_add_library(ArmEmu   FOLDER      ARM
                                     "BootStallDetector.cpp"
                                     "${MO_INCLUDE_DIR}/ArmEmu/BootStallDetector.hpp"
                                     "${MO_INCLUDE_DIR}/ArmEmu/CompositeDiagnosticSink.hpp"
+                                    "WatchpointManager.cpp"
+                                    "${MO_INCLUDE_DIR}/ArmEmu/WatchpointManager.hpp"
                         HEADERS     "${MO_INCLUDE_DIR}/ArmEmu.hpp"
                         PUBLIC_LIBS AgCore readerwriterqueue)
 
@@ -134,6 +136,8 @@ source_group(Interface FILES
              "BootStallDetector.cpp"
              "${MO_INCLUDE_DIR}/ArmEmu/BootStallDetector.hpp"
              "${MO_INCLUDE_DIR}/ArmEmu/CompositeIDiagnosticSink.hpp"
+             "WatchpointManager.cpp"
+             "${MO_INCLUDE_DIR}/ArmEmu/WatchpointManager.hpp"
 )
 
 # Define the unit test harness.
@@ -155,6 +159,7 @@ ag_add_test_app(ArmEmu_Tests    TEST_LIB ArmEmu
                                          "Test/Test_MemcRomBoot.cpp"
                                          "Test/Test_AluOperations.cpp"
                                          "Test/Test_ALU.cpp"
+                                         "Test/Test_Pipeline.cpp"
                                          "Test/Test_DataTransfer.cpp"
                                          "Test/Test_CoProcessor.cpp"
                                          "Test/Test_Options.cpp"
@@ -167,6 +172,10 @@ ag_add_test_app(ArmEmu_Tests    TEST_LIB ArmEmu
                                          "Test/Test_PCF8583.cpp"
                                          "Test/Test_RiscOSBoot.cpp"
                                          "Test/Test_Diagnostics.cpp"
+                                         "Test/Test_WatchpointManager.cpp"
+                                         "Test/TestFeedbackDevice.cpp"
+                                         "Test/TestFeedbackDevice.hpp"
+                                         "Test/Test_MemcModeSwitch.cpp"
                                          "Test/Test_Main.cpp"
                                          )
 
@@ -225,3 +234,22 @@ ag_add_static_data(EmuPerf_Test "MemcTestRom.hpp" BINARY
 # Embed the same MEMC test ROM in the unit test executable.
 ag_add_static_data(ArmEmu_Tests "MemcTestRom.hpp" BINARY
                    SOURCES "${MemcTestRomImagePath}")
+
+# Add a custom command to assemble the Mode Test ROM source code into
+# ARM machine code.
+set(ModeTestSourceIn "${PROJECT_SOURCE_DIR}/Tests/ArmEmu/MemcModeTestRom.arm")
+set(ModeTestRomPath "${CMAKE_CURRENT_BINARY_DIR}/ModeTestRom.bin")
+
+cmake_path(ABSOLUTE_PATH ModeTestSourceIn
+           NORMALIZE OUTPUT_VARIABLE ModeTestSource)
+
+add_custom_command(OUTPUT "${ModeTestRomPath}"
+                   COMMAND AAsm
+                   ARGS "${ModeTestSource}" "-o" "${ModeTestRomPath}"
+                   DEPENDS "${ModeTestSource}"
+                   WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+                   COMMENT "Assembling ${ModeTestSource}...")
+
+# Embed the mode test ROM in the unit test executable.
+ag_add_static_data(ArmEmu_Tests "ModeTestRom.hpp" BINARY
+                   SOURCES "${ModeTestRomPath}")

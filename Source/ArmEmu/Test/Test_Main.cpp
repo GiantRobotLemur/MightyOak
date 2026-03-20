@@ -21,6 +21,7 @@ namespace Arm {
 void registerAluExecTests();
 void registerDataTransferExecTests();
 void registerCoProcessorExecTests();
+void registerPipelineTests();
 
 }} // namespace Mo::Arm
 
@@ -49,6 +50,7 @@ int main(int argc, char **argv)
     Mo::Arm::registerAluExecTests();
     Mo::Arm::registerDataTransferExecTests();
     Mo::Arm::registerCoProcessorExecTests();
+    Mo::Arm::registerPipelineTests();
 
     int result = RUN_ALL_TESTS();
 

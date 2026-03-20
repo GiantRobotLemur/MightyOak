@@ -162,7 +162,7 @@ executable or a configured base path.
 | `ARMv2CoreRegisterFile.inl`     | 26-bit register file, banked registers, mode switching|
 | `ARMv2InstructionDecoder.inl`   | 3-bit major opcode dispatch (bits 27:25)             |
 | `InstructionPipeline.inl`       | Fetch, condition check, decode/execute, PC advance; records last PC/opcode/executed for diagnostics |
-| `ExecutionUnit.inl`             | IRQ priority loop; cycle-limited or unlimited run; `TAllowDiagnostics` template parameter gates `if constexpr` diagnostic branches; `connect()` discovers `IDiagnosticSink` via device system |
+| `ExecutionUnit.inl`             | IRQ priority loop; cycle-limited or unlimited run; `TAllowDiagnostics` template parameter gates `if constexpr` diagnostic branches; `connect()` discovers `IDiagnosticSink` and `WatchpointManager` via device system; register watchpoint checks after each instruction (zero-cost when diagnostics off) |
 | `ArmSystem.inl`                 | Concrete `IArmSystem`; `initialise()` calls `connectAllDevices()` then `_hardware.connect()` and `_execUnit.connect()` for post-init wiring; run methods |
 | `AluInstructions.inl`           | ALU data processing operations                       |
 | `DataTransferInstructions.inl`  | LDR/STR/LDM/STM implementation                      |
@@ -251,6 +251,32 @@ host-side frame capture, derived from `IMMIOBlock`.
   (sourced from `VIDC10` rather than `MemcHardware`).
 - Per-BPP scanline renderers (1, 2, 4, 8 BPP).
 - Converts 13-bit VIDC physical colour to ARGB32 via palette lookup.
+
+#### Watchpoint System
+
+**WatchpointManager** (`WatchpointManager.hpp/cpp`) — runtime memory and
+register watchpoints for the debugger.
+
+- Derives from `IHardwareDevice`; registered under device alias
+  `"WatchpointManager"` so it is discoverable by `MemcHardware` and
+  `SingleModeExecutionUnit` via `tryFindTypedDevice()`.
+- **Memory watchpoints** — address + type (read/write/both). Overlap detection
+  checks whether an access range `[addr, addr+size)` intersects the watched
+  address range `[wp.Address, wp.Address+4)`. When hit, `setDebugIrq(true)`
+  is called to break execution.
+- **Register watchpoints** — register index + optional match value. Shadow
+  register array tracks previous values; fires on any change or specific
+  value match. Checked after each instruction inside
+  `if constexpr (AllowDiagnostics)` in `ExecutionUnit.inl` (zero cost when
+  diagnostics are off).
+- **Integration**: `MemcHardware` discovers the WatchpointManager pointer in
+  `connect()` and checks it in `write<T>()`/`read<T>()`/`writeWords()`/`readWords()`
+  behind a null-pointer guard (one branch-predicted check per access).
+  `ExecutionUnit.inl` checks register watchpoints inside the existing
+  `if constexpr (AllowDiagnostics)` block for true compile-time elimination.
+- **IOC decoupling**: IOC's constructor and `_parent` field were changed from
+  `MemcHardware &` to `BasicIrqManagerHardware &` since it only calls
+  `setGuestIrq()` and `setGuestFastIrq()`.
 
 #### Diagnostic System
 
@@ -351,9 +377,10 @@ iterations.
 **Script language.** Line-oriented, `#` comments, case-insensitive commands.
 Commands cover system configuration (`config model/cpu/rom/ram`),
 initialisation (`init`), execution control (`run`, `step`, `continue`,
-`break`), state inspection (`regs`, `reg`, `mem`, `disasm`, `pc`, `irq`,
-`memc`, `ioc`, `trace`), and output (`echo`). Addresses accept `0x` hex or
-decimal notation. See `Doc/ArmDbgCli.md` for the full command reference.
+`break`, `watch`), state inspection (`regs`, `reg`, `mem`, `disasm`, `pc`,
+`irq`, `memc`, `ioc`, `trace`), and output (`echo`). Addresses accept `0x`
+hex or decimal notation. See `Doc/ArmDbgCli.md` for the full command
+reference.
 
 **Internal architecture:**
 
@@ -361,8 +388,8 @@ decimal notation. See `Doc/ArmDbgCli.md` for the full command reference.
 |-------|------|
 | `ScriptLexer` | Tokenises script lines; special-cases `echo` to preserve message text |
 | `CommandParser` | Converts tokens to `ParsedCommand` (command enum + arguments); handles `config` two-word dispatch |
-| `StateFormatter` | Pure static formatting functions (`formatRegisters`, `formatMemoryDump`, `formatDisassembly`, `formatIrqState`, `formatTrace`, `formatPcContext`) writing to `std::ostream&`; no emulator dependency, testable with hardcoded values |
-| `DebugSession` | Central class: holds `Options`, `IArmSystemUPtr`, `RingBufferTrace*`; config commands set fields, `init` creates the system via `ArmSystemBuilder` with diagnostics, execution commands call `runLimited()`/`runSingleStep()`, inspection commands read via `getCoreRegister()`/`readFromLogicalAddress()`/`tryFindTypedDevice<IOC>()` etc. |
+| `StateFormatter` | Pure static formatting functions (`formatRegisters`, `formatMemoryDump`, `formatDisassembly`, `formatIrqState`, `formatTrace`, `formatPcContext`, `formatWatchpointHit`, `formatWatchpointList`) writing to `std::ostream&`; no emulator dependency, testable with hardcoded values |
+| `DebugSession` | Central class: holds `Options`, `IArmSystemUPtr`, `RingBufferTrace*`, `WatchpointManager*`; config commands set fields, `init` creates the system via `ArmSystemBuilder` with diagnostics and a `WatchpointManager`, execution commands call `runLimited()`/`runSingleStep()` and report watchpoint hits on `DebugIrq`, `watch` command manages memory/register watchpoints, inspection commands read via `getCoreRegister()`/`readFromLogicalAddress()`/`tryFindTypedDevice<IOC>()` etc. |
 | `ScriptRunner` | Thin pipeline: reads lines from `std::istream`, tokenises, parses, dispatches to `DebugSession`; reports errors with line numbers |
 
 **Diagnostic integration.** `DebugSession::executeInit()` creates a
@@ -370,7 +397,10 @@ decimal notation. See `Doc/ArmDbgCli.md` for the full command reference.
 `CompositeDiagnosticSink` which is added as a device to the builder. Only the
 composite is added as a device — the trace is kept as a raw pointer for direct
 access by the `trace` command. This avoids the "DiagnosticSink" alias conflict
-that would occur if both were registered as separate devices.
+that would occur if both were registered as separate devices. A
+`WatchpointManager` is also created and added as a separate device; it is
+discovered by `MemcHardware` and `ExecutionUnit` during `connect()` via the
+`"WatchpointManager"` device alias.
 
 **CLI application.** `ArmDbgCli_Main.cpp` follows the `EmuPerfTestApp` pattern:
 `ArmDbgArgs` extends `Ag::Cli::ProgramArguments` (`--script`, `--rom` options),
@@ -504,7 +534,7 @@ Supported platforms: Visual Studio 2022 x64 (Windows), gcc 11 x64 (Linux).
   investigate where RISC OS 3.10 boot stalls: stall detection with
   disassembly, boot progress with trace, exception vector integrity, MEMC
   page table dump, I2C/IOC activity analysis, and PC progression timeline.
-- **ArmDbg tests** (`Source/ArmDbg/Test/`) — 47 tests across 5 suites:
+- **ArmDbg tests** (`Source/ArmDbg/Test/`) — 50 tests across 6 suites:
   `Test_ScriptLexer` (12 tests: tokenisation, comments, echo special case,
   whitespace handling), `Test_CommandParser` (15 tests: all command verbs,
   config sub-dispatch, case insensitivity, unknown commands),
@@ -514,9 +544,20 @@ Supported platforms: Visual Studio 2022 x64 (Windows), gcc 11 x64 (Linux).
   parsing), `Test_ScriptRunner` (6 tests: empty/comment scripts, echo pipeline,
   full boot script, single-line processing, unknown command failure). Tests
   requiring a ROM image use `GTEST_SKIP` when unavailable.
+- **WatchpointManager tests** (`Test_WatchpointManager.cpp`) — 19 tests
+  covering memory watchpoints (write/read/both, overlap detection, adjacent
+  miss), register watchpoints (any change, specific value match, out of
+  range), add/remove/clear lifecycle, and unique ID generation.
+- **Mode switch / SWI tests** (`Test_MemcModeSwitch.cpp`) — 10 tests using a
+  custom test ROM (`MemcModeTestRom.arm`) and a `TestFeedbackDevice` MMIO
+  device mapped at 0x3100000 in I/O space. Tests verify TEQP R15 mode
+  switching, TEQP Rn PSR transfer, SWI entry/return via MOVS and LDMFD,
+  nested SWI (OS\_WriteI pattern), SWI number extraction, and STM R15
+  PC+12|PSR storage. The feedback device has Milestone/Result/Expected/Actual
+  registers; non-zero Result triggers `raiseHostInterrupt()` to halt.
 - 21 AsmTools test files covering each pipeline stage; 29 ArmEmu test files
-  covering CPU, hardware, diagnostics, and integration (including ARM250
-  variant tests for ALU, co-processor, and data transfer).
+  covering CPU, hardware, diagnostics, watchpoints, and integration (including
+  ARM250 variant tests for ALU, co-processor, and data transfer).
 - `EmuPerfTest` benchmark target for performance measurement.
 
 ## Technical Debt

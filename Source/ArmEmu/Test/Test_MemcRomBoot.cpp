@@ -17,6 +17,8 @@
 
 #include <iostream>
 #include <sstream>
+#include <mutex>
+#include <thread>
 
 #include "ArmSystem.inl"
 #include "SystemConfigurations.inl"
@@ -224,14 +226,49 @@ protected:
         return lastResult;
     }
 
+    //! @brief Runs in a separate thread to implement a timeout.
+    //! @param[in] systemToWatch The emulator to raise a host IRQ on at timeout.
+    //! @param[in] isRunning The lock indicating if the emulator is still running.
+    //! @param[in] timeoutMs The maximum amount of time the emulator can run for.
+    static void watchDogThread(IArmSystem *systemToWatch,
+                               std::timed_mutex *isRunning,
+                               uint32_t timeoutMs)
+    {
+        if (!isRunning->try_lock_until(std::chrono::steady_clock::now() +
+                                       std::chrono::milliseconds(timeoutMs)))
+        {
+            // We failed to acquire the lock, the emulated system has run away.
+            systemToWatch->raiseHostInterrupt();
+        }
+    }
+
     //! @brief Runs the system until the PC stops changing (branch to self) or
     //! a BKPT is hit.
     //! @return True if a BKPT was hit, false if the PC was stuck.
-    bool runUntilHaltOrBkpt(int32_t maxSteps = MaxSteps)
+    bool runUntilHaltOrBkpt(int32_t maxSteps = MaxSteps, uint32_t timeoutMs = 30000)
     {
+        std::timed_mutex isRunning;
+        std::thread watchdog;
+
         auto sysToRun = createSystem();
-        _lastResult = sysToRun->runLimited(maxSteps);
-        analyseExecution();
+
+        if (sysToRun != nullptr)
+        {
+            // Acquire the lock while the emulator is running.
+            std::lock_guard guard(isRunning);
+
+            // Run a watchdog thread to monitor the lock and trigger a
+            // host IRQ after a timeout.
+            watchdog = std::thread(watchDogThread, sysToRun, &isRunning, timeoutMs);
+
+            // Run the emulator.
+            _lastResult = sysToRun->runLimited(maxSteps);
+            analyseExecution();
+        }
+
+        // Ensure the watchdog thread exits.
+        if (watchdog.joinable())
+            watchdog.join();
 
         return (_lastResult.ExecResult == ExecutionMetrics::Result::DebugIrq);
     }

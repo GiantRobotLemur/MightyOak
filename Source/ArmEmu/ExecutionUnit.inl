@@ -16,6 +16,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 #include "ArmCore.hpp"
 #include "ArmEmu/IDiagnosticSink.hpp"
+#include "ArmEmu/WatchpointManager.hpp"
 
 namespace Mo {
 namespace Arm {
@@ -52,6 +53,9 @@ private:
     SystemContext &_context;
     PrimaryPipeline _pipeline;
     IDiagnosticSink *_diagnosticSink;
+    WatchpointManager *_watchpointMgr;
+    uint64_t _targetCycles;
+    bool _hasTargetCycles;
 
     // Internal Functions
     static void onMaxCyclesElapsed(SystemContext &guestContext,
@@ -77,7 +81,10 @@ public:
         _regs(regs),
         _context(context),
         _pipeline(_hardware, _regs),
-        _diagnosticSink(nullptr)
+        _diagnosticSink(nullptr),
+        _watchpointMgr(nullptr),
+        _targetCycles(0),
+        _hasTargetCycles(false)
     {
     }
 
@@ -115,18 +122,44 @@ public:
 
         if (maxCycles < 0)
         {
-            // Single step mode.
+            // Single step mode. Invalidate the absolute cycle target
+            // so the next cycle-limited run starts fresh.
             runPipeline = false;
             metrics.ExecResult = ExecutionMetrics::Result::SingleStep;
+            _hasTargetCycles = false;
         }
         else if (maxCycles > 0)
         {
-            // Schedule a task to raise a host interrupt after the
-            // maximum number of cycles have elapsed.
+            // Schedule a task to raise a host interrupt at an absolute
+            // cycle target. This ensures that N sequential runs of M
+            // cycles each produce the same result as a single run of
+            // N*M cycles, by compensating for any per-instruction
+            // overshoot from previous runs.
+            uint64_t currentCycles = _context.getCPUClockTicks();
+
+            if (!_hasTargetCycles)
+            {
+                // First cycle-limited run or after a step/continue.
+                // Start tracking from the current position.
+                _targetCycles = currentCycles;
+                _hasTargetCycles = true;
+            }
+
+            _targetCycles += static_cast<uint64_t>(maxCycles);
+
+            uint64_t delta = (_targetCycles > currentCycles)
+                ? (_targetCycles - currentCycles) : 1;
+
             raiseHostIrq.defineTask(onMaxCyclesElapsed, nullptr);
             limitTask = &raiseHostIrq;
 
-            _context.scheduleTaskDeltaCycles(limitTask, maxCycles);
+            _context.scheduleTaskDeltaCycles(limitTask,
+                                             static_cast<uint32_t>(delta));
+        }
+        else
+        {
+            // Infinite/continue mode. Invalidate the cycle target.
+            _hasTargetCycles = false;
         }
 
         _pipeline.flushPipeline();
@@ -141,22 +174,31 @@ public:
 
         do
         {
+            // Apply any pending pipeline flush before checking interrupts.
+            // This ensures _coreRegisters[15] is in the correct pipelined
+            // state (instruction_addr + 8) so that handleIrq()/handleFirq()
+            // compute the correct return address in R14.
+            _pipeline.applyPendingFlush();
+
             // Read the state of unmasked IRQs which might upset things.
             uint8_t pendingIrqs = _hardware.getIrqStatus();
 
             if (pendingIrqs)
             {
-                // Deal with interrupts, both internal and external.
-                if (pendingIrqs & IrqState::HostIrqsMask)
-                {
-                    // Exit the pipeline without processing anything.
-                    runPipeline = false;
+                // Clear the stale result from the previous instruction
+                // so that processNonExecResult() doesn't re-apply a
+                // pipeline flush from a prior branch when only host
+                // IRQs are pending.
+                result = 0;
 
-                    metrics.ExecResult =
-                        (pendingIrqs & IrqState::DebugPending) ? ExecutionMetrics::Result::DebugIrq :
-                                                                 ExecutionMetrics::Result::HostIrq;
-                }
-                else if (pendingIrqs & IrqState::FastIrqPending)
+                // Process any pending guest IRQs before checking host
+                // IRQs. This ensures that when an IOC timer interrupt
+                // and a step-limit host IRQ fire on the same cycle, the
+                // guest interrupt is taken at the correct time — just
+                // as it would be during continuous execution. Without
+                // this, stepping can defer guest interrupts, causing
+                // non-deterministic execution paths.
+                if (pendingIrqs & IrqState::FastIrqPending)
                 {
                     // A fast interrupt has been signalled.
                     result = _regs.handleFirq();
@@ -174,7 +216,7 @@ public:
                         }
                     }
                 }
-                else // if (pendingIrqs & IS_IrqPending)
+                else if (pendingIrqs & IrqState::IrqPending)
                 {
                     // A normal interrupt has been signalled.
                     result = _regs.handleIrq();
@@ -191,6 +233,16 @@ public:
                             _diagnosticSink->onInterruptChange(evt);
                         }
                     }
+                }
+
+                if (pendingIrqs & IrqState::HostIrqsMask)
+                {
+                    // The host or debugger requested a stop.
+                    runPipeline = false;
+
+                    metrics.ExecResult =
+                        (pendingIrqs & IrqState::DebugPending) ? ExecutionMetrics::Result::DebugIrq :
+                                                                 ExecutionMetrics::Result::HostIrq;
                 }
 
                 // Ensure the results are properly applied to the pipeline.
@@ -214,6 +266,32 @@ public:
                         entry.CyclesTaken = static_cast<uint8_t>(result & ExecResult::CycleCountMask);
                         entry.WasExecuted = _pipeline.getLastWasExecuted();
                         _diagnosticSink->onInstruction(entry);
+                    }
+
+                    // Check breakpoints after each instruction.
+                    if (_watchpointMgr != nullptr &&
+                        _watchpointMgr->hasBreakpoints())
+                    {
+                        if (_watchpointMgr->checkPC(_pipeline.getLastPC()))
+                        {
+                            _hardware.setDebugIrq(true);
+                        }
+                    }
+
+                    // Check register watchpoints after each instruction.
+                    if (_watchpointMgr != nullptr &&
+                        _watchpointMgr->hasRegisterWatchpoints())
+                    {
+                        for (uint8_t r = 0; r < 16; ++r)
+                        {
+                            uint32_t val = _regs.getRn(static_cast<GeneralRegister>(r));
+
+                            if (_watchpointMgr->checkRegister(r, val))
+                            {
+                                _hardware.setDebugIrq(true);
+                                break;
+                            }
+                        }
                     }
                 }
 
@@ -248,7 +326,10 @@ public:
     void connect()
     {
         if constexpr (AllowDiagnostics)
+        {
             _context.tryFindTypedDevice("DiagnosticSink", _diagnosticSink);
+            _context.tryFindTypedDevice("WatchpointManager", _watchpointMgr);
+        }
     }
 };
 

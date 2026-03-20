@@ -8,3 +8,6 @@ ag_add_cli_app(ArmDbgCli  FOLDER      ARM
                            VERSION     "${PROJECT_VERSION}"
                            SOURCES     "ArmDbgCli_Main.cpp"
                            LIBS        ArmDbg)
+
+# Allow CLI to access private IPC headers from the ArmDbg library.
+target_include_directories(ArmDbgCli PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../ArmDbg")

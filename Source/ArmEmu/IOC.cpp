@@ -284,7 +284,7 @@ bool IocIrqState::raiseIrq(uint8_t id)
 ////////////////////////////////////////////////////////////////////////////////
 //! @brief Constructs a new object representing and instance of an I/O controller.
 //! @param[in] parent The object representing the system the controller belongs to.
-IOC::IOC(MemcHardware &parent) :
+IOC::IOC(BasicIrqManagerHardware &parent) :
     _synchronisedData(IocSyncStateTraits::create()),
     _parent(parent),
     _context(nullptr),
@@ -865,11 +865,14 @@ void IOC::Counter::go(SystemContext *context)
 //! @param context 
 void IOC::Counter::latch(SystemContext *context)
 {
-    // Calculate output latch vale from start time, current time and freq.
+    // Calculate output latch value from start time, current time and freq.
+    // The IOC timer counts from _inputLatch down to 0 (a period of
+    // _inputLatch + 1 ticks), then reloads and generates an interrupt.
     uint64_t elapsed = context->getMasterClockTicks() - _startTime;
     uint64_t elapsedTicks = elapsed / _masterTicksPerCount;
+    uint32_t period = static_cast<uint32_t>(_inputLatch) + 1;
 
-    _outputLatch = _inputLatch - static_cast<uint16_t>(elapsedTicks % _inputLatch);
+    _outputLatch = _inputLatch - static_cast<uint16_t>(elapsedTicks % period);
 }
 
 //! @brief Starts a timer counting, possibly re-starting it if already running.
@@ -881,8 +884,10 @@ void IOC::Counter::start(SystemContext *context, uint64_t countFactor)
     _startTime = context->getMasterClockTicks();
     _masterTicksPerCount = context->getMasterClockFrequency() / 2000000;
 
-    // Schedule interrupt.
-    context->scheduleTaskDeltaTicks(&_triggerTask, _masterTicksPerCount * _inputLatch * countFactor);
+    // Schedule interrupt. The IOC timer counts _inputLatch+1 ticks
+    // (from _inputLatch down to 0 inclusive) before triggering.
+    uint64_t period = static_cast<uint64_t>(_inputLatch) + 1;
+    context->scheduleTaskDeltaTicks(&_triggerTask, _masterTicksPerCount * period * countFactor);
 }
 
 //! @brief Activates the KART timer to start sending and receiving bytes.

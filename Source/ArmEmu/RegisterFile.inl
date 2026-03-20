@@ -75,7 +75,8 @@ struct PsrMask26
     static constexpr uint32_t PrivilageBits = 0xFC000003;
 
     //! @brief A mask of bits in the PSR which can be changed from 26-bit
-    //! non-privileged code.
+    //! non-privileged code. On ARM2, User mode can only modify the NZCV
+    //! condition flags, not mode bits or interrupt disable flags.
     static constexpr uint32_t UserBits = 0xF0000000;
 
     //! @brief A mask of bits which define the processor mode in the 26-bit PSR.

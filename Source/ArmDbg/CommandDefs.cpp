@@ -45,6 +45,7 @@ const char *getDbgCommandName(DbgCommand cmd)
     case DbgCommand::Disasm:      return "disasm";
     case DbgCommand::Irq:         return "irq";
     case DbgCommand::Memc:        return "memc";
+    case DbgCommand::Cam:         return "cam";
     case DbgCommand::Ioc:         return "ioc";
     case DbgCommand::Trace:       return "trace";
     case DbgCommand::Pc:          return "pc";
