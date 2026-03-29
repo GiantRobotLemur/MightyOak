@@ -26,7 +26,6 @@
 #include "ArmEmu/GuestEventQueue.hpp"
 
 #include "DebuggerApp.hpp"
-#include "MemcIOAdapter.hpp"
 #include "Tools.hpp"
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -315,15 +314,6 @@ void EmulatorSession::create(const Arm::Options &options)
         _emulator = builder.createSystem();
         _settings.setEmulatorOptions(options);
         _state = EmulatorState::Paused;
-
-        switch (options.getHardwareArchitecture())
-        {
-        case Arm::SystemModel::Archimedies:
-        case Arm::SystemModel::ASeries:
-            _ioAdapter = std::make_unique<MemcIOAdapter>(_emulator.get(),
-                                                         _settings.getEmulatorOptions());
-            break;
-        }
 
         emit sessionStarted(options, _emulator.get());
     }

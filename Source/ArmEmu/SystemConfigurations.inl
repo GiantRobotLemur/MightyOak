@@ -22,7 +22,7 @@
 #include "ExecutionUnit.inl"
 
 #include "TestBedHardware.inl"
-#include "MemcHardware.hpp"
+#include "MEMC.inl"
 #include "ARMv2CoreRegisterFile.inl"
 #include "ARMv2InstructionDecoder.inl"
 
@@ -196,11 +196,11 @@ struct ArmV2MemcSystemTraits
     // Public Types
     //! @brief The data type of the object which manages the physical address
     //! map and major hardware resources.
-    using HardwareType = MemcHardware;
+    using HardwareType = MemcHardware<TAllowDiagnostics>;
 
     //! @brief The data type of the object which holds state of the processor
     //! in terms of register contents, this includes co-processor state.
-    using RegisterFileType = ARMv2CoreRegisterFile<MemcHardware>;
+    using RegisterFileType = ARMv2CoreRegisterFile<HardwareType>;
 
     //! @brief Used with if constexpr to determine of IDiagnosticSink branches
     //! should be taken - otherwise they will be optimised out.
@@ -233,11 +233,11 @@ struct ArmV2aSMemcSystemTraits
     // Public Types
     //! @brief The data type of the object which manages the physical address
     //! map and major hardware resources.
-    using HardwareType = MemcHardware;
+    using HardwareType = MemcHardware<TAllowDiagnostics>;
 
     //! @brief The data type of the object which holds state of the processor
     //! in terms of register contents, this includes co-processor state.
-    using RegisterFileType = ARMv2CoreRegisterFile<MemcHardware>;
+    using RegisterFileType = ARMv2CoreRegisterFile<HardwareType>;
 
     //! @brief Used with if constexpr to determine of IDiagnosticSink branches
     //! should be taken - otherwise they will be optimised out.
@@ -270,11 +270,11 @@ struct ArmV2aMemcSystemTraits
     // Public Types
     //! @brief The data type of the object which manages the physical address
     //! map and major hardware resources.
-    using HardwareType = MemcHardware;
+    using HardwareType = MemcHardware<TAllowDiagnostics>;
 
     //! @brief The data type of the object which holds state of the processor
     //! in terms of register contents, this includes co-processor state.
-    using RegisterFileType = ARMv2aCoreRegisterFile<ArmV2aMemcSystemTraits::HardwareType>;
+    using RegisterFileType = ARMv2aCoreRegisterFile<HardwareType>;
 
     //! @brief Used with if constexpr to determine of IDiagnosticSink branches
     //! should be taken - otherwise they will be optimised out.

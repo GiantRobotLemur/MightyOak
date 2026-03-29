@@ -21,13 +21,18 @@
 #include "ArmEmu/RingBufferTrace.hpp"
 #include "ArmEmu/CompositeDiagnosticSink.hpp"
 #include "ArmEmu/WatchpointManager.hpp"
-#include "ArmEmu/IOC.hpp"
 
 #include "ArmDbg/DebugSession.hpp"
 #include "StateFormatter.hpp"
 
 namespace Mo {
 namespace Arm {
+
+namespace IOC {
+
+static constexpr uint32_t BaseAddr = 0x3200000;
+
+} // namespace IOC
 
 ////////////////////////////////////////////////////////////////////////////////
 // DebugSession Member Definitions
@@ -603,9 +608,9 @@ bool DebugSession::executeIrq(const ParsedCommand & /*cmd*/)
 {
     if (!requireInit("irq")) return false;
 
-    IOC *ioc = nullptr;
+    IHardwareDevicePtr ioc = nullptr;
 
-    if (!_system->tryFindTypedDevice<IOC>(Ag::String("IOC"), ioc) ||
+    if (!_system->tryFindDevice(Ag::String("IOC"), ioc) ||
         ioc == nullptr)
     {
         _output << "Warning: IOC device not found.\n";
@@ -707,7 +712,6 @@ bool DebugSession::executeCam(const ParsedCommand &cmd)
 
     uint32_t ramBytes = static_cast<uint32_t>(_options.getRamSizeKb()) * 1024;
     uint32_t physPageCount = ramBytes / pageSize;
-    uint32_t logicalPageCount = 0x02000000 / pageSize; // 32MB logical space.
 
     // Build reverse map: physPage -> logicalAddr (UINT32_MAX if unmapped).
     std::vector<uint32_t> physToLogical(physPageCount, UINT32_MAX);

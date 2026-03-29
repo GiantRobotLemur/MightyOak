@@ -18,7 +18,7 @@
 #include "ArmEmu/ArmSystemBuilder.hpp"
 #include "ArmSystem.inl"
 #include "SystemConfigurations.inl"
-#include "MemcHardware.hpp"
+#include "MEMC.inl"
 #include "ArmEmu/RingBufferTrace.hpp"
 #include "ArmEmu/BootProgressMonitor.hpp"
 #include "ArmEmu/CompositeDiagnosticSink.hpp"

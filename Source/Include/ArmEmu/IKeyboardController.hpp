@@ -2,7 +2,7 @@
 //! @brief The declaration of an interface to a hardware device representing
 //! the an emulated keyboard and mouse for the host to manipulate.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2024
+//! @date 2024-2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -48,6 +48,11 @@ public:
     // Accessors
 
     // Operations
+    //! @brief Connects the emulated device to the queue used to transmit bytes
+    //! back to the guest system via KART.
+    //! @param[in] txQueue A new pointer to the transmission queue.
+    virtual void connectToTxQueue(SynchronisedByteQueue *txQueue) = 0;
+
     //! @brief Reports a key press.
     //! @param[in] hostScanCode The host scan code to map to a native key
     //! press and report.

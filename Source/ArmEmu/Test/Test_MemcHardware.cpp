@@ -1,4 +1,4 @@
-//! @file Test_MemcHardware.cpp
+//! @file ArmEmu/Test/Test_MemcHardware.cpp
 //! @brief The definition of unit tests for the MemcHardware class.
 //! @author GiantRobotLemur@na-se.co.uk
 //! @date 2023-2026
@@ -12,7 +12,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 #include <gtest/gtest.h>
 
-#include "MemcHardware.hpp"
+#include "MEMC.inl"
 
 namespace Mo {
 namespace Arm {
@@ -24,8 +24,9 @@ namespace {
 class MemcHardwareTests : public ::testing::Test
 {
 protected:
+    using MemcType = MemcHardware<false>;
     AddressMap _readDevices, _writeDevices;
-    MemcHardware specimen;
+    MemcType specimen;
 
     MemcHardwareTests() :
         specimen(Options(), _readDevices, _writeDevices)

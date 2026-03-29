@@ -20,7 +20,7 @@
 
 #include "ArmSystem.inl"
 #include "SystemConfigurations.inl"
-#include "MemcHardware.hpp"
+#include "MEMC.inl"
 
 namespace Mo {
 namespace Arm {
@@ -47,7 +47,9 @@ protected:
         opts.setProcessorVariant(ProcessorModel::ARM2);
         opts.setSystemRom(SystemROMPreset::RiscOS_3_10);
         opts.setRamSizeKb(RamSizeKb);
+
         ArmSystemBuilder builder(opts);
+        builder.setDiagnosticsEnabled(true);
 
         if (diagnostics)
             builder.addDevice(std::move(diagnostics));
@@ -93,7 +95,6 @@ TEST_F(RiscOSBootTests, AdvancesPastI2CProbe)
 
     uint32_t pc = specimen->getCoreRegister(CoreRegister::PC);
     EXPECT_GT(sink->getI2cToggleCount(), 1u) << "PC at 0x" << std::hex << pc;
-
 
     // After 1M cycles, if the PC is still in the very early ROM code
     // (the first few hundred bytes), we're likely stuck in the I2C probe loop.

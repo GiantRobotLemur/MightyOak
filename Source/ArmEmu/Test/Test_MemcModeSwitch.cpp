@@ -19,7 +19,7 @@
 
 #include "ArmSystem.inl"
 #include "SystemConfigurations.inl"
-#include "MemcHardware.hpp"
+#include "MEMC.inl"
 #include "ModeTestRom.hpp"
 #include "TestFeedbackDevice.hpp"
 

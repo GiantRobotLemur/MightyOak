@@ -16,7 +16,7 @@
 #include <cstdint>
 
 #include "AcornKeyboardController.hpp"
-#include "ArmEmu/IOC.hpp"
+#include "IOC.hpp"
 
 namespace Mo {
 namespace Arm {
@@ -63,7 +63,7 @@ bool tryMapMouseButton(AcornKeyboardController::MouseButton button,
 AcornKeyboardController::AcornKeyboardController() :
     _name("Keyboard Controller"),
     _description("Maps host key and mouse events to guest-compatible scan codes."),
-    _ioController(nullptr),
+    _txQueue(nullptr),
     _mouseDeltaX(0),
     _mouseDeltaY(0),
     _pendingKeyEvents(Ag::AlignmentTraits<KeyEventQueue>::create()),
@@ -71,12 +71,18 @@ AcornKeyboardController::AcornKeyboardController() :
 {
 }
 
+// Inherited from IKeyboardController.
+void AcornKeyboardController::connectToTxQueue(SynchronisedByteQueue *txQueue)
+{
+    _txQueue = txQueue;
+}
+
 //! @brief Processes a byte sent from IOC via the KART interface.
 //! @param[in] nextByte The byte sent to the keyboard controller.
 void AcornKeyboardController::receiveKARTByte(uint8_t nextByte)
 {
     // We can't do anything if we can't send bytes back to IOC.
-    if (_ioController == nullptr)
+    if (_txQueue == nullptr)
         return;
 
     bool hasError = true;
@@ -85,7 +91,7 @@ void AcornKeyboardController::receiveKARTByte(uint8_t nextByte)
     if (nextByte == HRST)
     {
         _state = ControllerState::ReceivedHRST;
-        _ioController->writeKartByte(HRST);
+        _txQueue->enqueue(HRST);
         return;
     }
 
@@ -100,7 +106,7 @@ void AcornKeyboardController::receiveKARTByte(uint8_t nextByte)
         if (nextByte == RAK1)
         {
             _state = ControllerState::ReceivedRAK1;
-            _ioController->writeKartByte(RAK1);
+            _txQueue->enqueue(RAK1);
             hasError = false;
         }
         break;
@@ -110,7 +116,7 @@ void AcornKeyboardController::receiveKARTByte(uint8_t nextByte)
         {
             // Handshake complete. Transition to Initialised state.
             _state = ControllerState::Initialised;
-            _ioController->writeKartByte(RAK2);
+            _txQueue->enqueue(RAK2);
             hasError = false;
         }
         break;
@@ -122,12 +128,12 @@ void AcornKeyboardController::receiveKARTByte(uint8_t nextByte)
         {
             // Protocol reset - restart the handshake.
             _state = ControllerState::PreReset;
-            _ioController->writeKartByte(HRST);
+            _txQueue->enqueue(HRST);
         }
         else if (nextByte == RQID)
         {
             // Host requested the keyboard ID.
-            _ioController->writeKartByte(KBID_Bits | KeyboardId);
+            _txQueue->enqueue(KBID_Bits | KeyboardId);
         }
         else if (nextByte == RQMP)
         {
@@ -157,7 +163,7 @@ void AcornKeyboardController::receiveKARTByte(uint8_t nextByte)
         {
             // Host requested key data for a specific row. Send an empty
             // response as row-level polling is not yet fully supported.
-            _ioController->writeKartByte(PDAT_Bits | 0);
+            _txQueue->enqueue(PDAT_Bits | 0);
         }
         else
         {
@@ -171,7 +177,7 @@ void AcornKeyboardController::receiveKARTByte(uint8_t nextByte)
     {
         // Re-send the hard reset signal and reset the protocol.
         _state = ControllerState::PreReset;
-        _ioController->writeKartByte(HRST);
+        _txQueue->enqueue(HRST);
     }
 }
 
@@ -185,17 +191,6 @@ Ag::string_cref_t AcornKeyboardController::getName() const
 Ag::string_cref_t AcornKeyboardController::getDescription() const
 {
     return _description;
-}
-
-// Inherited from IHardwareDevice.
-void AcornKeyboardController::connect(SystemContext &context)
-{
-    IHardwareDevicePtr iocDevice;
-
-    if (context.tryFindDevice("IOC", iocDevice))
-    {
-        _ioController = dynamic_cast<IOC *>(iocDevice);
-    }
 }
 
 // Inherited from IKeyboardController.
@@ -304,12 +299,15 @@ void AcornKeyboardController::sendPendingData()
         // Send the key event data, then a status byte indicating
         // whether more data is available.
         sendKeyEvent(event);
-        _ioController->writeKartByte(getStatusByte());
+
+        if (_txQueue)
+            _txQueue->enqueue(getStatusByte());
     }
     else
     {
         // No key data pending, send current status.
-        _ioController->writeKartByte(getStatusByte());
+        if (_txQueue)
+            _txQueue->enqueue(getStatusByte());
     }
 }
 
@@ -317,18 +315,21 @@ void AcornKeyboardController::sendPendingData()
 //! @param[in] event The key event to send.
 void AcornKeyboardController::sendKeyEvent(const KeyEvent &event)
 {
+    if (_txQueue == nullptr)
+        return;
+
     uint8_t row = (event.ScanCode >> 4) & KDDA_Mask;
     uint8_t col = event.ScanCode & KDDA_Mask;
 
     if (event.IsDown)
     {
-        _ioController->writeKartByte(KDDA_Bits | row);
-        _ioController->writeKartByte(KDDA_Bits | col);
+        _txQueue->enqueue(KDDA_Bits | row);
+        _txQueue->enqueue(KDDA_Bits | col);
     }
     else
     {
-        _ioController->writeKartByte(KUDA_Bits | row);
-        _ioController->writeKartByte(KUDA_Bits | col);
+        _txQueue->enqueue(KUDA_Bits | row);
+        _txQueue->enqueue(KUDA_Bits | col);
     }
 }
 
@@ -338,12 +339,15 @@ void AcornKeyboardController::sendMouseData()
     int32_t dx = _mouseDeltaX.exchange(0, std::memory_order_relaxed);
     int32_t dy = _mouseDeltaY.exchange(0, std::memory_order_relaxed);
 
+    if (_txQueue == nullptr)
+        return;
+
     // Clamp to 7-bit signed range (-64 to +63).
     dx = std::clamp(dx, -64, 63);
     dy = std::clamp(dy, -64, 63);
 
-    _ioController->writeKartByte(static_cast<uint8_t>(dx) & MDAT_Mask);
-    _ioController->writeKartByte(static_cast<uint8_t>(dy) & MDAT_Mask);
+    _txQueue->enqueue(static_cast<uint8_t>(dx) & MDAT_Mask);
+    _txQueue->enqueue(static_cast<uint8_t>(dy) & MDAT_Mask);
 }
 
 }} // namespace Mo::Arm

@@ -17,7 +17,7 @@
 #include <gtest/gtest.h>
 
 #include "AcornKeyboardController.hpp"
-#include "MemcHardware.hpp"
+#include "MEMC.inl"
 
 namespace Mo {
 namespace Arm {
@@ -32,12 +32,14 @@ namespace {
 class KeyboardControllerTest : public ::testing::Test
 {
 protected:
+    using MemcType = MemcHardware<false>;
+    using IOCType = MemcType::IOCType;
     Options _defaultOptions;
     GuestEventQueue _eventQueue;
     SystemContext _context;
     AddressMap _readMap, _writeMap;
-    MemcHardware _memc;
-    IOC *_ioc;
+    MemcType _memc;
+    IOCType *_ioc;
     AcornKeyboardController *_keyboard;
 
     KeyboardControllerTest() :

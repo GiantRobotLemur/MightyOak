@@ -42,11 +42,11 @@ static constexpr size_t MaxDisplayPixels = 1024 * 1024;
 //! @param[out] argb32 The destination ARGB32 pixel buffer.
 //! @param[in] width The display width in pixels.
 //! @param[in] height The display height in scanlines.
-//! @param[in] bpp The bits per pixel (1, 2, 4, or 8).
+//! @param[in] pixelFormat The bits per pixel (1, 2, 4, or 8).
 //! @param[in] bytesPerRow The raw bytes per scanline.
 void expandToARGB32(const uint8_t *raw, const uint32_t *palette,
                     uint32_t *argb32, uint32_t width, uint32_t height,
-                    uint8_t bpp, uint32_t bytesPerRow)
+                    Mo::Arm::AcornPixelFormat pixelFormat, uint32_t bytesPerRow)
 {
     const uint8_t *srcRow = raw;
 
@@ -56,9 +56,9 @@ void expandToARGB32(const uint8_t *raw, const uint32_t *palette,
         uint32_t *dest = argb32 + (static_cast<size_t>(y) * width);
         uint32_t pixel = 0;
 
-        switch (bpp)
+        switch (pixelFormat)
         {
-        case 1:
+        case Mo::Arm::AcornPixelFormat::Palettised1Bpp:
             while (pixel < width)
             {
                 uint8_t byte = *src++;
@@ -68,7 +68,7 @@ void expandToARGB32(const uint8_t *raw, const uint32_t *palette,
             }
             break;
 
-        case 2:
+        case Mo::Arm::AcornPixelFormat::Palettised2Bpp:
             while (pixel < width)
             {
                 uint8_t byte = *src++;
@@ -81,7 +81,7 @@ void expandToARGB32(const uint8_t *raw, const uint32_t *palette,
             }
             break;
 
-        case 4:
+        case Mo::Arm::AcornPixelFormat::Palettised4Bpp:
             while (pixel < width)
             {
                 uint8_t byte = *src++;
@@ -94,7 +94,7 @@ void expandToARGB32(const uint8_t *raw, const uint32_t *palette,
             }
             break;
 
-        case 8:
+        case Mo::Arm::AcornPixelFormat::Palettised8Bpp:
             for (; pixel < width; ++pixel)
                 dest[pixel] = palette[src[pixel]];
             break;
@@ -259,7 +259,7 @@ bool SessionRunningState::renderFrame()
     }
 
     // Recreate the SDL texture if the display dimensions have changed.
-    if (info.Width != _lastWidth || info.Height != _lastHeight)
+    if (info.DisplayWidth != _lastWidth || info.DisplayHeight != _lastHeight)
     {
         if (_texture != nullptr)
             SDL_DestroyTexture(_texture);
@@ -267,17 +267,17 @@ bool SessionRunningState::renderFrame()
         _texture = SDL_CreateTexture(_renderer,
                                      SDL_PIXELFORMAT_ARGB8888,
                                      SDL_TEXTUREACCESS_STREAMING,
-                                     static_cast<int>(info.Width),
-                                     static_cast<int>(info.Height));
+                                     static_cast<int>(info.DisplayWidth),
+                                     static_cast<int>(info.DisplayHeight));
 
         if (_texture == nullptr)
             return false;
 
-        _lastWidth = info.Width;
-        _lastHeight = info.Height;
+        _lastWidth = info.DisplayWidth;
+        _lastHeight = info.DisplayHeight;
 
         // Ensure the ARGB32 buffer is large enough.
-        size_t pixelCount = static_cast<size_t>(info.Width) * info.Height;
+        size_t pixelCount = static_cast<size_t>(info.DisplayWidth) * info.DisplayHeight;
 
         if (_argb32Buffer.size() < pixelCount)
             _argb32Buffer.resize(pixelCount);
@@ -285,18 +285,20 @@ bool SessionRunningState::renderFrame()
 
     // Expand raw indexed pixels to ARGB32 using the palette.
     expandToARGB32(_rawFrameBuffer.data(), _palette, _argb32Buffer.data(),
-                   info.Width, info.Height, info.BitsPerPixel,
+                   info.DisplayWidth, info.DisplayHeight, info.DisplayFormat,
                    info.BytesPerRow);
 
     // Upload the ARGB32 buffer to the SDL texture.
     SDL_UpdateTexture(_texture, nullptr, _argb32Buffer.data(),
-                      static_cast<int>(info.Width * sizeof(uint32_t)));
+                      static_cast<int>(info.DisplayWidth * sizeof(uint32_t)));
 
     // Clear and render.
     // Use border colour as clear colour.
-    uint8_t br = static_cast<uint8_t>((info.BorderColour >> 16) & 0xFF);
-    uint8_t bg = static_cast<uint8_t>((info.BorderColour >> 8) & 0xFF);
-    uint8_t bb = static_cast<uint8_t>(info.BorderColour & 0xFF);
+    // TODO: Refactor to allow palette changes during a frame, for the border
+    // and the display frame, too.
+    uint8_t br = 0; // static_cast<uint8_t>((info.BorderColour >> 16) & 0xFF);
+    uint8_t bg = 0; // static_cast<uint8_t>((info.BorderColour >> 8) & 0xFF);
+    uint8_t bb = 0; // static_cast<uint8_t>(info.BorderColour & 0xFF);
 
     SDL_SetRenderDrawColor(_renderer, br, bg, bb, 255);
     SDL_RenderClear(_renderer);

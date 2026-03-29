@@ -22,7 +22,7 @@
 
 #include "ArmSystem.inl"
 #include "SystemConfigurations.inl"
-#include "MemcHardware.hpp"
+#include "MEMC.inl"
 #include "MemcTestRom.hpp"
 #include "ArmEmu/RingBufferTrace.hpp"
 #include "ArmEmu/BootProgressMonitor.hpp"
@@ -481,10 +481,11 @@ TEST_F(MemcRomBootTests, IOCInitCompletes)
 TEST_F(MemcRomBootTests, CinitRegisterStored)
 {
     // Create a standalone MemcHardware to test the Cinit register directly.
+    using MemcType = typename MemcHardware<false>;
     AddressMap readDevices, writeDevices;
-    MemcHardware memc(Options(), readDevices, writeDevices);
+    MemcType memc(Options(), readDevices, writeDevices);
     IHardwareDeviceCollection devices;
-    VIDC10 *specimen = nullptr;
+    MemcType::VIDCType *specimen = nullptr;
 
     memc.addIntegralHardware(devices);
 

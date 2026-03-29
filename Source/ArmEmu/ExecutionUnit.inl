@@ -33,8 +33,9 @@ namespace Arm {
 //! @tparam TPrimaryPipeline The pipeline which executes instructions for the
 //! single operating mode the execution units supports modelled on
 //! InstructionPipeline.
-//! @tparam Used with if constexpr to determine of IDiagnosticSink branches
-//! should be taken - otherwise they will be optimised out.
+//! @tparam TAllowDiagnostics Used with if constexpr to determine of
+//! IDiagnosticSink branches should be taken - otherwise they will be
+//! optimised out.
 template<typename THardware, typename TRegisterFile,
          typename TPrimaryPipeline, bool TAllowDiagnostics>
 class SingleModeExecutionUnit

@@ -18,8 +18,6 @@ ag_add_gui_app(ArmDebugger QT
                             Breakpoint.cpp
                             Breakpoint.hpp
                             EmulatorIOAdapter.hpp
-                            MemcIOAdapter.cpp
-                            MemcIOAdapter.hpp
                             EmulatorSession.cpp
                             EmulatorSession.hpp
                             DebuggerWindow.cpp

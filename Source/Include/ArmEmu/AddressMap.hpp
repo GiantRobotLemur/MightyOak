@@ -18,6 +18,8 @@
 
 #include <vector>
 
+#include <readerwriterqueue.h>
+
 #include "Ag/Core/String.hpp"
 
 namespace Mo {
@@ -250,6 +252,9 @@ public:
     uint32_t getSize() const override;
     void *getHostAddress() override;
 };
+
+//! @brief An alias for a cross-thread queue of bytes.
+using SynchronisedByteQueue = moodycamel::ReaderWriterQueue<uint8_t>;
 
 }} // namespace Mo::Arm
 

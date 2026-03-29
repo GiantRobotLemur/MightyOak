@@ -22,7 +22,6 @@
 
 #include "ArmEmu/ArmSystem.hpp"
 #include "ArmEmu/IDiagnosticSink.hpp"
-#include "ArmEmu/Display.hpp"
 #include "ArmEmu/GuestEventQueue.hpp"
 #include "ArmEmu/EmuOptions.hpp"
 #include "ArmEmu/SystemContext.hpp"

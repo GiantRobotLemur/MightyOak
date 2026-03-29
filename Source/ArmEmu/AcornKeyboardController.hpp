@@ -17,8 +17,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 #include <atomic>
 
-#include "readerwriterqueue.h"
-
 #include "Ag/Core/Memory.hpp"
 #include "Ag/Core/LinearSortedMap.hpp"
 
@@ -30,8 +28,6 @@ namespace Arm {
 ////////////////////////////////////////////////////////////////////////////////
 // Class Declarations
 ////////////////////////////////////////////////////////////////////////////////
-class IOC;
-
 //! @brief An object which represents the 87C51 keyboard controller,
 //! translating between key press and mouse movement and the internal
 //! KART protocol.
@@ -75,8 +71,8 @@ public:
     // Overrides
     virtual Ag::string_cref_t getName() const override;
     virtual Ag::string_cref_t getDescription() const override;
-    virtual void connect(SystemContext &context) override;
 
+    virtual void connectToTxQueue(SynchronisedByteQueue *txQueue) override;
     virtual void keyDown(uint32_t hostScanCode) override;
     virtual void keyUp(uint32_t hostScanCode) override;
     virtual void mouseButtonDown(MouseButton button) override;
@@ -114,11 +110,12 @@ private:
     void sendPendingData();
     void sendKeyEvent(const KeyEvent &event);
     void sendMouseData();
+    void writeKartByte(uint8_t txByte);
 
     // Internal Fields
     Ag::String _name;
     Ag::String _description;
-    IOC *_ioController;
+    SynchronisedByteQueue *_txQueue;
     std::atomic<int32_t> _mouseDeltaX;
     std::atomic<int32_t> _mouseDeltaY;
     ScanCodeMap _scanCodeMap;
