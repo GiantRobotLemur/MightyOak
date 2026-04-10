@@ -42,8 +42,8 @@ ag_add_library(ArmEmu   FOLDER      ARM
                                     "${MO_INCLUDE_DIR}/ArmEmu/ArmSystemBuilder.hpp"
                                     "ExecutionMetrics.cpp"
                                     "${MO_INCLUDE_DIR}/ArmEmu/ExecutionMetrics.hpp"
-                                    "GuestEventQueue.cpp"
-                                    "${MO_INCLUDE_DIR}/ArmEmu/GuestEventQueue.hpp"
+                                    "GuestEvent.cpp"
+                                    "${MO_INCLUDE_DIR}/ArmEmu/GuestEvent.hpp"
                                     "SystemContext.cpp"
                                     "${MO_INCLUDE_DIR}/ArmEmu/SystemContext.hpp"
                                     "${MO_INCLUDE_DIR}/ArmEmu/HostMessageID.hpp"
@@ -65,10 +65,10 @@ ag_add_library(ArmEmu   FOLDER      ARM
 
 if(DEFINED CMAKE_ASM_MASM_COMPILER AND "${USE_ASM}")
     target_sources(ArmEmu PRIVATE AluOperations_Win32_x64.asm)
-    source_group(Emulation FILES AluOperations_Win32_x64.asm)
+    source_group(Processor FILES AluOperations_Win32_x64.asm)
 else()
     target_sources(ArmEmu PRIVATE AluOperations_NoArch.cpp)
-    source_group(Emulation FILES AluOperations_NoArch.cpp)
+    source_group(Processor FILES AluOperations_NoArch.cpp)
 endif()
 
 list(APPEND DOC_SRCS "${CMAKE_CURRENT_SOURCE_DIR}"
@@ -108,8 +108,8 @@ source_group(Interface FILES
              "${MO_INCLUDE_DIR}/ArmEmu/ArmSystemBuilder.hpp"
              "ExecutionMetrics.cpp"
              "${MO_INCLUDE_DIR}/ArmEmu/ExecutionMetrics.hpp"
-             "GuestEventQueue.cpp"
-             "${MO_INCLUDE_DIR}/ArmEmu/GuestEventQueue.hpp"
+             "GuestEvent.cpp"
+             "${MO_INCLUDE_DIR}/ArmEmu/GuestEvent.hpp"
              "${MO_INCLUDE_DIR}/ArmEmu/HostMessageID.hpp"
              "SystemContext.cpp"
              "${MO_INCLUDE_DIR}/ArmEmu/SystemContext.hpp"
@@ -171,7 +171,6 @@ ag_add_test_app(ArmEmu_Tests    TEST_LIB ArmEmu
                                          "Test/Test_DataTransfer.cpp"
                                          "Test/Test_CoProcessor.cpp"
                                          "Test/Test_Options.cpp"
-                                         "Test/Test_GuestEventQueue.cpp"
                                          "Test/Test_ArmSystemBuilder.cpp"
                                          "Test/Test_VIDC10.cpp"
                                          "Test/Test_KeyboardController.cpp"

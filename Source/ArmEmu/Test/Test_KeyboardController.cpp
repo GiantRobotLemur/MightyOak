@@ -35,7 +35,6 @@ protected:
     using MemcType = MemcHardware<false>;
     using IOCType = MemcType::IOCType;
     Options _defaultOptions;
-    GuestEventQueue _eventQueue;
     SystemContext _context;
     AddressMap _readMap, _writeMap;
     MemcType _memc;

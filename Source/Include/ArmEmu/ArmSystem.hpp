@@ -21,7 +21,6 @@
 #include "Ag/Core/Utils.hpp"
 #include "ArmEmu/AddressMap.hpp"
 #include "ArmEmu/ExecutionMetrics.hpp"
-#include "ArmEmu/GuestEventQueue.hpp"
 #include "ArmEmu/HostMessageID.hpp"
 #include "ArmEmu/IVideoFrameProvider.hpp"
 

@@ -1,4 +1,4 @@
-//! @file ArmEmu/GuestEventQueue.hpp
+//! @file ArmEmu/GuestEvent.hpp
 //! @brief The declaration of an object which manages messages marshalled out
 //! of the emulator thread and into an observer thread.
 //! @author GiantRobotLemur@na-se.co.uk
@@ -8,14 +8,12 @@
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
 ////////////////////////////////////////////////////////////////////////////////
 
-#ifndef __ARM_EMU_GUEST_EVENT_QUEUE_HPP__
-#define __ARM_EMU_GUEST_EVENT_QUEUE_HPP__
+#ifndef __ARM_EMU_GUEST_EVENT_HPP__
+#define __ARM_EMU_GUEST_EVENT_HPP__
 
 ////////////////////////////////////////////////////////////////////////////////
 // Dependent Header Files
 ////////////////////////////////////////////////////////////////////////////////
-#include "readerwriterqueue.h"
-
 #include "Ag/Core/AlignedTypes.hpp"
 #include "Ag/Core/Memory.hpp"
 
@@ -28,49 +26,26 @@ namespace Arm {
 //! @brief A structure defining an event produced by an emulated system.
 struct BaseGuestEvent
 {
-    uintptr_t SourceID;
+    //! @brief The time at which the event was generated in master clock ticks
+    //! of the guest system.
+    uintptr_t Timestamp;
+
+    //! @brief The first event-type-specific parameter.
     uintptr_t Data1;
+
+    //! @brief The second event-type-specific parameter.
     uintptr_t Data2;
 
     //! @brief See the HostMessageID enumeration for useful values.
     uint32_t Type;
 
     BaseGuestEvent();
-    BaseGuestEvent(uintptr_t sourceID, int32_t type,
+    BaseGuestEvent(uintptr_t timeStamp, int32_t type,
                    uintptr_t data1, uintptr_t data2);
 };
 
 //! @brief A possibly padded version of GuestEvent.
 using GuestEvent = Ag::AlignedBaseN_t<BaseGuestEvent, 16>;
-
-//! @brief An object which manages messages marshalled out of the emulator
-//! thread and into an observer thread.
-class MOODYCAMEL_MAYBE_ALIGN_TO_CACHELINE GuestEventQueue
-{
-public:
-    // Construction/Destruction
-    GuestEventQueue();
-    GuestEventQueue(uintptr_t sourceID);
-    ~GuestEventQueue() = default;
-
-    // Accessors
-    uintptr_t getSourceID() const;
-    void setSourceID(uintptr_t sourceID);
-
-    // Operations
-    bool enque(int32_t type, uintptr_t data1, uintptr_t data2);
-    bool tryDeque(GuestEvent &next);
-
-private:
-    // Internal Types
-    using Queue = moodycamel::ReaderWriterQueue<GuestEvent>;
-
-    // Internal Fields
-    Queue _queue;
-    uintptr_t _sourceID;
-};
-
-using GuestEventQueueUPtr = std::unique_ptr<GuestEventQueue, Ag::AlignedDeleter<GuestEventQueue>>;
 
 }} // namespace Mo::Arm
 

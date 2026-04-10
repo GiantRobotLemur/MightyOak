@@ -32,8 +32,8 @@ public:
     virtual ~SessionConnection() = default;
 
     // Overrides
-    virtual void onGuestEvent(Arm::IArmSystem *instance, uint32_t id,
-                              uintptr_t param1, uintptr_t param2) override;
+    virtual void onGuestEvent(Arm::IArmSystem *instance,
+                              const Arm::GuestEvent &e) override;
 private:
     // Internal Fields
     uint32_t _guestEventMessageId = 0;
@@ -108,20 +108,21 @@ SessionConnection::SessionConnection(uint32_t guestEventMessageId) :
 }
 
 // Inherited from IHostConnection.
-void SessionConnection::onGuestEvent(Arm::IArmSystem */*instance*/, uint32_t id,
-                                     uintptr_t param1, uintptr_t param2)
+void SessionConnection::onGuestEvent(Arm::IArmSystem */*instance*/,
+                                     const Arm::GuestEvent &e)
 {
-    if ((id >= Arm::HostMessageID::VSyncOccurred) &&
-        (id < Arm::HostMessageID::LastHostMessage))
+    if ((e.Type >= Arm::HostMessageID::VSyncOccurred) &&
+        (e.Type < Arm::HostMessageID::LastHostMessage))
     {
         // Post the event to the input thread.
         SDL_Event guestEvent;
         Ag::zeroFill(guestEvent);
 
         guestEvent.type = _guestEventMessageId;
-        guestEvent.user.code = static_cast<decltype(guestEvent.user.code)>(id);
-        guestEvent.user.data1 = reinterpret_cast<void *>(param1);
-        guestEvent.user.data2 = reinterpret_cast<void *>(param2);
+        guestEvent.user.timestamp = e.Timestamp;
+        guestEvent.user.code = static_cast<decltype(guestEvent.user.code)>(e.Type);
+        guestEvent.user.data1 = reinterpret_cast<void *>(e.Data1);
+        guestEvent.user.data2 = reinterpret_cast<void *>(e.Data2);
 
         SDL_PushEvent(&guestEvent);
     }

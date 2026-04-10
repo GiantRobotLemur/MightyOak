@@ -12,7 +12,7 @@
 // Header File Includes
 ////////////////////////////////////////////////////////////////////////////////
 #include "ArmEmu/EmuOptions.hpp"
-#include "ArmEmu/GuestEventQueue.hpp"
+#include "ArmEmu/GuestEvent.hpp"
 #include "ArmEmu/SystemContext.hpp"
 #include "ArmEmu/AddressMap.hpp"
 
@@ -318,7 +318,10 @@ void SystemContext::postMessageToHost(uint32_t eventID, uintptr_t data1,
                                       uintptr_t data2)
 {
     if (_host)
-        _host->onGuestEvent(_parentSystem, eventID, data1, data2);
+    {
+        _host->onGuestEvent(_parentSystem,
+                            GuestEvent(_masterClock, eventID, data1, data2));
+    }
 }
 
 //! @brief Adds a device to the internal index.

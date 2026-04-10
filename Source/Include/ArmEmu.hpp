@@ -20,7 +20,7 @@
 #include "ArmEmu/IInterruptController.hpp"
 #include "ArmEmu/IKeyboardController.hpp"
 #include "ArmEmu/IVideoFrameProvider.hpp"
-#include "ArmEmu/GuestEventQueue.hpp"
+#include "ArmEmu/GuestEvent.hpp"
 #include "ArmEmu/SystemContext.hpp"
 #include "ArmEmu/IHostConnection.hpp"
 #include "ArmEmu/ArmSystem.hpp"

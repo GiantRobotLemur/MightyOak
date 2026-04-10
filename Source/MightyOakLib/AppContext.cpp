@@ -66,21 +66,22 @@ uint32_t AppContext::getGuestEventMessageId() const
 
 //! @brief Determines whether an SDL event was posted by the guest system.
 //! @param[in] sdlEvent The event to analyse.
-//! @param[out] id Receives the guest event ID, if successful.
-//! @param[out] param1 Receives the first guest event parameter, if successful.
-//! @param[out] param2 Receives the second guest event parameter, if successful.
-//! @retval true The @p sdlEvent represent a guest system event, @p id,
-//! @p param1 and @p param2 have been updated.
+//! @param[out] e Receives details of the event, if successful.
+//! @retval true The @p sdlEvent represent a guest system event, the contents
+//! of @p e have been updated.
 //! @retval false The event is not from a guest system.
-bool AppContext::isGuestEvent(const SDL_Event *sdlEvent, uint32_t &id,
-                              uintptr_t &param1, uintptr_t &param2) const
+bool AppContext::isGuestEvent(const SDL_Event *sdlEvent,
+                              Arm::GuestEvent &e) const
 {
     if ((_guestMessageId != 0) &&
         (sdlEvent->type == _guestMessageId))
     {
-        id = static_cast<uint32_t>(sdlEvent->user.code);
-        param1 = reinterpret_cast<uintptr_t>(sdlEvent->user.data1);
-        param2 = reinterpret_cast<uintptr_t>(sdlEvent->user.data2);
+        auto &user = sdlEvent->user;
+
+        e.Timestamp = user.timestamp;
+        e.Data1 = reinterpret_cast<uintptr_t>(user.data1);
+        e.Data2 = reinterpret_cast<uintptr_t>(user.data2);
+        e.Type = static_cast<decltype(e.Type)>(user.code);
 
         return true;
     }

@@ -39,8 +39,7 @@ public:
     const Ag::SDL3::Window &getMainWindow() const;
 
     uint32_t getGuestEventMessageId() const;
-    bool isGuestEvent(const SDL_Event *sdlEvent, uint32_t &id,
-                      uintptr_t &param1, uintptr_t &param2) const;
+    bool isGuestEvent(const SDL_Event *sdlEvent, Arm::GuestEvent &e) const;
 
     // Operations
     void initialise(const CliOptions &appOptions);

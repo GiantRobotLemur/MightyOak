@@ -370,14 +370,13 @@ bool SessionRunningState::onMouseButton(uintptr_t context, SDL_Event *event)
 bool SessionRunningState::onGuestEvent(uintptr_t context, SDL_Event *event)
 {
     auto *self = reinterpret_cast<SessionRunningState *>(context);
-    uintptr_t guestParam1, guestParam2;
-    uint32_t guestEventId;
+    Arm::GuestEvent guestEvent;
 
-    if (self->getContext()->isGuestEvent(event, guestEventId, guestParam1, guestParam2))
+    if (self->getContext()->isGuestEvent(event, guestEvent))
     {
-        if (guestEventId == Arm::HostMessageID::FrameBufferReady)
+        if (guestEvent.Type == Arm::HostMessageID::FrameBufferReady)
         {
-            self->onFrameReceived(static_cast<uint32_t>(guestParam1));
+            self->onFrameReceived(static_cast<uint32_t>(guestEvent.Data1));
         }
     }
 

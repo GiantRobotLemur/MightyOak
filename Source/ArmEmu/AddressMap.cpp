@@ -17,7 +17,6 @@
 
 #include "ArmEmu/AddressMap.hpp"
 #include "ArmEmu/ArmSystem.hpp"
-#include "ArmEmu/GuestEventQueue.hpp"
 #include "ArmEmu/SystemContext.hpp"
 
 namespace Mo {

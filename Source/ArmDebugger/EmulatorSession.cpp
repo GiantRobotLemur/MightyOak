@@ -1,7 +1,7 @@
 //! @file ArmDebugger/EmulatorSession.cpp
 //! @brief The definition of an object which manages the running emulated machine.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2024
+//! @date 2024-2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -23,14 +23,10 @@
 
 #include "Ag/QtInterop/Conversion.hpp"
 #include "ArmEmu/ArmSystemBuilder.hpp"
-#include "ArmEmu/GuestEventQueue.hpp"
+#include "ArmEmu/GuestEvent.hpp"
 
 #include "DebuggerApp.hpp"
 #include "Tools.hpp"
-
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
 
 namespace Mo {
 
@@ -66,11 +62,11 @@ public:
     virtual ~DebugSessionConnection() = default;
 
     // Overrides
-    virtual void onGuestEvent(Arm::IArmSystem *instance, uint32_t id,
-                              uintptr_t param1, uintptr_t param2)
+    virtual void onGuestEvent(Arm::IArmSystem *instance,
+                              const Arm::GuestEvent &e)
     {
         if (_session->getEmulator() == instance)
-            _session->onGuestEvent(id, param1, param2);
+            _session->onGuestEvent(e);
     }
 };
 
@@ -341,14 +337,12 @@ void EmulatorSession::create(const Arm::Options &options)
     }
 }
 
-void EmulatorSession::onGuestEvent(uint32_t id, uintptr_t param1, uintptr_t param2)
+void EmulatorSession::onGuestEvent(const Arm::GuestEvent &e)
 {
     // Process guest event in the main thread.
     if (_ioAdapter)
     {
-        Arm::GuestEvent emulatorEvent(0, id, param1, param2);
-
-        _ioAdapter->handleGuestEvent(emulatorEvent);
+        _ioAdapter->handleGuestEvent(e);
     }
 }
 
@@ -559,10 +553,6 @@ bool EmulatorSession::tryFindBreakpointIndex(uint32_t address,
 
     return isFound;
 }
-
-////////////////////////////////////////////////////////////////////////////////
-// Global Function Definitions
-////////////////////////////////////////////////////////////////////////////////
 
 } // namespace Mo
 ////////////////////////////////////////////////////////////////////////////////
