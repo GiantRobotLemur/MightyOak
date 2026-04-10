@@ -14,7 +14,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 // Dependent Header Files
 ////////////////////////////////////////////////////////////////////////////////
-#include <cstdint>
+#include "IHostConnection.hpp"
 
 namespace Mo {
 namespace Arm {
@@ -94,7 +94,7 @@ public:
 
     // Construction/Destruction
     SystemContext(const Options &sysConfig,
-                  GuestEventQueue &eventQueue,
+                  const IHostConnectionSPtr &host,
                   IArmSystem *parentSystem);
     ~SystemContext() = default;
 
@@ -127,7 +127,7 @@ public:
     void scheduleTaskDeltaCycles(GuestTask *task, uint32_t cpuCycleDelta);
     void scheduleTaskDeltaTicks(GuestTask *task, uint64_t masterTickDelta);
     bool unscheduleTask(GuestTask *taskToRemove);
-    bool postMessageToHost(uint32_t eventID, uintptr_t data1, uintptr_t data2);
+    void postMessageToHost(uint32_t eventID, uintptr_t data1, uintptr_t data2);
     void addDevice(IHardwareDevicePtr device);
     void connectAllDevices(IHardwareDeviceCollection &allDevices,
                            bool resetIndex = true);
@@ -143,7 +143,7 @@ private:
     using HardwareMap = std::unordered_map<Ag::String, IHardwareDevicePtr>;
 
     // Internal Fields
-    GuestEventQueue &_eventQueue;
+    IHostConnectionSPtr _host;
     IArmSystem *_parentSystem;
     GuestTask *_taskQueueHead;
     HardwareMap _devicesByName;

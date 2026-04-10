@@ -117,7 +117,7 @@ protected:
         opts.setRamSizeKb(1024);
 
         _system = std::make_unique<MemcSystem>(opts, std::move(devicePool),
-                                               readMap, writeMap);
+                                               readMap, writeMap, nullptr);
 
         // Load the embedded mode test ROM.
         size_t romByteCount;

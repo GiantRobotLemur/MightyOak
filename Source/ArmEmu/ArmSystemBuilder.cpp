@@ -75,6 +75,22 @@ void ArmSystemBuilder::setDiagnosticsEnabled(bool isEnabled)
     _enableDiagnostics = isEnabled;
 }
 
+//! @brief Gets the implementation which connects the constructed emulator to
+//! the host which manages it.
+const IHostConnectionSPtr &ArmSystemBuilder::getHostConnection() const
+{
+    return _hostConnection;
+}
+
+//! @brief Sets the connection to the host embedded in any created emulator.
+//! @param[in] host The new host connection implementation, possibly nullptr.
+//! @remarks The lifetime of the instance embedded within any created emulator
+//! needs to be managed external to the emulator.
+void ArmSystemBuilder::setHostConnection(const IHostConnectionSPtr &host)
+{
+    _hostConnection = host;
+}
+
 //! @brief Adds a device which the emulated system being built will take
 //! ownership of.
 //! @param[in] device A pointer to the device implementation to transfer
@@ -172,6 +188,8 @@ void ArmSystemBuilder::reset(const Options &baseOptions)
     _readMap.clear();
     _writeMap.clear();
     _devices.clear();
+    _hostConnection = nullptr;
+    _enableDiagnostics = false;
 }
 
 //! @brief Instantiates an appropriate implementation of IArmSystem based on
@@ -196,12 +214,12 @@ IArmSystemUPtr ArmSystemBuilder::createSystem()
                 if (_enableDiagnostics)
                 {
                     sys = new ArmSystem<ArmV2TestSystemTraits<true>>(_baseOptions,
-                        std::move(_devices), _readMap, _writeMap);
+                        std::move(_devices), _readMap, _writeMap, _hostConnection);
                 }
                 else
                 {
                     sys = new ArmSystem<ArmV2TestSystemTraits<false>>(_baseOptions,
-                        std::move(_devices),_readMap, _writeMap);
+                        std::move(_devices),_readMap, _writeMap, _hostConnection);
                 }
             }
             else if (_baseOptions.getProcessorVariant() == ProcessorModel::ARM250)
@@ -210,12 +228,12 @@ IArmSystemUPtr ArmSystemBuilder::createSystem()
                 if (_enableDiagnostics)
                 {
                     sys = new ArmSystem<ArmV2aSTestSystemTraits<true>>(_baseOptions,
-                        std::move(_devices),_readMap, _writeMap);
+                        std::move(_devices),_readMap, _writeMap, _hostConnection);
                 }
                 else
                 {
                     sys = new ArmSystem<ArmV2aSTestSystemTraits<false>>(_baseOptions,
-                        std::move(_devices), _readMap, _writeMap);
+                        std::move(_devices), _readMap, _writeMap, _hostConnection);
                 }
 
             }
@@ -225,12 +243,12 @@ IArmSystemUPtr ArmSystemBuilder::createSystem()
                 if (_enableDiagnostics)
                 {
                     sys = new ArmSystem<ArmV2aTestSystemTraits<true>>(_baseOptions,
-                        std::move(_devices), _readMap, _writeMap);
+                        std::move(_devices), _readMap, _writeMap, _hostConnection);
                 }
                 else
                 {
                     sys = new ArmSystem<ArmV2aTestSystemTraits<false>>(_baseOptions,
-                        std::move(_devices), _readMap, _writeMap);
+                        std::move(_devices), _readMap, _writeMap, _hostConnection);
                 }
             }
             else
@@ -251,12 +269,12 @@ IArmSystemUPtr ArmSystemBuilder::createSystem()
                 if (_enableDiagnostics)
                 {
                     sys = new ArmSystem<ArmV2MemcSystemTraits<true>>(_baseOptions,
-                        std::move(_devices), _readMap, _writeMap);
+                        std::move(_devices), _readMap, _writeMap, _hostConnection);
                 }
                 else
                 {
                     sys = new ArmSystem<ArmV2MemcSystemTraits<false>>(_baseOptions,
-                        std::move(_devices), _readMap, _writeMap);
+                        std::move(_devices), _readMap, _writeMap, _hostConnection);
                 }
             }
             else if (_baseOptions.getProcessorVariant() == ProcessorModel::ARM250)
@@ -264,12 +282,12 @@ IArmSystemUPtr ArmSystemBuilder::createSystem()
                 if (_enableDiagnostics)
                 {
                     sys = new ArmSystem<ArmV2aSMemcSystemTraits<true>>(_baseOptions,
-                        std::move(_devices), _readMap, _writeMap);
+                        std::move(_devices), _readMap, _writeMap, _hostConnection);
                 }
                 else
                 {
                     sys = new ArmSystem<ArmV2aSMemcSystemTraits<false>>(_baseOptions,
-                        std::move(_devices), _readMap, _writeMap);
+                        std::move(_devices), _readMap, _writeMap, _hostConnection);
                 }
             }
             else if (_baseOptions.getProcessorVariant() == ProcessorModel::ARM3)
@@ -277,12 +295,12 @@ IArmSystemUPtr ArmSystemBuilder::createSystem()
                 if (_enableDiagnostics)
                 {
                     sys = new ArmSystem<ArmV2aMemcSystemTraits<true>>(_baseOptions,
-                        std::move(_devices), _readMap, _writeMap);
+                        std::move(_devices), _readMap, _writeMap, _hostConnection);
                 }
                 else
                 {
                     sys = new ArmSystem<ArmV2aMemcSystemTraits<false>>(_baseOptions,
-                        std::move(_devices), _readMap, _writeMap);
+                        std::move(_devices), _readMap, _writeMap, _hostConnection);
                 }
             }
             else

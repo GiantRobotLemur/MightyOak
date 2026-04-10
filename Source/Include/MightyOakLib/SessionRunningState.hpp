@@ -18,6 +18,7 @@
 #include <vector>
 
 #include <SDL3/SDL.h>
+#include <Ag/Sdl3Tools.hpp>
 
 #include "AppState.hpp"
 
@@ -53,12 +54,13 @@ protected:
 
 private:
     // Internal Functions
-    static bool onRenderFrame(uintptr_t context, double timeDelta);
     static bool onKeyDown(uintptr_t context, SDL_Event *event);
     static bool onKeyUp(uintptr_t context, SDL_Event *event);
     static bool onMouseMotion(uintptr_t context, SDL_Event *event);
     static bool onMouseButton(uintptr_t context, SDL_Event *event);
-    bool renderFrame();
+    static bool onGuestEvent(uintptr_t context, SDL_Event *event);
+    void onFrameReceived(uint32_t frameId);
+    void onFrameConfigChanged(const Arm::FrameGeometry &newGeometry);
 
     // Internal Fields
     std::thread _emulatorThread;
@@ -66,11 +68,9 @@ private:
     SDL_Texture *_texture;
     Arm::IKeyboardController *_keyboard;
     Arm::IVideoFrameProvider *_frameProvider;
-    std::vector<uint8_t> _rawFrameBuffer;
+    Arm::FrameGeometry _currentFrameGeometry;
     std::vector<uint32_t> _argb32Buffer;
     uint32_t _palette[256];
-    uint32_t _lastWidth;
-    uint32_t _lastHeight;
 };
 
 } // namespace Mo

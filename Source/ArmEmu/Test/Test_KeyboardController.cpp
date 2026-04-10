@@ -43,7 +43,7 @@ protected:
     AcornKeyboardController *_keyboard;
 
     KeyboardControllerTest() :
-        _context(_defaultOptions, _eventQueue, nullptr),
+        _context(_defaultOptions, nullptr, nullptr),
         _memc(_defaultOptions, _readMap, _writeMap),
         _ioc(nullptr),
         _keyboard(nullptr)

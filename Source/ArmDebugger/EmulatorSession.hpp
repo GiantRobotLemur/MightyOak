@@ -77,6 +77,7 @@ public:
     bool tryFindBreakpoint(uint32_t address, bool isLogicalAddress, uint16_t &id) const;
 
     void create(const Arm::Options &options);
+    void onGuestEvent(uint32_t id, uintptr_t param1, uintptr_t param2);
 
 public slots:
     void destroy();
@@ -97,7 +98,6 @@ signals:
     void breakpointsChanged(const EmulatorSession *session);
 
 private slots:
-    void onPollEmulator();
     void onExecutionComplete();
 private:
     // Internal Types
@@ -106,11 +106,8 @@ private:
 
     // Internal Functions
     bool tryFindBreakpointIndex(uint32_t address, size_t &index) const;
-    void beginPollingEmulator();
-    void endPollingEmulator();
 
     // Internal Fields
-    QTimer _emulatorPollTimer;
     QEmulatorFutureWatcher _emulatorWatcher;
     Arm::IArmSystemUPtr _emulator;
     Arm::BootProgressMonitor *_diagnostic;

@@ -324,7 +324,7 @@ GTEST_TEST(DiagnosticsTest, NullSinkNoCallbacks)
     opts.setSystemRom(SystemROMPreset::Custom);
     opts.setRamSizeKb(1024);
 
-    MemcSystem system(opts, HardwareDevicePool(), AddressMap(), AddressMap());
+    MemcSystem system(opts, HardwareDevicePool(), AddressMap(), AddressMap(), nullptr);
 
     size_t romByteCount;
     const uint8_t *romData = getMemcTestRomData(romByteCount);
@@ -356,7 +356,7 @@ GTEST_TEST(DiagnosticsTest, InstructionTraceCaptures)
     HardwareDevicePool devicePool;
     devicePool.emplace_back(std::make_unique<RingBufferTrace>(256));
 
-    MemcSystem system(opts, std::move(devicePool), AddressMap(), AddressMap());
+    MemcSystem system(opts, std::move(devicePool), AddressMap(), AddressMap(), nullptr);
 
     RingBufferTrace *trace = nullptr;
     ASSERT_TRUE(system.tryFindTypedDevice("DiagnosticSink", trace));

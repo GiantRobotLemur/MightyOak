@@ -32,7 +32,10 @@ ag_add_library(ArmEmu   FOLDER      ARM
                                     "I2CBus.hpp"
                                     "PCF8583.cpp"
                                     "PCF8583.hpp"
+                                    "IVideoFrameProvider.cpp"
                                     "${MO_INCLUDE_DIR}/ArmEmu/IVideoFrameProvider.hpp"
+                                    "VideoFrameSampler.cpp"
+                                    "VideoFrameSampler.hpp"
                                     "MEMC.inl"
                                     "VIDC10.inl"
                                     "ArmSystemBuilder.cpp"
@@ -44,6 +47,7 @@ ag_add_library(ArmEmu   FOLDER      ARM
                                     "SystemContext.cpp"
                                     "${MO_INCLUDE_DIR}/ArmEmu/SystemContext.hpp"
                                     "${MO_INCLUDE_DIR}/ArmEmu/HostMessageID.hpp"
+                                    "${MO_INCLUDE_DIR}/ArmEmu/IHostConnection.hpp"
                                     "ArmSystem.cpp"
                                     "${MO_INCLUDE_DIR}/ArmEmu/ArmSystem.hpp"
                                     "${MO_INCLUDE_DIR}/ArmEmu/IDiagnosticSink.hpp"
@@ -75,19 +79,7 @@ source_group(Tools FILES
              "ArmCore.hpp"
              "ArmCore.cpp")
 
-source_group(Emulation FILES
-             "Hardware.inl"
-             "TestBedHardware.inl"
-             "MEMC.inl"
-             "IOC.cpp"
-             "IOC.hpp"
-             "VIDC10.inl"
-             "AcornKeyboardController.cpp"
-             "AcornKeyboardController.hpp"
-             "I2CBus.cpp"
-             "I2CBus.hpp"
-             "PCF8583.cpp"
-             "PCF8583.hpp"
+source_group(Processor FILES
              "RegisterFile.inl"
              "ARMv2CoreRegisterFile.inl"
              "AluInstructions.inl"
@@ -109,6 +101,7 @@ source_group(Interface FILES
              "AddressMap.cpp"
              "${MO_INCLUDE_DIR}/ArmEmu/AddressMap.hpp"
              "${MO_INCLUDE_DIR}/ArmEmu/IKeyboardController.hpp"
+             "IVideoFrameProvider.cpp"
              "${MO_INCLUDE_DIR}/ArmEmu/IVideoFrameProvider.hpp"
              "${MO_INCLUDE_DIR}/ArmEmu/IKeyboardController.hpp"
              "ArmSystemBuilder.cpp"
@@ -122,6 +115,10 @@ source_group(Interface FILES
              "${MO_INCLUDE_DIR}/ArmEmu/SystemContext.hpp"
              "ArmSystem.cpp"
              "${MO_INCLUDE_DIR}/ArmEmu/ArmSystem.hpp"
+             "${MO_INCLUDE_DIR}/ArmEmu/IHostConnection.hpp"
+)
+
+source_group(Diagnostics FILES
              "${MO_INCLUDE_DIR}/ArmEmu/IDiagnosticSink.hpp"
              "RingBufferTrace.cpp"
              "${MO_INCLUDE_DIR}/ArmEmu/RingBufferTrace.hpp"
@@ -132,6 +129,23 @@ source_group(Interface FILES
              "${MO_INCLUDE_DIR}/ArmEmu/CompositeDiagnosticSink.hpp"
              "WatchpointManager.cpp"
              "${MO_INCLUDE_DIR}/ArmEmu/WatchpointManager.hpp"
+)
+
+source_group(Hardware FILES
+             "Hardware.inl"
+             "TestBedHardware.inl"
+             "MEMC.inl"
+             "IOC.cpp"
+             "IOC.hpp"
+             "VIDC10.inl"
+             "VideoFrameSampler.cpp"
+             "VideoFrameSampler.hpp"
+             "AcornKeyboardController.cpp"
+             "AcornKeyboardController.hpp"
+             "I2CBus.cpp"
+             "I2CBus.hpp"
+             "PCF8583.cpp"
+             "PCF8583.hpp"
 )
 
 # Define the unit test harness.

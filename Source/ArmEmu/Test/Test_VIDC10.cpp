@@ -41,6 +41,24 @@ uint32_t makeTimingWord(uint8_t regId, uint16_t timingValue)
     return makeVidcWord(regId, static_cast<uint32_t>(timingValue) << 14);
 }
 
+//! @brief Constructs a value used to write the VIDC control word.
+//! @param[in] clockIndex The index of the clock source to choose.
+//! @param[in] formatIndex The index of the format to choose.
+//! @param[in] dmaRequest The index of the DMA stride timing.
+//! @param[in] interlace Indicates whether interlaced timing is selected.
+//! @param[in] compositeSync Indicates whether composite sync is selected.
+//! @return A word to write to the VIDC.
+uint32_t makeControlWord(uint8_t clockIndex, uint8_t formatIndex,
+                         uint8_t dmaRequest, bool interlace,
+                         bool compositeSync)
+{
+    return 0xE0000000 | (clockIndex & 0x03) |
+        ((formatIndex << VIDCControl::BppShift) & VIDCControl::BppMask) |
+         ((dmaRequest & 0x03) << 4) |
+         (interlace ? 0x40 : 0x00) |
+         (compositeSync ? 0x80 : 0x00);
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // Unit Tests
 ////////////////////////////////////////////////////////////////////////////////
@@ -88,42 +106,6 @@ GTEST_TEST(VIDC10Test, CursorColourRegisters)
 
     // Out-of-range returns 0.
     EXPECT_EQ(vidc.getCursorColour(3), 0);
-}
-
-GTEST_TEST(VIDC10Test, HorizontalTimingRegisters)
-{
-    VIDCDevice vidc;
-
-    uint16_t values[] = { 100, 10, 20, 30, 80, 90, 50, 5 };
-
-    for (uint8_t i = 0; i < 8; ++i)
-    {
-        vidc.writeRegister(makeTimingWord(VIDCRegister::HorizontalBase + i,
-                                          values[i]));
-        EXPECT_EQ(vidc.getHorizontalReg(i), values[i])
-            << "Horizontal register " << static_cast<int>(i);
-    }
-
-    // Out-of-range returns 0.
-    EXPECT_EQ(vidc.getHorizontalReg(8), 0);
-}
-
-GTEST_TEST(VIDC10Test, VerticalTimingRegisters)
-{
-    VIDCDevice vidc;
-
-    uint16_t values[] = { 312, 3, 18, 34, 290, 296, 100, 108 };
-
-    for (uint8_t i = 0; i < 8; ++i)
-    {
-        vidc.writeRegister(makeTimingWord(VIDCRegister::VerticalBase + i,
-                                          values[i]));
-        EXPECT_EQ(vidc.getVerticalReg(i), values[i])
-            << "Vertical register " << static_cast<int>(i);
-    }
-
-    // Out-of-range returns 0.
-    EXPECT_EQ(vidc.getVerticalReg(8), 0);
 }
 
 GTEST_TEST(VIDC10Test, SoundFrequencyRegister)
@@ -195,17 +177,23 @@ GTEST_TEST(VIDC10Test, DisplayDimensions)
 {
     VIDCDevice vidc;
 
+    vidc.writeRegister(makeControlWord(3, 2, 2, false, false));
+
     // Set up a standard MODE 12 (640x256) configuration.
     // HDSR = 70, HDER = 390 => width = (390 - 70) * 2 = 640
     vidc.writeRegister(makeTimingWord(VIDCRegister::HDSR, 70));
     vidc.writeRegister(makeTimingWord(VIDCRegister::HDER, 390));
 
+    // VDSR = 39, VDER = 294 => height = 294 - 39 = 255 - is what gets actually programmed.
     // VDSR = 34, VDER = 290 => height = 290 - 34 = 256
     vidc.writeRegister(makeTimingWord(VIDCRegister::VDSR, 34));
     vidc.writeRegister(makeTimingWord(VIDCRegister::VDER, 290));
 
-    EXPECT_EQ(vidc.getDisplayWidth(), 640u);
-    EXPECT_EQ(vidc.getDisplayHeight(), 256u);
+    vidc.updateFrameConfiguration();
+    FrameGeometry geometry(vidc.getFrameConfiguration());
+
+    EXPECT_EQ(geometry.getDisplayWidth(), 640u);
+    EXPECT_EQ(geometry.getDisplayHeight(), 256u);
 }
 
 GTEST_TEST(VIDC10Test, DisplayDimensionsZeroWhenInvalid)
@@ -215,12 +203,16 @@ GTEST_TEST(VIDC10Test, DisplayDimensionsZeroWhenInvalid)
     // HDER <= HDSR => width should be 0.
     vidc.writeRegister(makeTimingWord(VIDCRegister::HDSR, 100));
     vidc.writeRegister(makeTimingWord(VIDCRegister::HDER, 50));
-    EXPECT_EQ(vidc.getDisplayWidth(), 0u);
 
     // VDER <= VDSR => height should be 0.
     vidc.writeRegister(makeTimingWord(VIDCRegister::VDSR, 200));
     vidc.writeRegister(makeTimingWord(VIDCRegister::VDER, 100));
-    EXPECT_EQ(vidc.getDisplayHeight(), 0u);
+
+    vidc.updateFrameConfiguration();
+    FrameGeometry geometry(vidc.getFrameConfiguration());
+
+    EXPECT_EQ(geometry.getDisplayWidth(), 0u);
+    EXPECT_EQ(geometry.getDisplayHeight(), 0u);
 }
 
 GTEST_TEST(VIDC10Test, StereoRegisters)

@@ -24,6 +24,8 @@
 #include "ArmEmu/SystemContext.hpp"
 #include "ArmEmu/IVideoFrameProvider.hpp"
 #include "ArmEmu/IInterruptController.hpp"
+#include "ArmEmu/SystemContext.hpp"
+#include "VideoFrameSampler.hpp"
 
 namespace Mo {
 namespace Arm {
@@ -134,6 +136,9 @@ private:
     IInterruptController *_irqController;
     SystemContext *_context;
 
+    //! @brief An object to manage sampling the frame buffer.
+    VideoFrameSampler _frameSamples;
+
     //! @brief A pointer to the host block representing the physical RAM of
     //! the guest system.
     void *_physicalRam;
@@ -168,11 +173,30 @@ private:
     //! @brief Stereo image registers (8 entries, 3-bit stereo position).
     uint8_t _stereoPositions[VIDCRegister::StereoCount];
 
-    //! @brief Horizontal timing registers (8 entries, 10-bit values).
-    uint16_t _hRegs[VIDCRegister::HorizontalCount];
+    //! @brief Holds the display configuration based on parameters
+    //! written to the horizontal and vertical timing registers and
+    //! the VIDC control register.
+    FrameMetrics _displayConfig;
 
-    //! @brief Vertical timing registers (8 entries, 10-bit values).
-    uint16_t _vRegs[VIDCRegister::VerticalCount];
+    //! @brief The vertical cycle time in scan lines.
+    uint16_t _verticalCycleTicks = 0;
+
+    //! @brief The vertical sync time in scan lines.
+    uint16_t _verticalSyncTicks = 0;
+
+    //! @brief The horizontal scan time length in 2-pixel units.
+    uint16_t _horizontalCycleTicks = 0;
+
+    //! @brief The horizontal sync time length in 2-pixel units.
+    uint16_t _horizontalSyncTicks = 0;
+
+    //! @brief The HDSR register contents, defining the timing of the start of
+    //! the horizontal display, but dependent upon the current colour depth.
+    uint16_t _horizontalDisplayStart = 0;
+
+    //! @brief The HDER register contents, defining the timing of the end of
+    //! the horizontal display, but dependent upon the current colour depth.
+    uint16_t _horizontalDisplayEnd = 0;
 
     //! @brief Sound frequency register (8-bit, bit 8 is test only).
     uint8_t _soundFreq;
@@ -194,10 +218,53 @@ private:
     ///////////////////////////////////////////////////////////////////////////
     // Internal Functions
     ///////////////////////////////////////////////////////////////////////////
+    //! @brief Copies data from a circular buffer in emulated physical memory
+    //! to a host buffer as if it were transferred via DMA.
+    //! @param[in] target The buffer to receive the data, already set to the
+    //! correct size.
+    //! @param[in] initAddr The guest address of the first byte of display data
+    //! to sample.
+    //! @param[in] startAddr The guest address of the beginning of the circular
+    //! buffer being sampled.
+    //! @param[in] endAddr The guest address of the end of the circular buffer
+    //! begin sampled.
+    //! @return The count of bytes copied to @p target.
+    uint32_t transferDMADisplayData(Ag::ByteBlock &target, uint32_t initAddr,
+                                    uint32_t startAddr, uint32_t endAddr)
+    {
+        // Ensure the circular buffer has a valid definition.
+        if (startAddr >= endAddr)
+            return 0;
+
+        size_t dmaBufferSize = endAddr - startAddr;
+        size_t dmaOffset = (initAddr >= endAddr) ? startAddr : initAddr;
+
+        const uint8_t *ram = reinterpret_cast<const uint8_t *>(_physicalRam);
+        size_t maxBytesToCopy = std::min(target.size(), dmaBufferSize);
+        size_t bytesWritten;
+
+        for (bytesWritten = 0; bytesWritten < maxBytesToCopy; )
+        {
+            // Calculate the amount of contiguous data we can copy.
+            size_t blockSize = std::min(endAddr - dmaOffset,
+                                        maxBytesToCopy - bytesWritten);
+
+            // Transfer the block.
+            memcpy(target.data() + bytesWritten,
+                   ram + dmaOffset, blockSize);
+
+            // Move on to the second part of the buffer.
+            dmaOffset = startAddr;
+            bytesWritten += blockSize;
+        }
+
+        return static_cast<uint32_t>(bytesWritten);
+    }
+
     void scheduleVSync()
     {
         uint64_t frameTicks, vsyncTicks;
-        
+
         if (getFrameTiming(frameTicks, vsyncTicks))
         {
             _isInVSync = false;
@@ -211,47 +278,97 @@ private:
         }
     }
 
-    //! @brief Handles the system event when the VSync signal changes state.
-    //! @param[in] guestContext The context of the system processing the event.
-    //! @param[in] taskContext A raw pointer to the VIDC10 object.
-    static void onVSyncStart(SystemContext &guestContext, uintptr_t taskContext)
+    void onVSyncStart()
     {
-        VIDC10 *self = reinterpret_cast<VIDC10 *>(taskContext);
-
-        bool wasVSyncActive = self->_isInVSync;
-        bool isInVSync = !wasVSyncActive;
-        self->_isInVSync = isInVSync;
+        bool wasVSyncActive = _isInVSync;
+        _isInVSync = !wasVSyncActive;
 
         // Raise VSync IRQ (IOC IRQ A bit 3) for the duration of VSync
         // also IOC.C7 needs to be high during VSync
-        if (self->_irqController != nullptr)
-            self->_irqController->setVSyncState(isInVSync);
+        if (_irqController != nullptr)
+            _irqController->setVSyncState(_isInVSync);
 
-        if (isInVSync)
+        if (_isInVSync)
         {
-            // Post a message to the host to signal that a frame boundary occurred.
-            guestContext.postMessageToHost(Ag::toScalar(HostMessageID::VSyncOccurred), 0, 0);
+            // Copy the video and cursor data from memory to complete the
+            // sample of the video frame.
+            FrameSample &currentFrame = _frameSamples.getCurrentFrame();
+
+            transferDMADisplayData(currentFrame.getDisplayData(),
+                                   getVideoInitAddr(),
+                                   getVideoStartAddr(),
+                                   getVideoEndAddr());
+
+            // There is no Cstart or Cend register, only Cinit and a size
+            // calculated from the display timings, which should be initialised
+            // in the current frame.
+            size_t cursorBufferEnd = currentFrame.getCursorData().size() +
+                                     getCursorInitAddr();
+
+            transferDMADisplayData(currentFrame.getCursorData(),
+                                   getCursorInitAddr(),
+                                   getCursorInitAddr(),
+                                   static_cast<uint32_t>(cursorBufferEnd));
+
+            // Start the next frame.
+            uint32_t pixelClock = getPixelRateHz();
+
+            uint64_t ticksPerLine = (_context->getMasterClockFrequency() *
+                                    static_cast<uint64_t>(_horizontalCycleTicks)) / pixelClock;
+
+            uint32_t lastFrameIndex = _frameSamples.getCurrentFrameIndex();
+
+            _frameSamples.onVSyncStart(_context->getMasterClockTicks(),
+                                       ticksPerLine,
+                                       _displayConfig.VerticalDisplayStart);
+
+            if (currentFrame.hasFrame())
+            {
+                // Post a message to the host to signal that a frame boundary occurred
+                // which identifies the sample containing the frame data.
+                _context->postMessageToHost(HostMessageID::FrameBufferReady,
+                                            lastFrameIndex, 0);
+            }
+        }
+        else
+        {
+            // Start sampling the new frame.
+            updateFrameConfiguration();
+
+            // Use the current format or previous frame to initialise the next
+            // frame to be sampled.
+            _frameSamples.onVSyncEnd(this);
         }
 
         // Schedule the next VSync.
-        if (self->_vSyncActive)
+        if (_vSyncActive)
         {
-            uint64_t syncPeriod = 0;
+            uint64_t syncPeriod;
             uint64_t framePeriod;
 
-            if (self->getFrameTiming(framePeriod, syncPeriod))
+            if (getFrameTiming(framePeriod, syncPeriod))
             {
-                uint64_t ticks = isInVSync ? syncPeriod : (framePeriod - syncPeriod);
+                uint64_t ticks = _isInVSync ? syncPeriod : (framePeriod - syncPeriod);
 
-                guestContext.scheduleTaskDeltaTicks(&self->_vSyncTask, ticks);
+                _context->scheduleTaskDeltaTicks(&_vSyncTask, ticks);
             }
             else
             {
-                self->_vSyncActive = false;
+                _vSyncActive = false;
             }
         }
     }
 
+    //! @brief Handles the system event when the VSync signal changes state.
+    //! @param[in] guestContext The context of the system processing the event.
+    //! @param[in] taskContext A raw pointer to the VIDC10 object.
+    static void onVSyncStartCallback(SystemContext &guestContext, uintptr_t taskContext)
+    {
+        VIDC10 *self = reinterpret_cast<VIDC10 *>(taskContext);
+        self->_context = &guestContext;
+
+        self->onVSyncStart();
+    }
 public:
     ///////////////////////////////////////////////////////////////////////////
     // Construction/Destruction
@@ -276,10 +393,8 @@ public:
         std::memset(_palette, 0, sizeof(_palette));
         std::memset(_cursorColours, 0, sizeof(_cursorColours));
         std::memset(_stereoPositions, 0, sizeof(_stereoPositions));
-        std::memset(_hRegs, 0, sizeof(_hRegs));
-        std::memset(_vRegs, 0, sizeof(_vRegs));
 
-        _vSyncTask.defineTask(&onVSyncStart, this);
+        _vSyncTask.defineTask(&onVSyncStartCallback, this);
     }
 
     virtual ~VIDC10() = default;
@@ -364,22 +479,6 @@ public:
         return (index < VIDCRegister::CursorColourCount) ? _cursorColours[index] : 0;
     }
 
-    //! @brief Gets a horizontal timing register value.
-    //! @param[in] index The register index (0-7), corresponding to HCR, HSWR, HBSR,
-    //! HDSR, HDER, HBER, HCSR, HIR.
-    uint16_t getHorizontalReg(uint8_t index) const
-    {
-        return (index < VIDCRegister::HorizontalCount) ? _hRegs[index] : 0;
-    }
-
-    //! @brief Gets a vertical timing register value.
-    //! @param[in] index The register index (0-7), corresponding to VCR, VSWR, VBSR,
-    //! VDSR, VDER, VBER, VCSR, VCER.
-    uint16_t getVerticalReg(uint8_t index) const
-    {
-        return (index < VIDCRegister::VerticalCount) ? _vRegs[index] : 0;
-    }
-
     //! @brief Gets the control register value.
     uint8_t getControlReg() const
     {
@@ -399,6 +498,12 @@ public:
         return static_cast<uint8_t>(1) << ((_controlReg & VIDCControl::BppMask) >> VIDCControl::BppShift);
     }
 
+    //! @brief Determines if the current pixel format is 8-bits.
+    bool is8BitPalette() const
+    {
+        return Ag::Bin::extractBits<uint8_t, VIDCControl::BppShift, 2>(_controlReg) == 3;
+    }
+
     //! @brief Gets the pixel clock rate in Hz from the control register.
     uint32_t getPixelRateHz() const
     {
@@ -408,33 +513,36 @@ public:
     //! @brief Gets the display width in pixels derived from horizontal timing.
     uint16_t getDisplayWidth() const
     {
-        // The horizontal display region is between HDSR and HDER.
-        // Each timing register value is in units of 2 pixels at the pixel rate.
-        uint16_t hdsr = _hRegs[VIDCRegister::HDSR - VIDCRegister::HorizontalBase];
-        uint16_t hder = _hRegs[VIDCRegister::HDER - VIDCRegister::HorizontalBase];
-
-        if (hder > hdsr)
-        {
-            return (hder - hdsr) * 2;
-        }
-
-        return 0;
+        return (_displayConfig.HorizontalDisplayEnd > _displayConfig.HorizontalDisplayStart) ?
+            (_displayConfig.HorizontalDisplayEnd - _displayConfig.HorizontalDisplayStart) : 0;
     }
 
     //! @brief Gets the display height in lines derived from vertical timing.
     uint16_t getDisplayHeight() const
     {
-        // The vertical display region is between VDSR and VDER.
-        // Each timing register value is in units of 1 raster line.
-        uint16_t vdsr = _vRegs[VIDCRegister::VDSR - VIDCRegister::VerticalBase];
-        uint16_t vder = _vRegs[VIDCRegister::VDER - VIDCRegister::VerticalBase];
+        return (_displayConfig.VerticalDisplayEnd > _displayConfig.VerticalDisplayStart) ?
+            (_displayConfig.VerticalDisplayEnd - _displayConfig.VerticalDisplayStart) : 0;
+    }
 
-        if (vder > vdsr)
-        {
-            return vder - vdsr;
-        }
+    //! @brief Ensure the display configuration contains correct values based on
+    //! control and timing register contents.
+    void updateFrameConfiguration()
+    {
+        // Fix up values which vary according to pixel format.
+        // 
+        // See page 15 of VIDC10 data sheet for the following values.
+        static const uint16_t clockOffsets[] = { 19, 11, 7, 5 };
+        static const AcornPixelFormat formats[] = { AcornPixelFormat::Palettised1Bpp,
+                                                    AcornPixelFormat::Palettised2Bpp,
+                                                    AcornPixelFormat::Palettised4Bpp,
+                                                    AcornPixelFormat::Palettised8BppVIDC10 };
 
-        return 0;
+        uint8_t formatIndex = Ag::Bin::extractBits<uint8_t, VIDCControl::BppShift, 2>(_controlReg);
+        uint16_t clockOffset = clockOffsets[formatIndex];
+
+        _displayConfig.HorizontalDisplayStart = (_horizontalDisplayStart * 2) - clockOffset;
+        _displayConfig.HorizontalDisplayEnd = (_horizontalDisplayEnd * 2) - clockOffset;
+        _displayConfig.DisplayFormat = formats[formatIndex];
     }
 
     //! @brief Indicates whether the MEMC is generating reads of video data
@@ -484,23 +592,43 @@ public:
         uint8_t regId = Ag::Bin::extractBits<uint8_t, 26, 6>(value);
         bool timingChanged = false;
 
+        // Update the current frame sample with changes.
+        FrameSample &sample = _frameSamples.getCurrentFrame();
+        int16_t scanLine = (_context == nullptr) ? 0 :
+            _frameSamples.getScanLineIndex(_context->getMasterClockTicks());
+
         if (regId < VIDCRegister::PaletteCount)
         {
             // Video palette register 0-15.
             // Bits 0-12 hold the 13-bit physical colour (4:4:4 + supremacy).
-            _palette[regId] = Ag::Bin::extractBits<uint16_t, 0, 13>(value);
+            uint16_t regValue = Ag::Bin::extractBits<uint16_t, 0, 13>(value);
+            _palette[regId] = regValue;
+
+            // Update the colour definition in the frame being sampled.
+            CanonicalColour def = is8BitPalette() ? CanonicalColour::fromVIDC10FramePalette8Bit(regValue) :
+                                                    CanonicalColour::fromVIDC10FramePalette(regValue);
+            sample.addDisplayPaletteChange(scanLine, regId, def);
         }
         else if (regId == VIDCRegister::BorderColour)
         {
             // Border colour register.
-            _borderColour = Ag::Bin::extractBits<uint16_t, 0, 13>(value);
+            uint16_t regValue = Ag::Bin::extractBits<uint16_t, 0, 13>(value);
+
+            _borderColour = regValue;
+            sample.addBorderPaletteChange(scanLine,
+                                          CanonicalColour::fromVIDC10FramePalette(regValue));
         }
         else if (regId >= VIDCRegister::CursorColourBase &&
                  regId < VIDCRegister::CursorColourBase + VIDCRegister::CursorColourCount)
         {
             // Cursor colour registers 1-3 (register IDs 17-19).
-            _cursorColours[regId - VIDCRegister::CursorColourBase] =
-                Ag::Bin::extractBits<uint16_t, 0, 13>(value);
+            const uint16_t regValue = Ag::Bin::extractBits<uint16_t, 0, 13>(value);
+            const uint8_t colourId = regId - VIDCRegister::CursorColourBase;
+
+            _cursorColours[colourId] = regValue;
+            sample.addCursorPaletteChange(scanLine, colourId + 1,
+                                          CanonicalColour::fromVIDC10CursorPalette(regValue,
+                                                                                   colourId + 1));
         }
         else if (regId >= VIDCRegister::StereoBase &&
                  regId < VIDCRegister::StereoBase + VIDCRegister::StereoCount)
@@ -509,21 +637,89 @@ public:
             _stereoPositions[regId - VIDCRegister::StereoBase] =
                 Ag::Bin::extractBits<uint8_t, 0, 3>(value);
         }
-        else if (regId >= VIDCRegister::HorizontalBase &&
-                 regId < VIDCRegister::HorizontalBase + VIDCRegister::HorizontalCount)
+        else if (regId == VIDCRegister::HCR)
         {
-            // Horizontal timing registers (14-bit value, bits 14-23).
-            _hRegs[regId - VIDCRegister::HorizontalBase] =
-                Ag::Bin::extractBits<uint16_t, 14, 10>(value);
+            // HCR counts in units of 2 pixels. Retain the value in
+            // pixel pairs in order to calculate the total pixel clocks
+            // per horizontal line.
+            _horizontalCycleTicks = (Ag::Bin::extractBits<uint16_t, 14, 10>(value) + 1) * 2;
             timingChanged = true;
         }
-        else if (regId >= VIDCRegister::VerticalBase &&
-                 regId < VIDCRegister::VerticalBase + VIDCRegister::VerticalCount)
+        else if (regId == VIDCRegister::HSWR)
         {
-            // Vertical timing registers (14-bit value, bits 14-23).
-            _vRegs[regId - VIDCRegister::VerticalBase] =
-                Ag::Bin::extractBits<uint16_t, 14, 10>(value);
+            // HSWR also counts in units of 2 pixels. Retain the value
+            // in pixel pairs in order to calculate the total pixel clocks
+            // per horizontal line.
+            _horizontalSyncTicks = (Ag::Bin::extractBits<uint16_t, 14, 10>(value) + 1) * 2;
             timingChanged = true;
+        }
+        else if (regId == VIDCRegister::HBSR)
+        {
+            _displayConfig.HorizontalBorderStart = (Ag::Bin::extractBits<uint16_t, 14, 10>(value) * 2) + 1;
+        }
+        else if (regId == VIDCRegister::HDSR)
+        {
+            _horizontalDisplayStart = Ag::Bin::extractBits<uint16_t, 14, 10>(value);
+
+            // NOTE: The value of K in the expression below is dependent upon
+            // the pixel format, so can only be calculated at VSync.
+            //
+            // _displayConfig.HorizontalDisplayStart = (_horizontalDisplayStart * 2) - K
+        }
+        else if (regId == VIDCRegister::HDER)
+        {
+            _horizontalDisplayEnd = Ag::Bin::extractBits<uint16_t, 14, 10>(value);
+
+            // NOTE: The value of K in the expression below is dependent upon
+            // the pixel format, so can only be calculated at VSync.
+            //
+            // _displayConfig.HorizontalDisplayEnd = (_horizontalDisplayEnd * 2) - K
+        }
+        else if (regId == VIDCRegister::HBER)
+        {
+            _displayConfig.HorizontalBorderEnd =
+                (Ag::Bin::extractBits<uint16_t, 14, 10>(value) * 2) + 1;
+        }
+        else if (regId == VIDCRegister::HCSR)
+        {
+            // The Horizontal Cursor Start register is actually 11 bits.
+            // TODO: HCSR is actually 13-bits, but only in hi-res mono mode.
+            _displayConfig.HorizontalCursorStart =
+                Ag::Bin::extractBits<uint16_t, 13, 11>(value) + 6;
+        }
+        else if (regId == VIDCRegister::VCR)
+        {
+            _verticalCycleTicks = Ag::Bin::extractBits<uint16_t, 14, 10>(value) + 1;
+            timingChanged = true;
+        }
+        else if (regId == VIDCRegister::VSWR)
+        {
+            _verticalSyncTicks = Ag::Bin::extractBits<uint16_t, 14, 10>(value) + 1;
+            timingChanged = true;
+        }
+        else if (regId == VIDCRegister::VBSR)
+        {
+            _displayConfig.VerticalBorderStart = Ag::Bin::extractBits<uint16_t, 14, 10>(value) + 1;
+        }
+        else if (regId == VIDCRegister::VDSR)
+        {
+            _displayConfig.VerticalDisplayStart = Ag::Bin::extractBits<uint16_t, 14, 10>(value) + 1;
+        }
+        else if (regId == VIDCRegister::VDER)
+        {
+            _displayConfig.VerticalDisplayEnd = Ag::Bin::extractBits<uint16_t, 14, 10>(value) + 1;
+        }
+        else if (regId == VIDCRegister::VBER)
+        {
+            _displayConfig.VerticalBorderEnd = Ag::Bin::extractBits<uint16_t, 14, 10>(value) + 1;
+        }
+        else if (regId == VIDCRegister::VCSR)
+        {
+            _displayConfig.VerticalCursorStart = Ag::Bin::extractBits<uint16_t, 14, 10>(value) + 1;
+        }
+        else if (regId == VIDCRegister::VCER)
+        {
+            _displayConfig.VerticalCursorEnd = Ag::Bin::extractBits<uint16_t, 14, 10>(value) + 1;
         }
         else if (regId == VIDCRegister::SoundFreq)
         {
@@ -563,24 +759,13 @@ public:
     {
         totalFrameTicks = vsyncTicks = 0;
 
-        if (_context == nullptr)
-        {
+        if ((_context == nullptr) ||
+            _horizontalCycleTicks == 0 ||
+            _verticalCycleTicks == 0)
             return false;
-        }
 
-        // The frame period is (VCR + 1) horizontal lines, each (HCR + 1) * 2
-        // pixel clock periods wide.
-        uint16_t hcr = _hRegs[VIDCRegister::HCR - VIDCRegister::HorizontalBase];
-        uint16_t vcr = _vRegs[VIDCRegister::VCR - VIDCRegister::VerticalBase];
-
-        if (hcr == 0 || vcr == 0)
-        {
-            return 0;
-        }
-
-        // Total pixel clocks per frame = (HCR + 1) * 2 * (VCR + 1)
-        uint64_t pixelClocksPerLine = static_cast<uint64_t>(hcr + 1) * 2;
-        uint64_t pixelClocksPerFrame = pixelClocksPerLine * static_cast<uint64_t>(vcr + 1);
+        uint64_t pixelClocksPerLine = _horizontalCycleTicks;
+        uint64_t pixelClocksPerFrame = pixelClocksPerLine * _verticalCycleTicks;
 
         // Convert pixel clocks to master clock ticks.
         // Master clock frequency / pixel clock frequency = ticks per pixel clock.
@@ -588,15 +773,10 @@ public:
         uint64_t pixelFreq = getPixelRateHz();
 
         if (pixelFreq == 0)
-        {
-            return 0;
-        }
+            return false;
 
-        uint64_t vswr = _vRegs[VIDCRegister::VSWR - VIDCRegister::VerticalBase];
-        uint64_t pixelClocksPerSync = (vswr + 1) * pixelClocksPerLine;
-
+        uint64_t pixelClocksPerSync = pixelClocksPerLine * _verticalSyncTicks;
         vsyncTicks = (pixelClocksPerSync * masterFreq) / pixelFreq;
-
         totalFrameTicks = (pixelClocksPerFrame * masterFreq) / pixelFreq;
 
         return (vsyncTicks < totalFrameTicks) && (totalFrameTicks != 0);
@@ -694,118 +874,71 @@ public:
     }
 
     // Inherited from IVideoFrameProvider.
-    virtual bool VIDC10::getRawFrame(uint8_t *frameBuffer, size_t frameBufferSize,
-                                     uint32_t palette[256],
-                                     RawFrameInfo &info) const override
+    virtual uint32_t captureDisplayPalette(CanonicalColour *definitions,
+                                           uint32_t count) const override
     {
-        if (!_videoDMAActive || (_physicalRam == nullptr) || (_physicalRamSize == 0))
-            return false;
+        uint32_t safeCount = std::min(count, static_cast<uint32_t>(VIDCRegister::PaletteCount));
 
-        uint16_t width = getDisplayWidth();
-        uint16_t height = getDisplayHeight();
+        auto bpp = getBitsPerPixel();
 
-        if (width == 0 || height == 0)
-            return false;
-
-        uint8_t bpp = getBitsPerPixel();
-
-        switch (bpp)
+        if (bpp == 8)
         {
-        case 1: info.DisplayFormat = AcornPixelFormat::Palettised1Bpp; break;
-        case 2: info.DisplayFormat = AcornPixelFormat::Palettised2Bpp; break;
-        case 4: info.DisplayFormat = AcornPixelFormat::Palettised4Bpp; break;
-        case 8: info.DisplayFormat = AcornPixelFormat::Palettised8Bpp; break;
-        default: info.DisplayFormat = AcornPixelFormat::Palettised1Bpp; break;
-        }
-
-        uint32_t bytesPerRow = (static_cast<uint32_t>(width) * bpp + 7) / 8;
-        size_t totalBytes = static_cast<size_t>(bytesPerRow) * height;
-
-        if (frameBufferSize < totalBytes)
-            return false;
-
-        // Copy raw frame buffer bytes, resolving DMA address wrapping.
-        uint32_t vInit = getVideoInitAddr();
-        uint32_t vStart = getVideoStartAddr();
-        uint32_t vEnd = getVideoEndAddr();
-        const uint8_t *ram = reinterpret_cast<const uint8_t *>(_physicalRam);
-
-        uint32_t dmaAddr = vInit;
-        uint8_t *dest = frameBuffer;
-
-        for (uint32_t y = 0; y < height; ++y)
-        {
-            uint32_t bytesRemaining = bytesPerRow;
-
-            while (bytesRemaining > 0)
+            // There are only 16 palette entries, which are combined with the
+            // target pixel to create a colour.
+            for (uint32_t i = 0; i < safeCount; ++i)
             {
-                uint32_t bytesBeforeWrap;
-
-                if (vEnd > vStart && dmaAddr < vEnd)
-                    bytesBeforeWrap = vEnd - dmaAddr;
-                else
-                    bytesBeforeWrap = bytesRemaining;
-
-                uint32_t chunk = (bytesRemaining < bytesBeforeWrap)
-                    ? bytesRemaining : bytesBeforeWrap;
-
-                uint32_t srcOffset = dmaAddr % _physicalRamSize;
-                std::memcpy(dest, ram + srcOffset, chunk);
-
-                dest += chunk;
-                dmaAddr += chunk;
-                bytesRemaining -= chunk;
-
-                if (vEnd > vStart && dmaAddr >= vEnd)
-                    dmaAddr = vStart;
+                definitions[i] = CanonicalColour::fromVIDC10FramePalette8Bit(_palette[i]);
             }
-        }
-
-        // Build the 256-entry ARGB32 palette.
-        if (bpp <= 4)
-        {
-            // For 1/2/4 BPP, convert the meaningful palette entries.
-            uint32_t colourCount = 1u << bpp;
-
-            for (uint32_t i = 0; i < colourCount; ++i)
-            {
-                palette[i] = vidc13ToARGB32(
-                    getPaletteEntry(static_cast<uint8_t>(i)));
-            }
-
-            // Fill remaining entries with opaque black.
-            for (uint32_t i = colourCount; i < 256; ++i)
-                palette[i] = 0xFF000000;
         }
         else
         {
-            // For 8 BPP, pre-expand all 256 byte values.
-            // Low nibble selects a 13-bit base colour from the palette;
-            // high nibble overrides the green channel (bits [7:4]).
-            for (uint32_t byteVal = 0; byteVal < 256; ++byteVal)
+            for (uint32_t i = 0; i < safeCount; ++i)
             {
-                uint16_t colour13 = getPaletteEntry(
-                    static_cast<uint8_t>(byteVal & 0x0F));
-
-                uint8_t greenOverride = static_cast<uint8_t>(
-                    (byteVal >> 4) & 0x0F);
-
-                colour13 = static_cast<uint16_t>(
-                    (colour13 & ~static_cast<uint16_t>(0x00F0)) |
-                    (static_cast<uint16_t>(greenOverride) << 4));
-
-                palette[byteVal] = vidc13ToARGB32(colour13);
+                definitions[i] = CanonicalColour::fromVIDC10FramePalette(_palette[i]);
             }
         }
 
-        // Fill the frame info.
-        info.DisplayWidth = width;
-        info.DisplayHeight = height;
-        info.BytesPerRow = static_cast<uint16_t>(bytesPerRow);
-        //info.BorderColour = vidc13ToARGB32(getBorderColour());
-
-        return true;
+        return safeCount;
     }
+
+    // Inherited from IVideoFrameProvider.
+    virtual uint32_t captureCursorPalette(CanonicalColour *definitions,
+                                          uint32_t count) const override
+    {
+        uint32_t safeCount = std::min(count, static_cast<uint32_t>(VIDCRegister::CursorColourCount + 1));
+
+        if (safeCount > 0)
+        {
+            // Cursor colour #0 is always transparent.
+            definitions[0] = CanonicalColour::Transparent;
+        }
+
+        for (uint32_t i = 1; i < safeCount; ++i)
+        {
+            definitions[i] = CanonicalColour::fromVIDC10FramePalette(_palette[i - 1]);
+        }
+
+        return safeCount;
+    }
+
+    // Inherited from IVideoFrameProvider.
+    virtual CanonicalColour captureBorderColour() const override
+    {
+        return CanonicalColour::fromVIDC10FramePalette(_borderColour);
+    }
+
+    // Inherited from IVideoFrameProvider.
+    virtual const FrameMetrics &getFrameConfiguration() const override
+    {
+        return _displayConfig;
+    }
+
+    // Inherited from IVideoFrameProvider.
+    virtual const FrameSample *getSampledFrame(uint32_t id) const override
+    {
+        return &_frameSamples.getIndexedFrame(id);
+    }
+
 };
 
 }} // namespace Mo::Arm

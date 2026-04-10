@@ -45,7 +45,6 @@ private:
     using ExecutionUnit = typename TSysTraits::ExecutionUnitType;
 
     // Internal Fields
-    GuestEventQueueUPtr _eventQueue;
     SystemContext _interop;
     Hardware _hardware;
     RegisterFile _registers;
@@ -99,9 +98,9 @@ public:
     //! hardware over and above what the hardware types supplies.
     //! @param[in] options An object describing the preferred configuration of
     //! the emulated system.
-    ArmSystem(const Options &options) :
-        _eventQueue(Ag::createUniqueAligned<GuestEventQueue>(reinterpret_cast<uintptr_t>(static_cast<IArmSystem *>(this)))),
-        _interop(options, *_eventQueue.get(), this),
+    //! @param[in] host An optional reference to a connection to the host system.
+    ArmSystem(const Options &options, const IHostConnectionSPtr &host) :
+        _interop(options, host, this),
         _hardware(options),
         _registers(_hardware),
         _execUnit(_hardware, _registers, _interop),
@@ -127,9 +126,9 @@ public:
     //! @param[in] write The additional mappings of regions of memory which can
     //! be written over and above standard devices, ROM and RAM.
     ArmSystem(const Options &options, HardwareDevicePool &&devices,
-              const AddressMap &read, const AddressMap &write) :
-        _eventQueue(Ag::createUniqueAligned<GuestEventQueue>(reinterpret_cast<uintptr_t>(static_cast<IArmSystem *>(this)))),
-        _interop(options, *_eventQueue.get(), this),
+              const AddressMap &read, const AddressMap &write,
+              const IHostConnectionSPtr &host) :
+        _interop(options, host, this),
         _hardware(options, read, write),
         _registers(_hardware),
         _execUnit(_hardware, _registers, _interop),
@@ -295,12 +294,6 @@ public:
     virtual void raiseHostInterrupt() override
     {
         _hardware.setHostIrq(true);
-    }
-
-    // Inherited from IArmSystem.
-    virtual bool tryGetNextMessage(GuestEvent &next) override
-    {
-        return _eventQueue->tryDeque(next);
     }
 };
 

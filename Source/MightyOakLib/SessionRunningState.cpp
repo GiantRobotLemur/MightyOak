@@ -95,6 +95,9 @@ void expandToARGB32(const uint8_t *raw, const uint32_t *palette,
             break;
 
         case Mo::Arm::AcornPixelFormat::Palettised8Bpp:
+        case Mo::Arm::AcornPixelFormat::Palettised8BppVIDC10:
+            // NOTE: The VIDC10 16-colour palette that combines with the pixel
+            // to create a colour value has been resolved into a 256-colour palette.
             for (; pixel < width; ++pixel)
                 dest[pixel] = palette[src[pixel]];
             break;
@@ -117,12 +120,8 @@ SessionRunningState::SessionRunningState(AppContext *sharedContext) :
     _renderer(nullptr),
     _texture(nullptr),
     _keyboard(nullptr),
-    _frameProvider(nullptr),
-    _lastWidth(0),
-    _lastHeight(0)
+    _frameProvider(nullptr)
 {
-    _rawFrameBuffer.resize(MaxRawFrameBytes);
-    _argb32Buffer.resize(MaxDisplayPixels);
     std::memset(_palette, 0, sizeof(_palette));
 }
 
@@ -168,12 +167,7 @@ std::unique_ptr<Ag::SDL3::EventProcessor> SessionRunningState::configure()
     }
 
     // Create a periodic event processor synchronised to the primary display.
-    auto eventProcessor = std::make_unique<Ag::SDL3::PeriodicEventProcessor>(
-        mainWindow.getDisplayID());
-
-    // Schedule the frame rendering callback.
-    eventProcessor->schedulePeriodicTask(onRenderFrame,
-                                         reinterpret_cast<uintptr_t>(this));
+    auto eventProcessor = std::make_unique<Ag::SDL3::EventProcessor>();
 
     // Register input event handlers.
     Ag::SDL3::EventHandlers &dispatcher = eventProcessor->getEventDispatcher();
@@ -184,6 +178,8 @@ std::unique_ptr<Ag::SDL3::EventProcessor> SessionRunningState::configure()
     dispatcher.registerEventHandler(SDL_EVENT_MOUSE_MOTION, onMouseMotion, ctx);
     dispatcher.registerEventHandler(SDL_EVENT_MOUSE_BUTTON_DOWN, onMouseButton, ctx);
     dispatcher.registerEventHandler(SDL_EVENT_MOUSE_BUTTON_UP, onMouseButton, ctx);
+    dispatcher.registerCustomEventHandler(getContext()->getGuestEventMessageId(),
+                                          onGuestEvent, ctx);
 
     return eventProcessor;
 }
@@ -219,96 +215,97 @@ AppState *SessionRunningState::runInternal()
     return nullptr;
 }
 
-//! @brief Periodic callback invoked at the display refresh rate.
-//! @param[in] context A pointer to the SessionRunningState instance.
-//! @param[in] timeDelta Seconds elapsed since the last call.
-//! @retval true Continue processing.
-//! @retval false Request the event loop to exit.
-bool SessionRunningState::onRenderFrame(uintptr_t context,
-                                        double /*timeDelta*/)
+//! @brief Processes a captured video frame received from the emulated system.
+//! @param[in] frameId The numeric identifier of the sampled frame.
+void SessionRunningState::onFrameReceived(uint32_t frameId)
 {
-    auto *self = reinterpret_cast<SessionRunningState *>(context);
+    if (_frameProvider == nullptr)
+        return;
 
-    // Drain guest events.
-    Arm::IArmSystem *system = self->getContext()->getSession()->getSystem();
-    Arm::GuestEvent event;
+    auto frame = _frameProvider->getSampledFrame(frameId);
 
-    while (system->tryGetNextMessage(event))
+    if (frame == nullptr)
+        return;
+
+    static constexpr uint8_t IsGeomChange = Arm::FrameGeometry::Diff_FrameSize |
+                                            Arm::FrameGeometry::Diff_Format;
+
+    auto &config = frame->getGeometry();
+    auto diff = config.calculateDifferences(_currentFrameGeometry);
+
+    if (diff & IsGeomChange)
     {
-        // Process events as needed. For now, we just drain the queue.
+        // The output video configuration has changed.
+        onFrameConfigChanged(config);
     }
 
-    self->renderFrame();
-
-    return true;
-}
-
-//! @brief Renders the current emulator display frame to the SDL window.
-//! @retval true A frame was rendered.
-//! @retval false No frame was available.
-bool SessionRunningState::renderFrame()
-{
-    Arm::RawFrameInfo info;
-
-    if ((_frameProvider == nullptr) ||
-        !_frameProvider->getRawFrame(_rawFrameBuffer.data(),
-                                     _rawFrameBuffer.size(),
-                                     _palette, info))
-    {
-        return false;
-    }
-
-    // Recreate the SDL texture if the display dimensions have changed.
-    if (info.DisplayWidth != _lastWidth || info.DisplayHeight != _lastHeight)
-    {
-        if (_texture != nullptr)
-            SDL_DestroyTexture(_texture);
-
-        _texture = SDL_CreateTexture(_renderer,
-                                     SDL_PIXELFORMAT_ARGB8888,
-                                     SDL_TEXTUREACCESS_STREAMING,
-                                     static_cast<int>(info.DisplayWidth),
-                                     static_cast<int>(info.DisplayHeight));
-
-        if (_texture == nullptr)
-            return false;
-
-        _lastWidth = info.DisplayWidth;
-        _lastHeight = info.DisplayHeight;
-
-        // Ensure the ARGB32 buffer is large enough.
-        size_t pixelCount = static_cast<size_t>(info.DisplayWidth) * info.DisplayHeight;
-
-        if (_argb32Buffer.size() < pixelCount)
-            _argb32Buffer.resize(pixelCount);
-    }
-
+    // Update the window contents with the captured frame.
     // Expand raw indexed pixels to ARGB32 using the palette.
-    expandToARGB32(_rawFrameBuffer.data(), _palette, _argb32Buffer.data(),
-                   info.DisplayWidth, info.DisplayHeight, info.DisplayFormat,
-                   info.BytesPerRow);
+    auto &palette = frame->getDisplayPalette();
+    auto &format = Arm::getAcornPixelFormatInfo().getSymbolById(config.getDisplayFormat());
+
+    if (format.isHybridPalette())
+    {
+        // Resolve a 256-colour palette which can use each pixel as a look-up
+        // from a 16-colour palette which uses some of the pixel data to provide
+        // a base colour.
+        for (uint32_t i = 0; i < 256; ++i)
+        {
+            const Arm::CanonicalColour &paletteEntry = palette[i & 0x0F];
+
+            _palette[i] = paletteEntry.combineVIDC10LogicalColour(static_cast<uint8_t>(i)).RawValue;
+        }
+    }
+    else if (format.isPalettised())
+    {
+        for (uint16_t i = 0; i < format.getPaletteSize(); ++i)
+        {
+            _palette[i] = palette[i].RawValue;
+        }
+    }
+
+    expandToARGB32(frame->getDisplayData().data(), _palette, _argb32Buffer.data(),
+                   config.getDisplayWidth(), config.getDisplayHeight(),
+                   config.getDisplayFormat(), frame->getDisplayPitch());
 
     // Upload the ARGB32 buffer to the SDL texture.
     SDL_UpdateTexture(_texture, nullptr, _argb32Buffer.data(),
-                      static_cast<int>(info.DisplayWidth * sizeof(uint32_t)));
+                      static_cast<int>(config.getDisplayWidth() * sizeof(uint32_t)));
 
     // Clear and render.
     // Use border colour as clear colour.
+    auto &borderColour = frame->getBorderPalette().front();
+
     // TODO: Refactor to allow palette changes during a frame, for the border
     // and the display frame, too.
-    uint8_t br = 0; // static_cast<uint8_t>((info.BorderColour >> 16) & 0xFF);
-    uint8_t bg = 0; // static_cast<uint8_t>((info.BorderColour >> 8) & 0xFF);
-    uint8_t bb = 0; // static_cast<uint8_t>(info.BorderColour & 0xFF);
-
-    SDL_SetRenderDrawColor(_renderer, br, bg, bb, 255);
+    SDL_SetRenderDrawColor(_renderer, borderColour.getRed(), borderColour.getGreen(), borderColour.getBlue(), 255);
     SDL_RenderClear(_renderer);
 
     // Render the frame buffer texture scaled to fill the window while
     // maintaining the aspect ratio.
     SDL_RenderTexture(_renderer, _texture, nullptr, nullptr);
     SDL_RenderPresent(_renderer);
+}
 
-    return true;
+void SessionRunningState::onFrameConfigChanged(const Arm::FrameGeometry &newGeometry)
+{
+    // Dispose of previous video resources.
+    if (_texture != nullptr)
+        SDL_DestroyTexture(_texture);
+
+    // Create new video resources.
+    _texture = SDL_CreateTexture(_renderer,
+                                 SDL_PIXELFORMAT_ARGB8888,
+                                 SDL_TEXTUREACCESS_STREAMING,
+                                 static_cast<int>(newGeometry.getDisplayWidth()),
+                                 static_cast<int>(newGeometry.getDisplayHeight()));
+
+    size_t bufferSize = static_cast<size_t>(newGeometry.getDisplayWidth()) *
+        static_cast<size_t>(newGeometry.getDisplayHeight()) * 4;
+
+    _argb32Buffer.resize(bufferSize);
+
+    _currentFrameGeometry = newGeometry;
 }
 
 //! @brief Handles SDL key down events and forwards to the keyboard controller.
@@ -364,6 +361,24 @@ bool SessionRunningState::onMouseButton(uintptr_t context, SDL_Event *event)
             keyboard->mouseButtonDown(button);
         else
             keyboard->mouseButtonUp(button);
+    }
+
+    return true;
+}
+
+//! @brief Handles events from the running guest system.
+bool SessionRunningState::onGuestEvent(uintptr_t context, SDL_Event *event)
+{
+    auto *self = reinterpret_cast<SessionRunningState *>(context);
+    uintptr_t guestParam1, guestParam2;
+    uint32_t guestEventId;
+
+    if (self->getContext()->isGuestEvent(event, guestEventId, guestParam1, guestParam2))
+    {
+        if (guestEventId == Arm::HostMessageID::FrameBufferReady)
+        {
+            self->onFrameReceived(static_cast<uint32_t>(guestParam1));
+        }
     }
 
     return true;

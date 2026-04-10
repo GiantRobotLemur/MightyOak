@@ -153,6 +153,11 @@ ROM file path from `Options::getRomPath()`. `Options::findRomImagePath()`
 walks up a directory hierarchy to locate a `ROMs/` folder relative to the
 executable or a configured base path.
 
+The `IHostConnection` interface allows other threads to listen to events generated
+by the running emulator. Its `onGuestEvent()` member function is called by the
+emulator and any logic within should not overly delay its running. It is used to
+report frames of the display captured by the `IVideoFrameProvider` implementation.
+
 #### Key `.inl` Files
 
 | File                            | Purpose                                              |
@@ -170,7 +175,7 @@ executable or a configured base path.
 
 #### Hardware Components
 
-**MemcHardware** (`MemcHardware.hpp/cpp`) — MEMC1/MEMC1a memory controller.
+**MemcHardware** (`MEMC.inl`) — MEMC1/MEMC1a memory controller.
 
 - 64 MB logical address space: RAM (0–32 MB, page-translated), physical RAM
   (32–48 MB), IOC (48–52 MB), VIDC write-only (52–54 MB), MEMC CAM registers
@@ -201,7 +206,7 @@ executable or a configured base path.
 - Optional `IDiagnosticSink` for MMIO read/write logging and interrupt state
   change notifications.
 
-**VIDC10** (`VIDC10.hpp/cpp`) — VL86C310 video controller. Implements
+**VIDC10** (`VIDC10.inl`) — VL86C310 video controller. Implements
 `IVideoFrameProvider`.
 
 - Write-only MMIO; register selected by bits 31:26 of the written word.
@@ -211,9 +216,9 @@ executable or a configured base path.
 - Schedules VSync via `GuestTask` at frame rate derived from timing registers.
 - Owns DMA address fields (Vinit, Vstart, Vend, Cinit) received from MEMC
   register writes; `reset()` clears them and cancels any scheduled VSync.
-- `getRawFrame()` copies raw indexed framebuffer bytes from physical RAM
-  (handling DMA address wrapping), builds a 256-entry ARGB8888 palette
-  (with 8-BPP green-channel override expansion), and returns `RawFrameInfo`.
+- Captures display data and metadata in order to provide the host system with
+  pixel output extracted from hardware registers and physical RAM
+  (handling DMA address wrapping).
 - Registers under device alias `"DISPLAY"` for host-side lookup.
 
 **AcornKeyboardController** (`AcornKeyboardController.cpp`) — KART protocol
@@ -238,19 +243,14 @@ state machine.
 - Auto-incrementing register pointer for sequential read/write access.
 
 **IVideoFrameProvider** (`IVideoFrameProvider.hpp`) — public interface for
-host-side frame capture, derived from `IMMIOBlock`.
+guest-side frame capture, derived from `IMMIOBlock`.
 
-- `getRawFrame()` returns raw indexed framebuffer bytes, a 256-entry ARGB8888
-  palette, and a `RawFrameInfo` struct (Width, Height, BytesPerRow,
-  BitsPerPixel, BorderColour). Designed for future GPU shader-based palette
-  lookup rendering.
-
-**Display** (`Display.hpp/cpp`) — read-side frame renderer.
-
-- Reads framebuffer from MemcHardware RAM using VIDC10 DMA addresses
-  (sourced from `VIDC10` rather than `MemcHardware`).
-- Per-BPP scanline renderers (1, 2, 4, 8 BPP).
-- Converts 13-bit VIDC physical colour to ARGB32 via palette lookup.
+- `captureDisplayPalette(), `captureCursorPalette()`,
+  `captureBorderColour()` and `getFrameConfiguration()` are all used to capture
+  the state of hardware registers.
+- Implementations are responsible for capturing display data encapsulated as
+  FrameSample instances and reporting them to the host via guest events.
+- `getSampledFrame()` is used to obtain a captured frame of display data.
 
 #### Watchpoint System
 
@@ -425,12 +425,12 @@ Namespace `Mo`. SDL3-based application framework:
   via `Options::findRomImagePath()` at startup.
 - `SessionRunningState` — concrete state for active emulation. Creates an SDL3
   renderer, launches the emulator on a background thread, and runs a
-  `PeriodicEventProcessor` on the main thread synchronised to display refresh.
-  Each frame calls `IVideoFrameProvider::getRawFrame()` to capture the indexed
-  framebuffer and palette, expands to ARGB32 on the CPU (1/2/4/8 BPP), and
-  uploads via `SDL_UpdateTexture()`. Looks up `IKeyboardController` and
-  `IVideoFrameProvider` through `IArmSystem::tryFindTypedDevice()` by device
-  name. Forwards SDL key and mouse events to `IKeyboardController`.
+  `EventProcessor` on the main thread to poll for events from the system of
+  emulator, marchalled from the emulator thread via a `IHostConnection`
+  implementation.
+  Looks up `IKeyboardController` and `IVideoFrameProvider` through
+  `IArmSystem::tryFindTypedDevice()` by device name. Forwards SDL key and
+  mouse events to `IKeyboardController`.
 
 ### ArmDebugger — Qt6 GUI Debugger (Optional)
 

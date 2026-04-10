@@ -16,32 +16,38 @@
 #include "MightyOakLib/EmulatorSession.hpp"
 #include "ArmEmu/ArmSystemBuilder.hpp"
 
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
-
 namespace Mo {
 
 namespace {
 ////////////////////////////////////////////////////////////////////////////////
 // Local Data Types
 ////////////////////////////////////////////////////////////////////////////////
+//! @brief An implementation of IHostConnection which connects to an emulator
+//! session.
+class SessionConnection : public Arm::IHostConnection
+{
+public:
+    // Construction/Destruction
+    SessionConnection(uint32_t guestEventMessageId);
+    virtual ~SessionConnection() = default;
 
-////////////////////////////////////////////////////////////////////////////////
-// Local Data
-////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////
-// Local Functions
-////////////////////////////////////////////////////////////////////////////////
+    // Overrides
+    virtual void onGuestEvent(Arm::IArmSystem *instance, uint32_t id,
+                              uintptr_t param1, uintptr_t param2) override;
+private:
+    // Internal Fields
+    uint32_t _guestEventMessageId = 0;
+};
 
 } // Anonymous namespace
 
 ////////////////////////////////////////////////////////////////////////////////
 // EmulatorSession Member Definitions
 ////////////////////////////////////////////////////////////////////////////////
-EmulatorSession::EmulatorSession(const Arm::Options &configuration) :
-    _configuration(configuration)
+EmulatorSession::EmulatorSession(const Arm::Options &configuration,
+                                 uint32_t guestEventId) :
+    _configuration(configuration),
+    _hostConnection(std::make_shared<SessionConnection>(guestEventId))
 {
 }
 
@@ -72,7 +78,9 @@ bool EmulatorSession::createSystem(Ag::String &error)
     try
     {
         Arm::ArmSystemBuilder builder(_configuration);
+        builder.setHostConnection(_hostConnection);
         _system = builder.createSystem();
+
         return true;
     }
     catch (const Ag::Exception &ex)
@@ -88,8 +96,36 @@ bool EmulatorSession::createSystem(Ag::String &error)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// Global Function Definitions
+// SessionConnection Member Definitions
 ////////////////////////////////////////////////////////////////////////////////
+//! @brief Constructs an IHostConnection implementation which passes guest
+//! events on to the SDL input thread.
+//! @param[in] guestEventMessageId The identifier allocated by SDL for encoding
+//! guest events as SDL_Event values.
+SessionConnection::SessionConnection(uint32_t guestEventMessageId) :
+    _guestEventMessageId(guestEventMessageId)
+{
+}
+
+// Inherited from IHostConnection.
+void SessionConnection::onGuestEvent(Arm::IArmSystem */*instance*/, uint32_t id,
+                                     uintptr_t param1, uintptr_t param2)
+{
+    if ((id >= Arm::HostMessageID::VSyncOccurred) &&
+        (id < Arm::HostMessageID::LastHostMessage))
+    {
+        // Post the event to the input thread.
+        SDL_Event guestEvent;
+        Ag::zeroFill(guestEvent);
+
+        guestEvent.type = _guestEventMessageId;
+        guestEvent.user.code = static_cast<decltype(guestEvent.user.code)>(id);
+        guestEvent.user.data1 = reinterpret_cast<void *>(param1);
+        guestEvent.user.data2 = reinterpret_cast<void *>(param2);
+
+        SDL_PushEvent(&guestEvent);
+    }
+}
 
 } // namespace Mo
 ////////////////////////////////////////////////////////////////////////////////

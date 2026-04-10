@@ -51,6 +51,29 @@ public:
     }
 };
 
+
+class DebugSessionConnection : public Arm::IHostConnection
+{
+private:
+    EmulatorSession *_session;
+public:
+    // Construction/Destruction
+    DebugSessionConnection(EmulatorSession *session) :
+        _session(session)
+    {
+    }
+
+    virtual ~DebugSessionConnection() = default;
+
+    // Overrides
+    virtual void onGuestEvent(Arm::IArmSystem *instance, uint32_t id,
+                              uintptr_t param1, uintptr_t param2)
+    {
+        if (_session->getEmulator() == instance)
+            _session->onGuestEvent(id, param1, param2);
+    }
+};
+
 ////////////////////////////////////////////////////////////////////////////////
 // Local Data
 ////////////////////////////////////////////////////////////////////////////////
@@ -72,18 +95,12 @@ Arm::ExecutionMetrics runEmulator(Arm::IArmSystem *emulator)
 ////////////////////////////////////////////////////////////////////////////////
 EmulatorSession::EmulatorSession(QObject *owner) :
     QObject(owner),
-    _emulatorPollTimer(this),
     _emulatorWatcher(this),
     _diagnostic(nullptr),
     _state(EmulatorState::Uninitialised)
 {
-    connect(&_emulatorPollTimer, &QTimer::timeout,
-            this, &EmulatorSession::onPollEmulator);
     connect(&_emulatorWatcher, &QEmulatorFutureWatcher::finished,
             this, &EmulatorSession::onExecutionComplete);
-
-    _emulatorPollTimer.setSingleShot(false);
-    _emulatorPollTimer.setInterval(1);
 
     // DEBUG: Preset a valid config for quick testing.
     auto sessionOptions = _settings.getEmulatorOptions();
@@ -310,6 +327,7 @@ void EmulatorSession::create(const Arm::Options &options)
         _diagnostic = bootMonitor.get();
         builder.addDevice(std::move(bootMonitor));
         builder.setDiagnosticsEnabled(true);
+        builder.setHostConnection(std::make_shared<DebugSessionConnection>(this));
 
         _emulator = builder.createSystem();
         _settings.setEmulatorOptions(options);
@@ -320,6 +338,17 @@ void EmulatorSession::create(const Arm::Options &options)
     catch (const Ag::Exception &error)
     {
         reportError(nullptr, tr("Emulator Error"), error);
+    }
+}
+
+void EmulatorSession::onGuestEvent(uint32_t id, uintptr_t param1, uintptr_t param2)
+{
+    // Process guest event in the main thread.
+    if (_ioAdapter)
+    {
+        Arm::GuestEvent emulatorEvent(0, id, param1, param2);
+
+        _ioAdapter->handleGuestEvent(emulatorEvent);
     }
 }
 
@@ -342,7 +371,7 @@ void EmulatorSession::destroy()
         emit sessionEnded(_emulator.get());
 
         _state = EmulatorState::Uninitialised;
-        _ioAdapter.reset();
+        //_ioAdapter.reset();
         _emulator.reset();
     }
 }
@@ -383,9 +412,6 @@ void EmulatorSession::step()
     if (_emulator && (_state == EmulatorState::Paused))
     {
         _emulator->runSingleStep();
-
-        // Drain the guest event queue.
-        onPollEmulator();
 
         emit sessionSingleStep(_emulator.get());
     }
@@ -431,8 +457,6 @@ void EmulatorSession::resume()
             currentBreakpoint.apply();
         }
 
-        beginPollingEmulator();
-
         // Set the emulator to run without restriction.
         QEmulatorFuture pendingResult = QtConcurrent::run(runEmulator, _emulator.get());
         _emulatorWatcher.setFuture(pendingResult);
@@ -448,10 +472,6 @@ void EmulatorSession::pause()
 
         // Wait for emulator to stop.
         _emulatorWatcher.waitForFinished();
-
-        // Stop polling for event, but drain the guest event queue.
-        endPollingEmulator();
-        onPollEmulator();
     }
 }
 
@@ -474,31 +494,11 @@ void EmulatorSession::stop()
     }
 }
 
-void EmulatorSession::onPollEmulator()
-{
-    if (_emulator)
-    {
-        // Drain the emulator guest event queue.
-        Arm::GuestEvent emulatorEvent;
-
-        while (_emulator->tryGetNextMessage(emulatorEvent))
-        {
-            // Process guest event in the main thread.
-            if (_ioAdapter)
-                _ioAdapter->handleGuestEvent(emulatorEvent);
-        }
-    }
-}
-
 void EmulatorSession::onExecutionComplete()
 {
     if (_emulator)
     {
         _state = EmulatorState::Paused;
-
-        // Stop polling for emulator events and drain the queue.
-        _emulatorPollTimer.stop();
-        onPollEmulator();
 
         size_t breakpointIndex;
         uint32_t lastPC = _emulator->getCoreRegister(Arm::CoreRegister::PC) - 4;
@@ -558,19 +558,6 @@ bool EmulatorSession::tryFindBreakpointIndex(uint32_t address,
     }
 
     return isFound;
-}
-
-void EmulatorSession::beginPollingEmulator()
-{
-    if (_emulator)
-    {
-        _emulatorPollTimer.start();
-    }
-}
-
-void EmulatorSession::endPollingEmulator()
-{
-    _emulatorPollTimer.stop();
 }
 
 ////////////////////////////////////////////////////////////////////////////////

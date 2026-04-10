@@ -22,6 +22,7 @@
 #include "ArmEmu/IVideoFrameProvider.hpp"
 #include "ArmEmu/GuestEventQueue.hpp"
 #include "ArmEmu/SystemContext.hpp"
+#include "ArmEmu/IHostConnection.hpp"
 #include "ArmEmu/ArmSystem.hpp"
 #include "ArmEmu/ArmSystemBuilder.hpp"
 #include "ArmEmu/IDiagnosticSink.hpp"

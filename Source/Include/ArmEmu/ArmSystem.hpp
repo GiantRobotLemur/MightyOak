@@ -225,15 +225,6 @@ public:
     //! @brief Raises an external interrupt to force a call to run() to
     //! return.
     virtual void raiseHostInterrupt() = 0;
-
-    //! @brief Attempts to extract a message from the system's external
-    //! event queue.
-    //! @param[out] next Receives the next message if one is available.
-    //! @retval true A message was retrieved.
-    //! @retval false No messages were available.
-    //! @note This and only this member function can be called from a separate
-    //! thread from that which the processor is running in.
-    virtual bool tryGetNextMessage(GuestEvent &next) = 0;
 };
 
 //! @brief A custom deleter for IArmSystem implementations.

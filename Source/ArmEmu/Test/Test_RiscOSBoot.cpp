@@ -61,6 +61,51 @@ protected:
     {
         return createSystem({ });
     }
+
+    //! @brief Runs in a separate thread to implement a timeout.
+    //! @param[in] systemToWatch The emulator to raise a host IRQ on at timeout.
+    //! @param[in] isRunning The lock indicating if the emulator is still running.
+    //! @param[in] timeoutMs The maximum amount of time the emulator can run for.
+    static void watchDogThread(IArmSystem *systemToWatch,
+                               std::timed_mutex *isRunning,
+                               uint32_t timeoutMs)
+    {
+        if (!isRunning->try_lock_until(std::chrono::steady_clock::now() +
+                                       std::chrono::milliseconds(timeoutMs)))
+        {
+            // We failed to acquire the lock, the emulated system has run away.
+            systemToWatch->raiseHostInterrupt();
+        }
+    }
+
+    //! @brief Runs the system until the PC stops changing (branch to self) or
+    //! a BKPT is hit.
+    ExecutionMetrics runUntilHaltOrBkpt(IArmSystem *sysToRun, int32_t maxSteps,
+                                        uint32_t timeoutMs = 10000)
+    {
+        std::timed_mutex isRunning;
+        std::thread watchdog;
+        ExecutionMetrics runResult;
+
+        if (sysToRun != nullptr)
+        {
+            // Acquire the lock while the emulator is running.
+            std::lock_guard guard(isRunning);
+
+            // Run a watchdog thread to monitor the lock and trigger a
+            // host IRQ after a timeout.
+            watchdog = std::thread(watchDogThread, sysToRun, &isRunning, timeoutMs);
+
+            // Run the emulator.
+            runResult = sysToRun->runLimited(maxSteps);
+        }
+
+        // Ensure the watchdog thread exits.
+        if (watchdog.joinable())
+            watchdog.join();
+
+        return runResult;
+    }
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -72,7 +117,7 @@ TEST_F(RiscOSBootTests, ResetVectorExecutes)
 {
     // Run a modest number of cycles to verify the PC advances from the reset vector.
     auto specimen = createSystem();
-    auto result = specimen->runLimited(1000);
+    auto result = runUntilHaltOrBkpt(specimen.get(), 1000);
 
     uint32_t pc = specimen->getCoreRegister(CoreRegister::PC);
     EXPECT_GT(pc, 0u) << "PC did not advance from the reset vector.";
@@ -91,7 +136,7 @@ TEST_F(RiscOSBootTests, AdvancesPastI2CProbe)
     auto sinkPtr = std::make_unique<BootProgressMonitor>();
     auto sink = sinkPtr.get();
     auto specimen = createSystem(std::move(sinkPtr));
-    auto result = specimen->runLimited(50000000);
+    auto result = runUntilHaltOrBkpt(specimen.get(), 50000000);
 
     uint32_t pc = specimen->getCoreRegister(CoreRegister::PC);
     EXPECT_GT(sink->getI2cToggleCount(), 1u) << "PC at 0x" << std::hex << pc;
@@ -114,7 +159,7 @@ TEST_F(RiscOSBootTests, BootProgressesBeyondHardwareInit)
 {
     // Run 10 million cycles to get through hardware initialisation.
     auto specimen = createSystem();
-    auto result = specimen->runLimited(10000000);
+    auto result = runUntilHaltOrBkpt(specimen.get(), 10000000);
 
     uint32_t pc = specimen->getCoreRegister(CoreRegister::PC);
 

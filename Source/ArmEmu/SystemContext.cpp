@@ -154,13 +154,13 @@ void GuestTask::execute(SystemContext &sysContext)
 //! @brief Constructs an object which provides communications with the host
 //! system to emulated hardware devices.
 //! @param[in] options An object describing the system being emulated.
-//! @param[in] eventQueue A reference to the FIFO used to pass message to the
-//! host input thread.
+//! @param[in] host An optional reference to an object used to report guest
+//! events to the host system.
 //! @param[in] parentSystem The emulated system being interfaced.
 SystemContext::SystemContext(const Options &sysConfig,
-                             GuestEventQueue &eventQueue,
+                             const IHostConnectionSPtr &host,
                              IArmSystem *parentSystem) :
-    _eventQueue(eventQueue),
+    _host(host),
     _parentSystem(parentSystem),
     _taskQueueHead(nullptr),
     _masterClock(0),
@@ -310,17 +310,15 @@ bool SystemContext::SystemContext::unscheduleTask(GuestTask *taskToRemove)
     return taskToRemove->unschedule(_taskQueueHead);
 }
 
-//! @brief Attempts to post a message to the host input thread without blocking.
+//! @brief Attempts to post a message to the host without blocking.
 //! @param[in] eventID The type of the event to raise.
 //! @param[in] data1 The first item of event-specific data.
 //! @param[in] data2 The second item of event-specific data.
-//! @retval true The message was successfully posted to the input thread.
-//! @retval false The FIFO was full, no message could be posted without
-//! blocking the current thread to allocate more memory.
-bool SystemContext::postMessageToHost(uint32_t eventID, uintptr_t data1,
+void SystemContext::postMessageToHost(uint32_t eventID, uintptr_t data1,
                                       uintptr_t data2)
 {
-    return _eventQueue.enque(eventID, data1, data2);
+    if (_host)
+        _host->onGuestEvent(_parentSystem, eventID, data1, data2);
 }
 
 //! @brief Adds a device to the internal index.

@@ -150,7 +150,7 @@ protected:
             devicePool.emplace_back(std::move(extraDevice));
 
         _system = std::make_unique<MemcSystem>(opts, std::move(devicePool),
-                                               AddressMap(), AddressMap());
+                                               AddressMap(), AddressMap(), nullptr);
 
         // Load the embedded test ROM into low ROM.
         size_t romByteCount;

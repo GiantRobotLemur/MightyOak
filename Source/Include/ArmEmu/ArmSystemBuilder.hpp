@@ -17,17 +17,10 @@
 #include "EmuOptions.hpp"
 #include "AddressMap.hpp"
 #include "ArmSystem.hpp"
-
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
+#include "IHostConnection.hpp"
 
 namespace Mo {
 namespace Arm {
-
-////////////////////////////////////////////////////////////////////////////////
-// Data Type Declarations
-////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////
 // Class Declarations
@@ -45,6 +38,8 @@ public:
     // Accessors
     bool isDiagnosticsEnabled() const;
     void setDiagnosticsEnabled(bool isEnabled);
+    const IHostConnectionSPtr &getHostConnection() const;
+    void setHostConnection(const IHostConnectionSPtr &host);
 
     // Operations
     void addDevice(IHardwareDeviceUPtr &&device);
@@ -59,7 +54,8 @@ private:
     AddressMap _readMap;
     AddressMap _writeMap;
     HardwareDevicePool _devices;
-    bool _enableDiagnostics;
+    IHostConnectionSPtr _hostConnection;
+    bool _enableDiagnostics = false;
 };
 
 }} // namespace Mo::Arm
