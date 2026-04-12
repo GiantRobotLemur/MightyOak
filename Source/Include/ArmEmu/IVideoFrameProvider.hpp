@@ -53,6 +53,42 @@ enum class AcornPixelFormat : uint8_t
     XRGB8888,
 };
 
+//! @brief An enumeration which defines a bitfield describing the difference
+//! between two captured video frames.
+enum FrameDiff : uint16_t
+{
+    FrameDiff_None              = 0x000,
+    FrameDiff_DisplaySize       = 0x001,
+    FrameDiff_BorderSize        = 0x002,
+    FrameDiff_BorderPosition    = 0x004,
+    FrameDiff_FrameSize         = 0x007,
+    FrameDiff_CursorSize        = 0x008,
+    FrameDiff_CursorPosition    = 0x010,
+    FrameDiff_DisplayFormat     = 0x020,
+    FrameDiff_DisplayContent    = 0x040,
+    FrameDiff_CursorContent     = 0x080,
+    FrameDiff_DisplayPalette    = 0x100,
+    FrameDiff_BorderPalette     = 0x200,
+    FrameDiff_CurorPalette      = 0x400,
+    FrameDiff_All               = 0x7FF,
+};
+
+//! @brief An alias of the scalar type used to combine FrameDiff_* values as
+//! a bitfield.
+using FrameDiffBits = std::underlying_type_t<FrameDiff>;
+
+//! @brief Expresses the recording state of a FrameSample.
+enum FrameState : uint8_t
+{
+    FrameState_NoFrame      = 0x00,
+    FrameState_HasDisplay   = 0x01,
+    FrameState_HasCursor    = 0x02,
+};
+
+//! @brief An alias of the scalar type used to combine FrameState_* values as
+//! a bitfield.
+using FrameStateBits = std::underlying_type_t<FrameState>;
+
 //! @brief An object which provides metadata for an AcornPixelFormat value.
 class AcornPixelFormatValue : public Ag::EnumSymbol<AcornPixelFormat>
 {
@@ -129,6 +165,24 @@ struct CanonicalColour
     constexpr uint8_t getBlue() const
     {
         return Ag::Bin::extractBits<uint8_t, BlueShift, BitsPerComponent>(RawValue);
+    }
+
+    //! @brief Tests two canonical colour values for equality.
+    //! @param[in] rhs The value to compare against.
+    //! @retval true If the raw colour values are identical.
+    //! @retval false If there is a single difference between raw colour values.
+    constexpr bool operator==(const CanonicalColour &rhs) const noexcept
+    {
+        return RawValue == rhs.RawValue;
+    }
+
+    //! @brief Tests two canonical colour values for inequality.
+    //! @param[in] rhs The value to compare against.
+    //! @retval true If there is a single difference between raw colour values.
+    //! @retval false If the raw colour values are identical.
+    constexpr bool operator!=(const CanonicalColour &rhs) const noexcept
+    {
+        return RawValue != rhs.RawValue;
     }
 
     // Public Constants
@@ -274,19 +328,6 @@ private:
     AcornPixelFormat _displayFormat = AcornPixelFormat::Palettised1Bpp;
 
 public:
-    // Public Constants
-    static constexpr uint8_t Diff_None              = 0x00;
-    static constexpr uint8_t Diff_DisplaySize       = 0x01;
-    static constexpr uint8_t Diff_BorderSize        = 0x02;
-    static constexpr uint8_t Diff_BorderPosition    = 0x04;
-    static constexpr uint8_t Diff_FrameSize         = 0x07;
-    static constexpr uint8_t Diff_CursorSize        = 0x08;
-    static constexpr uint8_t Diff_CursorPosition    = 0x10;
-    static constexpr uint8_t Diff_Format            = 0x20;
-
-    // Public Fields
-
-
     // Construction/Destruction
     FrameGeometry() = default;
     FrameGeometry(const FrameMetrics &metrics);
@@ -307,6 +348,12 @@ public:
     //! @brief The number of raw bytes per scan line.
     constexpr uint16_t getBytesPerRow() const noexcept { return _bytesPerDisplayRow; }
 
+    //! @brief Gets the count of bytes required to store a frame of display data.
+    constexpr size_t getDisplayDataSize() const noexcept
+    {
+        return static_cast<size_t>(_bytesPerDisplayRow) * _displayHeight;
+    }
+
     //! @brief The horizontal offset into the display of the left edge of the
     //! cursor image, in pixels.
     constexpr int16_t getCursorLeft() const noexcept { return _cursorLeft; }
@@ -320,6 +367,12 @@ public:
 
     //! @brief The height of the cursor image in scan lines.
     constexpr uint16_t getCursorHeight() const noexcept { return _cursorHeight; }
+
+    //! @brief Gets the count of bytes required to store a frame of cursor data.
+    constexpr size_t getCursorDataSize() const noexcept
+    {
+        return static_cast<size_t>(_bytesPerCursorRow) * _cursorHeight;
+    }
 
     //! @brief Gets the left offset of the border from the display area.
     constexpr int16_t getBorderLeft() const noexcept { return _borderLeft; }
@@ -338,7 +391,7 @@ public:
 
     // Operations
     bool initialise(const FrameMetrics &metrics);
-    uint8_t calculateDifferences(const FrameGeometry &rhs) const;
+    FrameDiffBits calculateDifferences(const FrameGeometry &rhs) const;
     void invalidate();
 private:
     // Internal Functions
@@ -392,47 +445,48 @@ public:
 
     // Accessors
     bool hasFrame() const;
+    bool hasCursor() const;
+    bool hasDisplay() const;
     bool hasDisplayPaletteChanges() const;
     bool hasCursorPaletteChanges() const;
     bool hasBorderPaletteChanges() const;
+    FrameDiffBits getDifferenceFromLastFrame() const;
+    void applyDifference(FrameDiffBits difference);
 
     const FrameGeometry &getGeometry() const;
     bool isCompatible(const FrameGeometry &rhs) const;
 
-    Ag::ByteBlock &getDisplayData();
-    const Ag::ByteBlock &getDisplayData() const;
-    uint16_t getDisplayPitch() const;
+    DMABlock &getDisplayData();
+    const DMABlock &getDisplayData() const;
     const PaletteEntries &getDisplayPalette() const;
     const PaletteChanges &getDisplayColourChanges() const;
 
     const PaletteEntries &getBorderPalette() const;
     const ScanLineIndices &getBorderColourChanges() const;
 
-    Ag::ByteBlock &getCursorData();
-    const Ag::ByteBlock &getCursorData() const;
-    uint16_t getCursorPitch() const;
+    DMABlock &getCursorData();
+    const DMABlock &getCursorData() const;
     const PaletteEntries &getCursorPalette() const;
     const PaletteChanges &getCursorColourChanges() const;
 
     // Operations
     void invalidateGeometry();
+    void addState(FrameStateBits bits);
     bool initialise(const IVideoFrameProvider *provider);
-    bool initialise(const FrameSample &previousFrame);
+    bool initialise(const FrameSample &previousFrame, const FrameGeometry &compatibleGeometry);
     void addDisplayPaletteChange(int16_t scanLine, uint8_t entryIndex, const CanonicalColour &definition);
     void addCursorPaletteChange(int16_t scanLine, uint8_t entryIndex, const CanonicalColour &definition);
     void addBorderPaletteChange(int16_t scanLine, const CanonicalColour &definition);
 private:
-    // Internal Types
-
     // Internal Functions
-    static void applyPaletteChanges(size_t basePaletteSize,
+    static bool applyPaletteChanges(size_t basePaletteSize,
                                     PaletteEntries &target,
                                     const PaletteEntries &source,
                                     const PaletteChanges &changes);
 
     // Internal Fields
-    Ag::ByteBlock _displayData;
-    Ag::ByteBlock _cursorData;
+    DMABlock _displayData;
+    DMABlock _cursorData;
     PaletteEntries _displayPalette;
     PaletteChanges _displayColourChanges;
     PaletteEntries _borderPalette;
@@ -440,8 +494,8 @@ private:
     PaletteEntries _cursorPalette;
     PaletteChanges _cursorColourChanges;
     FrameGeometry _geometry;
-    uint16_t _displayPitch;
-    uint16_t _cursorPitch;
+    FrameDiffBits _diff;
+    FrameStateBits _state;
 };
 
 //! @brief An abstract interface to a device which provides video frame captured

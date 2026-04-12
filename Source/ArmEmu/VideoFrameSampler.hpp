@@ -32,21 +32,21 @@ public:
     ~VideoFrameSampler() = default;
 
     // Accessors
+    bool hasValidFrame() const;
     int16_t getScanLineIndex(uint64_t masterTicks) const;
     uint32_t getCurrentFrameIndex() const;
     FrameSample &getCurrentFrame();
     const FrameSample &getCurrentFrame() const;
     const FrameSample &getIndexedFrame(uint32_t frame) const;
+    void captureDisplayData(const void *vram, uint32_t initAddr,
+                            uint32_t startAddr, uint32_t endAddr);
+    void captureCursorData(const void *vram, uint32_t initAddr);
 
     // Operations
     uint32_t onVSyncStart(uint64_t currentTickCount, uint64_t ticksPerLine,
                           uint16_t firstDisplayScanLine);
     void onVSyncEnd(const IVideoFrameProvider *frameProvider);
 private:
-    // Internal Types
-
-    // Internal Functions
-
     // Internal Fields
     std::vector<FrameSample> _frames;
     uint64_t _lastVSyncTime;

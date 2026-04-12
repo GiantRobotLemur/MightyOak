@@ -164,7 +164,7 @@ private:
     PCF8583 _cmos;
     AddressMap _readAddrDecoder;
     AddressMap _writeAddrDecoder;
-    std::vector<uint8_t> _ram;
+    DMABlock _ram;
     std::vector<uint8_t> _lowRom;
     std::vector<uint8_t> _highRom;
     std::vector<uint16_t> _pageMappings;

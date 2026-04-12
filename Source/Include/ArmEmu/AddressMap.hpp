@@ -20,6 +20,7 @@
 
 #include <readerwriterqueue.h>
 
+#include "Ag/Core/Memory.hpp"
 #include "Ag/Core/String.hpp"
 
 namespace Mo {
@@ -41,6 +42,8 @@ enum class RegionType : uint8_t
 ////////////////////////////////////////////////////////////////////////////////
 class SystemContext;
 using SystemContextPtr = SystemContext *;
+
+using DMABlock = std::vector<uint8_t, Ag::AlignedAllocator<uint8_t, 16>>;
 
 //! @brief Describes a mapping of a virtual address to a physical address.
 struct PageMapping

@@ -238,11 +238,12 @@ FrameGeometry::FrameGeometry(const FrameMetrics &metrics)
 }
 
 //! @brief Determines if the frame has valid geometry.
-//! @retval true The display has a non-zero area.
-//! @retval false The display has zero area.
+//! @retval true The display or border has a non-zero area.
+//! @retval false The display and border have zero areas.
 bool FrameGeometry::isValid() const
 {
-    return (_displayWidth > 0) && (_displayHeight > 0);
+    return ((_displayWidth > 0) && (_displayHeight > 0)) ||
+           ((_borderWidth > 0) && (_borderHeight > 0));
 }
 
 //! @brief Determines whether the frame includes a cursor overlay image.
@@ -258,8 +259,7 @@ bool FrameGeometry::hasCursor() const
 //! @retval false The border has zero size.
 bool FrameGeometry::hasBorder() const
 {
-    return (_borderWidth > 0) ||
-        (_borderHeight > 0);
+    return (_borderWidth > 0) && (_borderHeight > 0);
 }
 
 //! @brief Determines whether the frame includes a valid display.
@@ -393,32 +393,32 @@ bool FrameGeometry::initialise(const FrameMetrics &metrics)
 //! @param[in] rhs The frame geometry to compare with the current one.
 //! @return A bit field of combined Diff_* values expressing the changes, a
 //! value of 0 indicates the two geometries are the same.
-uint8_t FrameGeometry::calculateDifferences(const FrameGeometry &rhs) const
+FrameDiffBits FrameGeometry::calculateDifferences(const FrameGeometry &rhs) const
 {
-    uint8_t diff = Diff_None;
+    FrameDiffBits diff = FrameDiff_None;
 
     if ((_displayWidth != rhs._displayWidth) ||
         (_displayHeight != rhs._displayHeight))
-        diff |= Diff_DisplaySize;
+        diff |= FrameDiff_DisplaySize;
 
     if ((_borderLeft != rhs._borderLeft) ||
         (_borderTop != rhs._borderTop))
-        diff |= Diff_BorderPosition;
+        diff |= FrameDiff_BorderPosition;
 
     if((_borderWidth != rhs._borderWidth) ||
        (_borderHeight != rhs._borderHeight))
-        diff |= Diff_BorderSize;
+        diff |= FrameDiff_BorderSize;
 
     if ((_cursorWidth != rhs._cursorWidth) ||
         (_cursorHeight != rhs._cursorHeight))
-        diff |= Diff_CursorSize;
+        diff |= FrameDiff_CursorSize;
 
     if ((_cursorLeft != rhs._cursorLeft) ||
         (_cursorTop != rhs._cursorTop))
-        diff |= Diff_CursorPosition;
+        diff |= FrameDiff_CursorPosition;
 
     if (_displayFormat != rhs._displayFormat)
-        diff |= Diff_Format;
+        diff |= FrameDiff_DisplayFormat;
 
     return diff;
 }
@@ -475,14 +475,13 @@ bool PaletteChange::tryCombine(const PaletteChange &next)
     return false;
 }
 
-
 ////////////////////////////////////////////////////////////////////////////////
 // FrameSample Member Definitions
 ////////////////////////////////////////////////////////////////////////////////
 //! @brief Constructs an empty sampled frame.
 FrameSample::FrameSample() :
-    _displayPitch(0),
-    _cursorPitch(16)
+    _diff(FrameDiff_All),
+    _state(FrameState_NoFrame)
 {
 }
 
@@ -492,6 +491,24 @@ FrameSample::FrameSample() :
 bool FrameSample::hasFrame() const
 {
     return _geometry.isValid();
+}
+
+//! @brief Determines if the frame contains a sample of cursor data.
+//! @retval true The frame contains a valid sample of cursor data.
+//! @retval false The frame does not configure a cursor, or no cursor data was
+//! sample from the guest system.
+bool FrameSample::hasCursor() const
+{
+    return _geometry.hasCursor() && ((_state & FrameState_HasCursor) != 0);
+}
+
+//! @brief Determines if the frame contains a sample of display data.
+//! @retval true The frame contains a valid sample of display data.
+//! @retval false The frame does not configure a display, or no display data was
+//! sample from the guest system.
+bool FrameSample::hasDisplay() const
+{
+    return _geometry.hasDisplay() && ((_state & FrameState_HasDisplay) != 0);
 }
 
 //! @brief Indicates whether the frame contains more than an initial display
@@ -515,6 +532,21 @@ bool FrameSample::hasBorderPaletteChanges() const
     return _borderColourChanges.empty() == false;
 }
 
+//! @brief Gets a bitfield indicating how the current frame is different from
+//! the previously sampled frame.
+FrameDiffBits FrameSample::getDifferenceFromLastFrame() const
+{
+    return _diff;
+}
+
+//! @brief Adds a set of differences to the current bitfield.
+//! @param[in] difference Bits indicating aspects of this frame which don't
+//! match the previous one.
+void FrameSample::applyDifference(FrameDiffBits difference)
+{
+    _diff |= difference;
+}
+
 //! @brief Gets the geometry and format of the sampled fram.e
 const FrameGeometry &FrameSample::getGeometry() const
 {
@@ -531,9 +563,8 @@ bool FrameSample::isCompatible(const FrameGeometry &rhs) const
 {
     // If the size of the display, border or cursor has changed, or the
     // display format has changed, the samples aren't compatible.
-    static constexpr auto Diff_Incompatible = FrameGeometry::Diff_FrameSize |
-        FrameGeometry::Diff_CursorSize |
-        FrameGeometry::Diff_Format;
+    static constexpr FrameDiffBits Diff_Incompatible = FrameDiff_FrameSize |
+        FrameDiff_CursorSize | FrameDiff_DisplayFormat;
 
     auto diff = _geometry.calculateDifferences(rhs);
 
@@ -541,21 +572,15 @@ bool FrameSample::isCompatible(const FrameGeometry &rhs) const
 }
 
 //! @brief Gets a reference to the captured display memory contents.
-Ag::ByteBlock &FrameSample::getDisplayData()
+DMABlock &FrameSample::getDisplayData()
 {
     return _displayData;
 }
 
 //! @brief Gets a read-only reference to the captured display memory contents.
-const Ag::ByteBlock &FrameSample::getDisplayData() const
+const DMABlock &FrameSample::getDisplayData() const
 {
     return _displayData;
-}
-
-//! @brief Gets the count of bytes between successive lines of display data.
-uint16_t FrameSample::getDisplayPitch() const
-{
-    return _displayPitch;
 }
 
 //! @brief Gets the palette entries for the display pixels.
@@ -583,21 +608,15 @@ const FrameSample::ScanLineIndices &FrameSample::getBorderColourChanges() const
 }
 
 //! @brief Gets a reference to the captured cursor memory contents.
-Ag::ByteBlock &FrameSample::getCursorData()
+DMABlock &FrameSample::getCursorData()
 {
     return _cursorData;
 }
 
 //! @brief Gets a read-only reference to the captured cursor memory contents.
-const Ag::ByteBlock &FrameSample::getCursorData() const
+const DMABlock &FrameSample::getCursorData() const
 {
     return _cursorData;
-}
-
-//! @brief Gets the count of bytes between successive lines of cursor data.
-uint16_t FrameSample::getCursorPitch() const
-{
-    return _cursorPitch;
 }
 
 //! @brief Gets the colours used to define the cursor overlay.
@@ -618,7 +637,14 @@ void FrameSample::invalidateGeometry()
     _geometry.invalidate();
 }
 
-//! @brief Initialises the frame sample from the video frame provider.
+//! @brief Applies additional state to the frame being sampled.
+//! @param[in] bits The state bits to apply.
+void FrameSample::addState(FrameStateBits bits)
+{
+    _state |= bits;
+}
+
+//! @brief Completely initialises the frame sample from the video frame provider.
 //! @param[in] provider The provider defining the initial palette definitions.
 //! @retval true If the sampled frame was valid.
 //! @retval false If the sampled frame held no output.
@@ -628,17 +654,27 @@ bool FrameSample::initialise(const IVideoFrameProvider *provider)
     _displayColourChanges.clear();
     _borderColourChanges.clear();
     _cursorColourChanges.clear();
+    _diff = FrameDiff_All;
+    _state = FrameState_NoFrame;
+
+    // Whether there is a border geometry or not, the border colour
+    // should be passed on through successive frames.
+    _borderPalette.clear();
+    Ag::ensureCapacity(_borderPalette, 16);
+    Ag::ensureCapacity(_borderColourChanges, 16);
+    _borderPalette.push_back(provider->captureBorderColour());
 
     if (isValid)
     {
         // Reconfigure the buffer to receive the display data.
-        _displayPitch = _geometry.getBytesPerRow();
-
         if (_geometry.hasDisplay())
         {
+            // Ensure the various display buffers are large enough to contain
+            // the data they immediately need to sample, while not reducing
+            // their capacity which may be needed in future.
             auto &format = getAcornPixelFormatInfo().getSymbolById(_geometry.getDisplayFormat());
 
-            size_t requiredDisplaySize = _displayPitch * _geometry.getDisplayHeight();
+            size_t requiredDisplaySize = _geometry.getDisplayDataSize();
             Ag::ensureCapacity(_displayData, requiredDisplaySize);
             _displayData.resize(requiredDisplaySize);
 
@@ -672,24 +708,11 @@ bool FrameSample::initialise(const IVideoFrameProvider *provider)
             _displayPalette.clear();
         }
 
-        // Configure to be able to capture border information.
-        _borderPalette.clear();
-
-        if (_geometry.hasBorder())
-        {
-            Ag::ensureCapacity(_borderPalette, 16);
-            Ag::ensureCapacity(_borderColourChanges, 16);
-
-            _borderPalette.push_back(provider->captureBorderColour());
-        }
-
         // Configure to be able to capture cursor information.
         if (_geometry.hasCursor())
         {
             // Reconfigure the buffer to receive the cursor data.
-            _cursorPitch = calculateFramePitch(AcornPixelFormat::Palettised2Bpp,
-                                               _geometry.getCursorWidth());
-            size_t requiredCursorSize = _cursorPitch * _geometry.getCursorHeight();
+            size_t requiredCursorSize = _geometry.getCursorDataSize();
             Ag::ensureCapacity(_cursorData, requiredCursorSize);
             _cursorData.resize(requiredCursorSize);
 
@@ -710,7 +733,6 @@ bool FrameSample::initialise(const IVideoFrameProvider *provider)
         {
             _cursorData.clear();
             _cursorPalette.clear();
-            _cursorPitch = 0;
         }
 
         return true;
@@ -729,21 +751,34 @@ bool FrameSample::initialise(const IVideoFrameProvider *provider)
 //! @brief Initialises the sample frame from the previous frame by resolving
 //! new initial palette entries and buffer sizes.
 //! @param[in] previousFrame The previous frame sample.
+//! @param[in] compatibleGeometry The current frame geometry, which is
+//! compatible with that of the previous frame.
 //! @retval true If the sampled frame was valid.
 //! @retval false If the sampled frame held no output.
-bool FrameSample::initialise(const FrameSample &previousFrame)
+bool FrameSample::initialise(const FrameSample &previousFrame,
+                             const FrameGeometry &compatibleGeometry)
 {
-    _geometry = previousFrame._geometry;
+    _geometry = compatibleGeometry;
     _displayColourChanges.clear();
     _borderPalette.clear();
     _borderColourChanges.clear();
     _cursorPalette.clear();
     _cursorColourChanges.clear();
+    _diff = _geometry.calculateDifferences(compatibleGeometry);
+    _state = FrameState_NoFrame;
 
-    if (_geometry.isValid())
+    // Whether or not a border was defined, capture the last border colour.
+    const auto &prevBorderPalette = previousFrame._borderPalette;
+    Ag::ensureCapacity(_borderPalette, prevBorderPalette.capacity());
+    Ag::ensureCapacity(_borderColourChanges, previousFrame._borderColourChanges.capacity());
+    _borderPalette.push_back(prevBorderPalette.back());
+
+    if (_borderPalette.front() != prevBorderPalette.front())
+        _diff |= FrameDiff_BorderPalette;
+
+    if (_geometry.hasDisplay())
     {
         // Reconfigure the buffer to receive the display data.
-        _displayPitch = previousFrame._displayPitch;
         _displayData.resize(previousFrame._displayData.size());
         auto &pixelFormat = getAcornPixelFormatInfo().getSymbolById(_geometry.getDisplayFormat());
 
@@ -756,60 +791,79 @@ bool FrameSample::initialise(const FrameSample &previousFrame)
 
             _displayPalette.resize(paletteSize);
 
-            // Copy the palette.
+            // Copy the available palette entries.
+            size_t entriesToCopy = std::min(paletteSize, previousFrame._displayPalette.size());
+
             std::copy_n(previousFrame._displayPalette.data(),
-                        paletteSize, _displayPalette.data());
+                        entriesToCopy,
+                        _displayPalette.data());
+
+            // Fill the rest with transparent.
+            std::fill_n(_displayPalette.data() + entriesToCopy,
+                        paletteSize - entriesToCopy,
+                        CanonicalColour::Transparent);
 
             // Process display palette changes.
-            applyPaletteChanges(paletteSize, _displayPalette,
-                                previousFrame._displayPalette,
-                                previousFrame._displayColourChanges);
+            if (applyPaletteChanges(paletteSize, _displayPalette,
+                                    previousFrame._displayPalette,
+                                    previousFrame._displayColourChanges))
+            {
+                _diff |= FrameDiff_DisplayPalette;
+            }
         }
         else
         {
             // There is no palette.
             _displayPalette.clear();
         }
-
-        // Configure to be able to capture border information.
-        if (_geometry.hasBorder())
-        {
-            Ag::ensureCapacity(_borderPalette, previousFrame._borderPalette.capacity());
-            Ag::ensureCapacity(_borderColourChanges, previousFrame._borderColourChanges.capacity());
-
-            // Capture the last border colour from the previous frame.
-            _borderPalette.push_back(previousFrame._borderPalette.back());
-        }
-
-        // Configure to be able to capture cursor information.
-        if (_geometry.hasCursor())
-        {
-            // Reconfigure the buffer to receive the cursor data.
-            _cursorPitch = previousFrame._cursorPitch;
-            _cursorData.resize(previousFrame._cursorData.size());
-
-            // Ensure there is enough space for the initial palette.
-            Ag::ensureCapacity(_cursorPalette, previousFrame._cursorPalette.capacity());
-            _cursorPalette.resize(4);
-            std::copy_n(previousFrame._cursorPalette.data(), 4,
-                        _cursorPalette.data());
-
-            // Process cursor palette changes.
-            applyPaletteChanges(4, _cursorPalette, previousFrame._cursorPalette,
-                                previousFrame._cursorColourChanges);
-        }
-        else
-        {
-            _cursorPitch = 0;
-        }
-
-        return true;
     }
     else
     {
-        // The geometry was invalid.
-        return false;
+        // There is no display.
+        _displayData.clear();
+        _displayPalette.clear();
     }
+
+    // Configure to be able to capture cursor information.
+    if (_geometry.hasCursor())
+    {
+        static constexpr size_t CursorPaletteSize = 4;
+
+        // Reconfigure the buffer to receive the cursor data.
+        _cursorData.resize(previousFrame._cursorData.size());
+
+        // Ensure there is enough space for the initial palette.
+        Ag::ensureCapacity(_cursorPalette, previousFrame._cursorPalette.capacity());
+        _cursorPalette.resize(CursorPaletteSize);
+
+        size_t entriesToCopy = std::min(CursorPaletteSize,
+                                        previousFrame._cursorPalette.size());
+
+        // Copy what entries we can, fill the rest with transparent.
+        std::copy_n(previousFrame._cursorPalette.data(),
+                    entriesToCopy,
+                    _cursorPalette.data());
+
+        std::fill_n(_cursorPalette.data() + entriesToCopy,
+                    CursorPaletteSize - entriesToCopy,
+                    CanonicalColour::Transparent);
+
+        // Process cursor palette changes.
+        if (applyPaletteChanges(CursorPaletteSize, _cursorPalette,
+                                previousFrame._cursorPalette,
+                                previousFrame._cursorColourChanges))
+        {
+            _diff |= FrameDiff_CurorPalette;
+        }
+    }
+    else
+    {
+        // There is no cursor.
+        _cursorData.clear();
+        _cursorPalette.clear();
+    }
+
+    return _geometry.isValid();
 }
 
 //! @brief Documents a change to the display palette mid-frame.
@@ -876,12 +930,16 @@ void FrameSample::addBorderPaletteChange(int16_t scanLine, const CanonicalColour
 //! @param[in] target The pre-initialised base palette to update with changes.
 //! @param[in] source The colours referred to by the changes.
 //! @param[in] changes The changes made to the palette.
-void FrameSample::applyPaletteChanges(size_t basePaletteSize,
+//! @retval true At least one palette entry was updated.
+//! @retval false No palette entries were updated.
+bool FrameSample::applyPaletteChanges(size_t basePaletteSize,
                                       PaletteEntries &target,
                                       const PaletteEntries &source,
                                       const PaletteChanges &changes)
 {
     // Apply each change sequentially to the target palette.
+    bool changeApplied = false;
+
     for (const auto &change : changes)
     {
         if (change.FirstEntry < basePaletteSize)
@@ -891,8 +949,12 @@ void FrameSample::applyPaletteChanges(size_t basePaletteSize,
 
             std::copy_n(source.data() + change.SourceIndex, safeCount,
                         target.data() + change.FirstEntry);
+
+            changeApplied |= (safeCount > 0);
         }
     }
+
+    return changeApplied;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -24,7 +24,6 @@
 #include "ArmEmu/SystemContext.hpp"
 #include "ArmEmu/IVideoFrameProvider.hpp"
 #include "ArmEmu/IInterruptController.hpp"
-#include "ArmEmu/SystemContext.hpp"
 #include "VideoFrameSampler.hpp"
 
 namespace Mo {
@@ -290,25 +289,22 @@ private:
 
         if (_isInVSync)
         {
-            // Copy the video and cursor data from memory to complete the
-            // sample of the video frame.
-            FrameSample &currentFrame = _frameSamples.getCurrentFrame();
+            if (_videoDMAActive)
+            {
+                // Only capture video data if it was actually being fed
+                // to the output.
+                _frameSamples.captureDisplayData(_physicalRam,
+                                                 getVideoInitAddr(),
+                                                 getVideoStartAddr(),
+                                                 getVideoEndAddr());
 
-            transferDMADisplayData(currentFrame.getDisplayData(),
-                                   getVideoInitAddr(),
-                                   getVideoStartAddr(),
-                                   getVideoEndAddr());
+                _frameSamples.captureCursorData(_physicalRam,
+                                                getCursorInitAddr());
+            }
 
-            // There is no Cstart or Cend register, only Cinit and a size
-            // calculated from the display timings, which should be initialised
-            // in the current frame.
-            size_t cursorBufferEnd = currentFrame.getCursorData().size() +
-                                     getCursorInitAddr();
-
-            transferDMADisplayData(currentFrame.getCursorData(),
-                                   getCursorInitAddr(),
-                                   getCursorInitAddr(),
-                                   static_cast<uint32_t>(cursorBufferEnd));
+            // Capture the final state of the sampled frame.
+            uint32_t lastFrameIndex = _frameSamples.getCurrentFrameIndex();
+            bool isLastFrameValid = _frameSamples.hasValidFrame();
 
             // Start the next frame.
             uint32_t pixelClock = getPixelRateHz();
@@ -316,13 +312,11 @@ private:
             uint64_t ticksPerLine = (_context->getMasterClockFrequency() *
                                     static_cast<uint64_t>(_horizontalCycleTicks)) / pixelClock;
 
-            uint32_t lastFrameIndex = _frameSamples.getCurrentFrameIndex();
-
             _frameSamples.onVSyncStart(_context->getMasterClockTicks(),
                                        ticksPerLine,
                                        _displayConfig.VerticalDisplayStart);
 
-            if (currentFrame.hasFrame())
+            if (isLastFrameValid)
             {
                 // Post a message to the host to signal that a frame boundary occurred
                 // which identifies the sample containing the frame data.

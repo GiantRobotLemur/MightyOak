@@ -227,63 +227,84 @@ void SessionRunningState::onFrameReceived(uint32_t frameId)
     if (frame == nullptr)
         return;
 
-    static constexpr uint8_t IsGeomChange = Arm::FrameGeometry::Diff_FrameSize |
-                                            Arm::FrameGeometry::Diff_Format;
+    static constexpr Arm::FrameDiffBits IsGeomChange = Arm::FrameDiff_FrameSize |
+                                                       Arm::FrameDiff_DisplayFormat;
 
     auto &config = frame->getGeometry();
-    auto diff = config.calculateDifferences(_currentFrameGeometry);
+    auto diff = frame->getDifferenceFromLastFrame();
 
-    if (diff & IsGeomChange)
+    if (diff == Arm::FrameDiff_None)
+    {
+        // Exploit frame coherence - nothing has changed.
+        return;
+    }
+    else if (diff & IsGeomChange)
     {
         // The output video configuration has changed.
         onFrameConfigChanged(config);
     }
 
-    // Update the window contents with the captured frame.
-    // Expand raw indexed pixels to ARGB32 using the palette.
-    auto &palette = frame->getDisplayPalette();
-    auto &format = Arm::getAcornPixelFormatInfo().getSymbolById(config.getDisplayFormat());
-
-    if (format.isHybridPalette())
+    if (frame->hasDisplay())
     {
-        // Resolve a 256-colour palette which can use each pixel as a look-up
-        // from a 16-colour palette which uses some of the pixel data to provide
-        // a base colour.
-        for (uint32_t i = 0; i < 256; ++i)
+        // Update the window contents with the captured frame.
+        // Expand raw indexed pixels to ARGB32 using the palette.
+        auto &palette = frame->getDisplayPalette();
+        auto &format = Arm::getAcornPixelFormatInfo().getSymbolById(config.getDisplayFormat());
+
+        if (format.isHybridPalette())
         {
-            const Arm::CanonicalColour &paletteEntry = palette[i & 0x0F];
+            // Resolve a 256-colour palette which can use each pixel as a look-up
+            // from a 16-colour palette which uses some of the pixel data to provide
+            // a base colour.
+            for (uint32_t i = 0; i < 256; ++i)
+            {
+                const Arm::CanonicalColour &paletteEntry = palette[i & 0x0F];
 
-            _palette[i] = paletteEntry.combineVIDC10LogicalColour(static_cast<uint8_t>(i)).RawValue;
+                _palette[i] = paletteEntry.combineVIDC10LogicalColour(static_cast<uint8_t>(i)).RawValue;
+            }
         }
-    }
-    else if (format.isPalettised())
-    {
-        for (uint16_t i = 0; i < format.getPaletteSize(); ++i)
+        else if (format.isPalettised())
         {
-            _palette[i] = palette[i].RawValue;
+            for (uint16_t i = 0; i < format.getPaletteSize(); ++i)
+            {
+                _palette[i] = palette[i].RawValue;
+            }
         }
+
+        expandToARGB32(frame->getDisplayData().data(), _palette, _argb32Buffer.data(),
+                       config.getDisplayWidth(), config.getDisplayHeight(),
+                       config.getDisplayFormat(), frame->getGeometry().getBytesPerRow());
+
+        // Upload the ARGB32 buffer to the SDL texture.
+        SDL_UpdateTexture(_texture, nullptr, _argb32Buffer.data(),
+                          static_cast<int>(config.getDisplayWidth() * sizeof(uint32_t)));
     }
-
-    expandToARGB32(frame->getDisplayData().data(), _palette, _argb32Buffer.data(),
-                   config.getDisplayWidth(), config.getDisplayHeight(),
-                   config.getDisplayFormat(), frame->getDisplayPitch());
-
-    // Upload the ARGB32 buffer to the SDL texture.
-    SDL_UpdateTexture(_texture, nullptr, _argb32Buffer.data(),
-                      static_cast<int>(config.getDisplayWidth() * sizeof(uint32_t)));
 
     // Clear and render.
-    // Use border colour as clear colour.
-    auto &borderColour = frame->getBorderPalette().front();
+    if (frame->getGeometry().hasBorder())
+    {
+        // Use border colour as clear colour.
+        auto &borderColour = frame->getBorderPalette().front();
 
-    // TODO: Refactor to allow palette changes during a frame, for the border
-    // and the display frame, too.
-    SDL_SetRenderDrawColor(_renderer, borderColour.getRed(), borderColour.getGreen(), borderColour.getBlue(), 255);
+        // TODO: Refactor to allow palette changes during a frame, for the border
+        // and the display frame, too.
+        SDL_SetRenderDrawColor(_renderer, borderColour.getRed(), borderColour.getGreen(), borderColour.getBlue(), 255);
+    }
+    else
+    {
+        // Clear to black.
+        SDL_SetRenderDrawColor(_renderer, 0, 0, 0, 255);
+    }
+
     SDL_RenderClear(_renderer);
 
-    // Render the frame buffer texture scaled to fill the window while
-    // maintaining the aspect ratio.
-    SDL_RenderTexture(_renderer, _texture, nullptr, nullptr);
+    if (config.hasDisplay())
+    {
+        // Render the frame buffer texture scaled to fill the window while
+        // maintaining the aspect ratio.
+        SDL_RenderTexture(_renderer, _texture, nullptr, nullptr);
+    }
+
     SDL_RenderPresent(_renderer);
 }
 
