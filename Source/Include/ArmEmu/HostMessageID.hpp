@@ -30,8 +30,19 @@ enum HostMessageID : uint32_t
     VSyncOccurred,
 
     //! @brief A complete frame has been rendered and is ready for display.
+    //! @remarks
+    //! The first parameter contains the index of the frame which has finished
+    //! being sampled.
     FrameBufferReady,
 
+    //! @brief Indicates a change in the state of keyboard LEDs.
+    //! @remarks
+    //! The first parameter contains a IKeyboardController::LEDStateBits value.
+    KeyboardLEDsChanged,
+
+
+
+    //! @brief A place-holder value, which should always be last.
     LastHostMessage
 };
 

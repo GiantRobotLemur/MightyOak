@@ -21,6 +21,7 @@
 #include "Ag/Core/LinearSortedMap.hpp"
 
 #include "ArmEmu/IKeyboardController.hpp"
+#include "ArmEmu/SystemContext.hpp"
 
 namespace Mo {
 namespace Arm {
@@ -71,7 +72,9 @@ public:
     // Overrides
     virtual Ag::string_cref_t getName() const override;
     virtual Ag::string_cref_t getDescription() const override;
+    virtual void connect(SystemContext &context) override;
 
+    virtual LEDStateBits getLEDStates() const override;
     virtual void connectToTxQueue(SynchronisedByteQueue *txQueue) override;
     virtual void keyDown(uint32_t hostScanCode) override;
     virtual void keyUp(uint32_t hostScanCode) override;
@@ -87,6 +90,8 @@ private:
         ReceivedHRST,
         ReceivedRAK1,
         Initialised,
+        AfterFirstByteSent,
+        AfterSecondByteSent,
     };
 
     //! @brief Represents a key or mouse button event queued for transmission.
@@ -106,11 +111,9 @@ private:
     static constexpr uint8_t KeyboardId = 1;
 
     // Internal Functions
-    uint8_t getStatusByte() const;
-    void sendPendingData();
-    void sendKeyEvent(const KeyEvent &event);
-    void sendMouseData();
-    void writeKartByte(uint8_t txByte);
+    void beginSendMouseData();
+    void beginSendKeyEvent(uint8_t keyCode, bool isPressed);
+    bool handleAcknowledge(uint8_t rxByte);
 
     // Internal Fields
     Ag::String _name;
@@ -118,9 +121,13 @@ private:
     SynchronisedByteQueue *_txQueue;
     std::atomic<int32_t> _mouseDeltaX;
     std::atomic<int32_t> _mouseDeltaY;
+    SystemContext *_context;
     ScanCodeMap _scanCodeMap;
-    KeyEventQueueUPtr _pendingKeyEvents;
+    LEDStateBits _ledStates;
     ControllerState _state;
+    bool _keyScanningEnabled;
+    bool _mouseTxEnabled;
+    uint8_t _secondTxByte;
 };
 
 }} // namespace Mo::Arm

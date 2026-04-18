@@ -217,49 +217,9 @@ private:
     ///////////////////////////////////////////////////////////////////////////
     // Internal Functions
     ///////////////////////////////////////////////////////////////////////////
-    //! @brief Copies data from a circular buffer in emulated physical memory
-    //! to a host buffer as if it were transferred via DMA.
-    //! @param[in] target The buffer to receive the data, already set to the
-    //! correct size.
-    //! @param[in] initAddr The guest address of the first byte of display data
-    //! to sample.
-    //! @param[in] startAddr The guest address of the beginning of the circular
-    //! buffer being sampled.
-    //! @param[in] endAddr The guest address of the end of the circular buffer
-    //! begin sampled.
-    //! @return The count of bytes copied to @p target.
-    uint32_t transferDMADisplayData(Ag::ByteBlock &target, uint32_t initAddr,
-                                    uint32_t startAddr, uint32_t endAddr)
-    {
-        // Ensure the circular buffer has a valid definition.
-        if (startAddr >= endAddr)
-            return 0;
 
-        size_t dmaBufferSize = endAddr - startAddr;
-        size_t dmaOffset = (initAddr >= endAddr) ? startAddr : initAddr;
-
-        const uint8_t *ram = reinterpret_cast<const uint8_t *>(_physicalRam);
-        size_t maxBytesToCopy = std::min(target.size(), dmaBufferSize);
-        size_t bytesWritten;
-
-        for (bytesWritten = 0; bytesWritten < maxBytesToCopy; )
-        {
-            // Calculate the amount of contiguous data we can copy.
-            size_t blockSize = std::min(endAddr - dmaOffset,
-                                        maxBytesToCopy - bytesWritten);
-
-            // Transfer the block.
-            memcpy(target.data() + bytesWritten,
-                   ram + dmaOffset, blockSize);
-
-            // Move on to the second part of the buffer.
-            dmaOffset = startAddr;
-            bytesWritten += blockSize;
-        }
-
-        return static_cast<uint32_t>(bytesWritten);
-    }
-
+    //! @brief Schedules a guest event to process the next VSync signal to the
+    //! display hardware.
     void scheduleVSync()
     {
         uint64_t frameTicks, vsyncTicks;
@@ -277,6 +237,7 @@ private:
         }
     }
 
+    //! @brief Handles the next VSync signal.
     void onVSyncStart()
     {
         bool wasVSyncActive = _isInVSync;

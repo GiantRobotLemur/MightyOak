@@ -36,16 +36,31 @@ public:
 
     enum MouseButton : uint32_t
     {
+        NoButton = 0,
         LeftButton = 1,
         MiddleButton = 2,
         RightButton = 4,
         ButtonMask = 7
     };
 
+    //! @brief Expresses the keyboard LED states.
+    enum LEDState : uint8_t
+    {
+        LED_None        = 0x00,
+        LED_CapsLock    = 0x01,
+        LED_NumLock     = 0x02,
+        LED_ScrollLock  = 0x04,
+        LED_All         = 0x07,
+    };
+
+    using LEDStateBits = std::underlying_type_t<LEDState>;
+
     // Construction/Destruction
     virtual ~IKeyboardController() = default;
 
     // Accessors
+    //! @brief Gets the current state of the keyboard LEDs.
+    virtual LEDStateBits getLEDStates() const = 0;
 
     // Operations
     //! @brief Connects the emulated device to the queue used to transmit bytes

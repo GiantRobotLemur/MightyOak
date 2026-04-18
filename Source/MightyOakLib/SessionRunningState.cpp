@@ -333,10 +333,8 @@ void SessionRunningState::onFrameConfigChanged(const Arm::FrameGeometry &newGeom
 bool SessionRunningState::onKeyDown(uintptr_t context, SDL_Event *event)
 {
     auto *self = reinterpret_cast<SessionRunningState *>(context);
-    Arm::IKeyboardController *keyboard = self->_keyboard;
-
-    if (keyboard != nullptr)
-        keyboard->keyDown(static_cast<uint32_t>(event->key.scancode));
+    auto *session = self->getContext()->getSession();
+    session->onKeyChange(event->key.scancode, true);
 
     return true;
 }
@@ -345,10 +343,8 @@ bool SessionRunningState::onKeyDown(uintptr_t context, SDL_Event *event)
 bool SessionRunningState::onKeyUp(uintptr_t context, SDL_Event *event)
 {
     auto *self = reinterpret_cast<SessionRunningState *>(context);
-    Arm::IKeyboardController *keyboard = self->_keyboard;
-
-    if (keyboard != nullptr)
-        keyboard->keyUp(static_cast<uint32_t>(event->key.scancode));
+    auto *session = self->getContext()->getSession();
+    session->onKeyChange(event->key.scancode, false);
 
     return true;
 }
@@ -357,12 +353,10 @@ bool SessionRunningState::onKeyUp(uintptr_t context, SDL_Event *event)
 bool SessionRunningState::onMouseMotion(uintptr_t context, SDL_Event *event)
 {
     auto *self = reinterpret_cast<SessionRunningState *>(context);
-    Arm::IKeyboardController *keyboard = self->_keyboard;
+    auto *session = self->getContext()->getSession();
 
-    if (keyboard != nullptr)
-        keyboard->mouseDelta(static_cast<int32_t>(event->motion.xrel),
-                             static_cast<int32_t>(event->motion.yrel));
-
+    session->onMouseMove(static_cast<int32_t>(event->motion.xrel),
+                         static_cast<int32_t>(event->motion.yrel));
 
     return true;
 }
@@ -371,18 +365,10 @@ bool SessionRunningState::onMouseMotion(uintptr_t context, SDL_Event *event)
 bool SessionRunningState::onMouseButton(uintptr_t context, SDL_Event *event)
 {
     auto *self = reinterpret_cast<SessionRunningState *>(context);
-    Arm::IKeyboardController *keyboard = self->_keyboard;
+    auto *session = self->getContext()->getSession();
 
-    if (keyboard != nullptr)
-    {
-        auto button = static_cast<Arm::IKeyboardController::MouseButton>(
-            event->button.button);
-
-        if (event->type == SDL_EVENT_MOUSE_BUTTON_DOWN)
-            keyboard->mouseButtonDown(button);
-        else
-            keyboard->mouseButtonUp(button);
-    }
+    session->onMouseButtonChange(event->button.button,
+                                 (event->type == SDL_EVENT_MOUSE_BUTTON_DOWN));
 
     return true;
 }

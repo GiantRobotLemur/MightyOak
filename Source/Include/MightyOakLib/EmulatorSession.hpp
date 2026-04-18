@@ -36,7 +36,9 @@ public:
 
     // Operations
     bool createSystem(Ag::String &error);
-
+    void onKeyChange(SDL_Scancode keyCode, bool isPressed);
+    void onMouseButtonChange(SDL_MouseButtonFlags sdlButton, bool isPressed);
+    void onMouseMove(int dx, int dy);
 private:
     // Internal Types
 
@@ -46,6 +48,7 @@ private:
     Arm::Options _configuration;
     Arm::IArmSystemUPtr _system;
     Arm::IHostConnectionSPtr _hostConnection;
+    Arm::IKeyboardController *_guestKeyboard = nullptr;
 };
 
 } // namespace Mo
