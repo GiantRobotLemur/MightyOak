@@ -235,16 +235,16 @@ private:
             switch (Ag::Bin::extractBits<uint8_t, 17, 3>(offset))
             {
             case 0: // Vinit
-                _vidc.setVideoInitAddr(offset & 0x1FFFC);
+                _vidc.setVideoInitAddr(Ag::Bin::extractAndShiftBits<uint32_t, 2, 4, 15>(offset));
                 break;
             case 1: // Vstart
-                _vidc.setVideoStartAddr(offset & 0x1FFFC);
+                _vidc.setVideoStartAddr(Ag::Bin::extractAndShiftBits<uint32_t, 2, 4, 15>(offset));
                 break;
             case 2: // Vend
-                _vidc.setVideoEndAddr(offset & 0x1FFFC);
+                _vidc.setVideoEndAddr(Ag::Bin::extractAndShiftBits<uint32_t, 2, 4, 15>(offset));
                 break;
             case 3: // Cinit
-                _vidc.setCursorInitAddr(offset & 0x1FFFC);
+                _vidc.setCursorInitAddr(Ag::Bin::extractAndShiftBits<uint32_t, 2, 4, 15>(offset));
                 break;
             case 4: // Sstart
             case 5: // SendN
