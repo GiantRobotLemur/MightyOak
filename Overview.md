@@ -224,8 +224,20 @@ report frames of the display captured by the `IVideoFrameProvider` implementatio
 **AcornKeyboardController** (`AcornKeyboardController.cpp`) — KART protocol
 state machine.
 
-- Protocol: Idle → WaitingForRAK1 → WaitingForRAK2 → Initialised → command
+- Protocol: PreReset → ReceivedHRST → ReceivedRAK1 → Initialised → command
   processing (RQID, LEDS, RQMP, RQPD).
+- Key, mouse button and mouse movement data is sent as two-byte packets:
+  the first byte is sent immediately (state `AfterFirstByteSent`), the host
+  replies `BACK` to request the second (state `AfterSecondByteSent`), then
+  completes the exchange with `NACK`/`SACK`/`MACK`/`SMAK`, which also select
+  whether key scanning and unsolicited mouse reporting are enabled. Input is
+  ignored until the host enables it, and any unexpected byte resets the
+  protocol by sending `HRST`.
+- Tech debt: there is no input queue, so input arriving while an exchange is
+  in progress is dropped. `keyDown()`/`mouseDelta()` etc. run on the SDL
+  thread and mutate the protocol state shared with `receiveKARTByte()` on the
+  emulation thread without synchronisation. The `KeyEvent`/`KeyEventQueue`
+  types in the header are unused.
 
 **I2CBus** (`I2CBus.hpp/cpp`) — bit-banged I2C bus controller.
 
