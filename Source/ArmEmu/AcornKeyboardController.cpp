@@ -68,6 +68,7 @@ AcornKeyboardController::AcornKeyboardController() :
     _txQueue(nullptr),
     _mouseDeltaX(0),
     _mouseDeltaY(0),
+    _pendingKeyEvents(Ag::AlignmentTraits<KeyEventQueue>::create()),
     _context(nullptr),
     _ledStates(LED_None),
     _state(ControllerState::PreReset),
@@ -88,9 +89,13 @@ void AcornKeyboardController::receiveKARTByte(uint8_t nextByte)
     bool hasError = true;
 
     // HRST is always accepted regardless of state and resets the protocol.
+    // Key scanning and mouse reporting remain disabled until the host
+    // re-enables them after the handshake.
     if (nextByte == HRST)
     {
         _state = ControllerState::ReceivedHRST;
+        _keyScanningEnabled = false;
+        _mouseTxEnabled = false;
         _txQueue->enqueue(HRST);
         return;
     }
@@ -146,11 +151,9 @@ void AcornKeyboardController::receiveKARTByte(uint8_t nextByte)
             // host does not wait for one.
             LEDStateBits newState = nextByte & LED_All;
 
-            if (newState != _ledStates)
+            if (_ledStates.exchange(newState, std::memory_order_relaxed) != newState)
             {
                 // The LED state has changed. Inform the host.
-                _ledStates = newState;
-
                 if (_context != nullptr)
                     _context->postMessageToHost(KeyboardLEDsChanged, newState, 0);
             }
@@ -172,11 +175,9 @@ void AcornKeyboardController::receiveKARTByte(uint8_t nextByte)
         if (nextByte == BACK)
         {
             // Host requests the second byte of the current key/mouse
-            // exchange, or sends pending key/mouse data.
+            // exchange.
             _state = ControllerState::AfterSecondByteSent;
-
-            if (_txQueue != nullptr)
-                _txQueue->enqueue(_secondTxByte);
+            _txQueue->enqueue(_secondTxByte);
 
             hasError = false;
         }
@@ -204,6 +205,40 @@ void AcornKeyboardController::receiveKARTByte(uint8_t nextByte)
     }
 }
 
+//! @brief Starts sending the next item of pending input to the host, if
+//! the protocol is idle and reporting of that input has been enabled.
+//! @details This must be called on the emulation thread, i.e. the thread
+//! which calls receiveKARTByte(), each time the KART could transfer a byte.
+//! Key events are given priority over unsolicited mouse movement data.
+void AcornKeyboardController::processPendingInput()
+{
+    if (_keyScanningEnabled == false)
+    {
+        // Key scanning is disabled, discard key events rather than report
+        // them once it is next enabled.
+        KeyEvent discarded;
+
+        while (_pendingKeyEvents->try_dequeue(discarded)) {}
+    }
+
+    // Wait for the handshake or any data exchange in progress to complete.
+    if ((_state != ControllerState::Initialised) || (_txQueue == nullptr))
+        return;
+
+    KeyEvent event;
+
+    if (_keyScanningEnabled && _pendingKeyEvents->try_dequeue(event))
+    {
+        beginSendKeyEvent(event.ScanCode, event.IsDown);
+    }
+    else if (_mouseTxEnabled &&
+             ((_mouseDeltaX.load(std::memory_order_relaxed) != 0) ||
+              (_mouseDeltaY.load(std::memory_order_relaxed) != 0)))
+    {
+        beginSendMouseData();
+    }
+}
+
 // Inherited from IHardwareDevice.
 Ag::string_cref_t AcornKeyboardController::getName() const
 {
@@ -226,7 +261,7 @@ void AcornKeyboardController::connect(SystemContext &context)
 // Inherited from IKeyboardController.
 IKeyboardController::LEDStateBits AcornKeyboardController::getLEDStates() const
 {
-    return _ledStates;
+    return _ledStates.load(std::memory_order_relaxed);
 }
 
 // Inherited from IKeyboardController.
@@ -240,9 +275,9 @@ void AcornKeyboardController::keyDown(uint32_t hostScanCode)
 {
     uint32_t guestScanCode;
 
-    if (_keyScanningEnabled && _scanCodeMap.tryFind(hostScanCode, guestScanCode))
+    if (_scanCodeMap.tryFind(hostScanCode, guestScanCode))
     {
-        beginSendKeyEvent(static_cast<uint8_t>(guestScanCode), true);
+        _pendingKeyEvents->enqueue(KeyEvent{ static_cast<uint8_t>(guestScanCode), true });
     }
 }
 
@@ -251,9 +286,9 @@ void AcornKeyboardController::keyUp(uint32_t hostScanCode)
 {
     uint32_t guestScanCode;
 
-    if (_keyScanningEnabled && _scanCodeMap.tryFind(hostScanCode, guestScanCode))
+    if (_scanCodeMap.tryFind(hostScanCode, guestScanCode))
     {
-        beginSendKeyEvent(static_cast<uint8_t>(guestScanCode), false);
+        _pendingKeyEvents->enqueue(KeyEvent{ static_cast<uint8_t>(guestScanCode), false });
     }
 }
 
@@ -262,9 +297,9 @@ void AcornKeyboardController::mouseButtonDown(AcornKeyboardController::MouseButt
 {
     uint32_t guestScanCode;
 
-    if (_keyScanningEnabled && tryMapMouseButton(button, guestScanCode))
+    if (tryMapMouseButton(button, guestScanCode))
     {
-        beginSendKeyEvent(static_cast<uint8_t>(guestScanCode), true);
+        _pendingKeyEvents->enqueue(KeyEvent{ static_cast<uint8_t>(guestScanCode), true });
     }
 }
 
@@ -273,20 +308,18 @@ void AcornKeyboardController::mouseButtonUp(AcornKeyboardController::MouseButton
 {
     uint32_t guestScanCode;
 
-    if (_keyScanningEnabled && tryMapMouseButton(button, guestScanCode))
+    if (tryMapMouseButton(button, guestScanCode))
     {
-        beginSendKeyEvent(static_cast<uint8_t>(guestScanCode), false);
+        _pendingKeyEvents->enqueue(KeyEvent{ static_cast<uint8_t>(guestScanCode), false });
     }
 }
 
 // Inherited from IKeyboardController.
 void AcornKeyboardController::mouseDelta(int32_t deltaX, int32_t deltaY)
 {
+    // The deltas are sent by processPendingInput() or in response to RQMP.
     _mouseDeltaX.fetch_add(deltaX, std::memory_order_relaxed);
     _mouseDeltaY.fetch_add(deltaY, std::memory_order_relaxed);
-
-    if (_mouseTxEnabled)
-        beginSendMouseData();
 }
 
 // Inherited from IKeyboardController.
@@ -320,7 +353,7 @@ void AcornKeyboardController::beginSendMouseData()
     dx = std::clamp(dx, -64, 63);
     dy = std::clamp(dy, -64, 63);
 
-    // Prepare to end.
+    // Prepare to send the second byte.
     _secondTxByte = static_cast<uint8_t>(dy) & MDAT_Mask;
     _state = ControllerState::AfterFirstByteSent;
 

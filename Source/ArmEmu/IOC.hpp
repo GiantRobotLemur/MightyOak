@@ -385,6 +385,13 @@ private:
                 ioc->_keyboard->receiveKARTByte(txByte);
             }
 
+            if (ioc->_keyboard != nullptr)
+            {
+                // Allow the keyboard to start sending any input reported
+                // by the host.
+                ioc->_keyboard->processPendingInput();
+            }
+
             // Reset the counter.
             kartCounter.go(&guestContext);
         }

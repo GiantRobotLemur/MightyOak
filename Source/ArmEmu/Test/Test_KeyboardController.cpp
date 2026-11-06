@@ -30,8 +30,9 @@ namespace {
 //! an AcornKeyboardController, and provides helpers for exercising the KART
 //! protocol.
 //! @details Data exchanges follow the Archimedes keyboard protocol: the
-//! keyboard sends the first byte of a two-byte packet unprompted (or in
-//! response to RQMP), the host replies with BACK to request the second byte,
+//! keyboard sends the first byte of a two-byte packet unprompted when the
+//! KART is next clocked (or in response to RQMP), the host replies with BACK
+//! to request the second byte,
 //! then the host completes the exchange with one of NACK, SACK, MACK or SMAK,
 //! which also selects whether key scanning and unsolicited mouse reporting
 //! are enabled.
@@ -89,6 +90,16 @@ protected:
     std::vector<uint8_t> sendByte(uint8_t hostByte)
     {
         _keyboard->receiveKARTByte(hostByte);
+
+        return drainRxQueue();
+    }
+
+    //! @brief Simulates the KART clock ticking, allowing the keyboard to start
+    //! sending any pending input reported by the host.
+    //! @returns The bytes the keyboard controller sent.
+    std::vector<uint8_t> processInput()
+    {
+        _keyboard->processPendingInput();
 
         return drainRxQueue();
     }
@@ -255,7 +266,7 @@ TEST_F(KeyboardControllerTest, KeyDown_SendsRowThenColumnOnBACK)
 
     // The row byte is sent as soon as the key is pressed.
     _keyboard->keyDown(0x1E);
-    expectSingleByte(drainRxQueue(), AcornKeyboardController::KDDA_Bits | 0x03);
+    expectSingleByte(processInput(), AcornKeyboardController::KDDA_Bits | 0x03);
 
     // BACK requests the column byte.
     expectSingleByte(sendByte(AcornKeyboardController::BACK),
@@ -273,7 +284,7 @@ TEST_F(KeyboardControllerTest, KeyUp_SendsRowThenColumnOnBACK)
     _keyboard->setKeyMapping(&mapping, 1);
 
     _keyboard->keyUp(0x1E);
-    expectSingleByte(drainRxQueue(), AcornKeyboardController::KUDA_Bits | 0x03);
+    expectSingleByte(processInput(), AcornKeyboardController::KUDA_Bits | 0x03);
 
     expectSingleByte(sendByte(AcornKeyboardController::BACK),
                      AcornKeyboardController::KUDA_Bits | 0x0C);
@@ -293,14 +304,14 @@ TEST_F(KeyboardControllerTest, MultipleKeys_SentInSeparateExchanges)
 
     // First exchange.
     _keyboard->keyDown(0x10);
-    expectSingleByte(drainRxQueue(), AcornKeyboardController::KDDA_Bits | 0x02);
+    expectSingleByte(processInput(), AcornKeyboardController::KDDA_Bits | 0x02);
     expectSingleByte(sendByte(AcornKeyboardController::BACK),
                      AcornKeyboardController::KDDA_Bits | 0x07);
     EXPECT_TRUE(sendByte(AcornKeyboardController::SACK).empty());
 
     // Second exchange.
     _keyboard->keyDown(0x11);
-    expectSingleByte(drainRxQueue(), AcornKeyboardController::KDDA_Bits | 0x05);
+    expectSingleByte(processInput(), AcornKeyboardController::KDDA_Bits | 0x05);
     expectSingleByte(sendByte(AcornKeyboardController::BACK),
                      AcornKeyboardController::KDDA_Bits | 0x05);
     EXPECT_TRUE(sendByte(AcornKeyboardController::SACK).empty());
@@ -313,7 +324,7 @@ TEST_F(KeyboardControllerTest, UnmappedKey_NotSent)
     // No key mappings set. keyDown should have no effect.
     _keyboard->keyDown(0xFF);
 
-    EXPECT_TRUE(drainRxQueue().empty());
+    EXPECT_TRUE(processInput().empty());
 }
 
 TEST_F(KeyboardControllerTest, KeyDown_IgnoredBeforeScanningEnabled)
@@ -326,7 +337,91 @@ TEST_F(KeyboardControllerTest, KeyDown_IgnoredBeforeScanningEnabled)
     // Key scanning is not enabled until the host sends SACK or SMAK.
     _keyboard->keyDown(0x1E);
 
-    EXPECT_TRUE(drainRxQueue().empty());
+    EXPECT_TRUE(processInput().empty());
+
+    // The key event was discarded rather than held until scanning is enabled.
+    EXPECT_TRUE(sendByte(AcornKeyboardController::SACK).empty());
+    EXPECT_TRUE(processInput().empty());
+}
+
+TEST_F(KeyboardControllerTest, KeyEvents_QueuedDuringExchange)
+{
+    initialise(AcornKeyboardController::SACK);
+
+    IKeyboardController::ScanCodeMapping mappings[] = {
+        { 0x10, 0x27 }, // host 0x10 → row 2, col 7
+        { 0x11, 0x55 }, // host 0x11 → row 5, col 5
+    };
+    _keyboard->setKeyMapping(mappings, 2);
+
+    // Both keys are reported before the guest has seen either.
+    _keyboard->keyDown(0x10);
+    _keyboard->keyDown(0x11);
+
+    expectSingleByte(processInput(), AcornKeyboardController::KDDA_Bits | 0x02);
+
+    // The second key is held while the first exchange is in progress.
+    EXPECT_TRUE(processInput().empty());
+    expectSingleByte(sendByte(AcornKeyboardController::BACK),
+                     AcornKeyboardController::KDDA_Bits | 0x07);
+    EXPECT_TRUE(processInput().empty());
+    EXPECT_TRUE(sendByte(AcornKeyboardController::SACK).empty());
+
+    // The second key is sent once the first exchange is acknowledged.
+    expectSingleByte(processInput(), AcornKeyboardController::KDDA_Bits | 0x05);
+    expectSingleByte(sendByte(AcornKeyboardController::BACK),
+                     AcornKeyboardController::KDDA_Bits | 0x05);
+    EXPECT_TRUE(sendByte(AcornKeyboardController::SACK).empty());
+
+    EXPECT_TRUE(processInput().empty());
+}
+
+TEST_F(KeyboardControllerTest, KeyEvents_TakePriorityOverMouseData)
+{
+    initialise(AcornKeyboardController::SMAK);
+
+    IKeyboardController::ScanCodeMapping mapping(0x1E, 0x3C);
+    _keyboard->setKeyMapping(&mapping, 1);
+
+    _keyboard->mouseDelta(1, 2);
+    _keyboard->keyDown(0x1E);
+
+    expectSingleByte(processInput(), AcornKeyboardController::KDDA_Bits | 0x03);
+    expectSingleByte(sendByte(AcornKeyboardController::BACK),
+                     AcornKeyboardController::KDDA_Bits | 0x0C);
+    EXPECT_TRUE(sendByte(AcornKeyboardController::SMAK).empty());
+
+    // The mouse movement follows in the next exchange.
+    expectSingleByte(processInput(), 1);
+    expectSingleByte(sendByte(AcornKeyboardController::BACK), 2);
+    EXPECT_TRUE(sendByte(AcornKeyboardController::SMAK).empty());
+}
+
+TEST_F(KeyboardControllerTest, Input_NotSentBeforeHandshake)
+{
+    IKeyboardController::ScanCodeMapping mapping(0x1E, 0x3C);
+    _keyboard->setKeyMapping(&mapping, 1);
+
+    _keyboard->keyDown(0x1E);
+    _keyboard->mouseDelta(1, 1);
+
+    EXPECT_TRUE(processInput().empty());
+}
+
+TEST_F(KeyboardControllerTest, HRST_DisablesReporting)
+{
+    initialise(AcornKeyboardController::SMAK);
+
+    IKeyboardController::ScanCodeMapping mapping(0x1E, 0x3C);
+    _keyboard->setKeyMapping(&mapping, 1);
+
+    // Re-run the handshake without re-enabling reporting.
+    completeHandshake();
+
+    _keyboard->keyDown(0x1E);
+    _keyboard->mouseDelta(1, 1);
+
+    EXPECT_TRUE(processInput().empty());
 }
 
 TEST_F(KeyboardControllerTest, KeyDown_IgnoredWhenOnlyMouseEnabled)
@@ -338,7 +433,7 @@ TEST_F(KeyboardControllerTest, KeyDown_IgnoredWhenOnlyMouseEnabled)
 
     _keyboard->keyDown(0x1E);
 
-    EXPECT_TRUE(drainRxQueue().empty());
+    EXPECT_TRUE(processInput().empty());
 }
 
 TEST_F(KeyboardControllerTest, NACK_AfterExchange_DisablesScanning)
@@ -349,14 +444,14 @@ TEST_F(KeyboardControllerTest, NACK_AfterExchange_DisablesScanning)
     _keyboard->setKeyMapping(&mapping, 1);
 
     _keyboard->keyDown(0x1E);
-    drainRxQueue();
+    processInput();
     sendByte(AcornKeyboardController::BACK);
 
     // Complete the exchange with NACK, disabling key scanning.
     EXPECT_TRUE(sendByte(AcornKeyboardController::NACK).empty());
 
     _keyboard->keyUp(0x1E);
-    EXPECT_TRUE(drainRxQueue().empty());
+    EXPECT_TRUE(processInput().empty());
 }
 
 TEST_F(KeyboardControllerTest, NonBACK_AfterFirstByte_ResetsProtocol)
@@ -367,7 +462,7 @@ TEST_F(KeyboardControllerTest, NonBACK_AfterFirstByte_ResetsProtocol)
     _keyboard->setKeyMapping(&mapping, 1);
 
     _keyboard->keyDown(0x1E);
-    drainRxQueue();
+    processInput();
 
     expectSingleByte(sendByte(AcornKeyboardController::RQID),
                      AcornKeyboardController::HRST);
@@ -381,7 +476,7 @@ TEST_F(KeyboardControllerTest, NonAcknowledge_AfterSecondByte_ResetsProtocol)
     _keyboard->setKeyMapping(&mapping, 1);
 
     _keyboard->keyDown(0x1E);
-    drainRxQueue();
+    processInput();
     sendByte(AcornKeyboardController::BACK);
 
     expectSingleByte(sendByte(AcornKeyboardController::RQID),
@@ -397,7 +492,7 @@ TEST_F(KeyboardControllerTest, MouseButtonDown_CorrectScancodes)
 
     // Left button = scancode 0x70 → row 7, col 0.
     _keyboard->mouseButtonDown(IKeyboardController::LeftButton);
-    expectSingleByte(drainRxQueue(), AcornKeyboardController::KDDA_Bits | 0x07);
+    expectSingleByte(processInput(), AcornKeyboardController::KDDA_Bits | 0x07);
     expectSingleByte(sendByte(AcornKeyboardController::BACK),
                      AcornKeyboardController::KDDA_Bits | 0x00);
     EXPECT_TRUE(sendByte(AcornKeyboardController::SACK).empty());
@@ -409,7 +504,7 @@ TEST_F(KeyboardControllerTest, MouseButtonUp_CorrectScancodes)
 
     // Right button = scancode 0x72 → row 7, col 2.
     _keyboard->mouseButtonUp(IKeyboardController::RightButton);
-    expectSingleByte(drainRxQueue(), AcornKeyboardController::KUDA_Bits | 0x07);
+    expectSingleByte(processInput(), AcornKeyboardController::KUDA_Bits | 0x07);
     expectSingleByte(sendByte(AcornKeyboardController::BACK),
                      AcornKeyboardController::KUDA_Bits | 0x02);
     EXPECT_TRUE(sendByte(AcornKeyboardController::SACK).empty());
@@ -421,7 +516,7 @@ TEST_F(KeyboardControllerTest, MiddleMouseButton_CorrectScancode)
 
     // Middle button = scancode 0x71 → row 7, col 1.
     _keyboard->mouseButtonDown(IKeyboardController::MiddleButton);
-    expectSingleByte(drainRxQueue(), AcornKeyboardController::KDDA_Bits | 0x07);
+    expectSingleByte(processInput(), AcornKeyboardController::KDDA_Bits | 0x07);
     expectSingleByte(sendByte(AcornKeyboardController::BACK),
                      AcornKeyboardController::KDDA_Bits | 0x01);
 }
@@ -432,7 +527,7 @@ TEST_F(KeyboardControllerTest, MouseButton_IgnoredBeforeScanningEnabled)
 
     _keyboard->mouseButtonDown(IKeyboardController::LeftButton);
 
-    EXPECT_TRUE(drainRxQueue().empty());
+    EXPECT_TRUE(processInput().empty());
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -499,10 +594,13 @@ TEST_F(KeyboardControllerTest, MouseDelta_SentUnpromptedWhenMouseEnabled)
 
     // With mouse reporting enabled, movement starts an exchange immediately.
     _keyboard->mouseDelta(5, -3);
-    expectSingleByte(drainRxQueue(), 5);
+    expectSingleByte(processInput(), 5);
     expectSingleByte(sendByte(AcornKeyboardController::BACK),
                      static_cast<uint8_t>(-3) & 0x7F);
     EXPECT_TRUE(sendByte(AcornKeyboardController::MACK).empty());
+
+    // No further data is sent without further movement.
+    EXPECT_TRUE(processInput().empty());
 }
 
 TEST_F(KeyboardControllerTest, MouseDelta_HeldUntilRQMPWhenMouseDisabled)
@@ -511,7 +609,7 @@ TEST_F(KeyboardControllerTest, MouseDelta_HeldUntilRQMPWhenMouseDisabled)
 
     // With mouse reporting disabled, movement is accumulated silently.
     _keyboard->mouseDelta(5, 6);
-    EXPECT_TRUE(drainRxQueue().empty());
+    EXPECT_TRUE(processInput().empty());
 
     expectSingleByte(sendByte(AcornKeyboardController::RQMP), 5);
     expectSingleByte(sendByte(AcornKeyboardController::BACK), 6);
@@ -546,7 +644,7 @@ TEST_F(KeyboardControllerTest, FullBootSequence)
 
     // 5. A key press is reported via a full two-byte exchange.
     _keyboard->keyDown(0x1E);
-    expectSingleByte(drainRxQueue(), AcornKeyboardController::KDDA_Bits | 0x03);
+    expectSingleByte(processInput(), AcornKeyboardController::KDDA_Bits | 0x03);
     expectSingleByte(sendByte(AcornKeyboardController::BACK),
                      AcornKeyboardController::KDDA_Bits | 0x0C);
     EXPECT_TRUE(sendByte(AcornKeyboardController::SMAK).empty());

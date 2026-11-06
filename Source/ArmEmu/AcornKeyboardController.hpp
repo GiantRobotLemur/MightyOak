@@ -32,6 +32,10 @@ namespace Arm {
 //! @brief An object which represents the 87C51 keyboard controller,
 //! translating between key press and mouse movement and the internal
 //! KART protocol.
+//! @details Key, mouse button and mouse movement events are reported by a
+//! single host thread and only ever queued or accumulated. All protocol state
+//! is owned by the emulation thread, which calls receiveKARTByte() and
+//! processPendingInput() as the KART is clocked.
 class AcornKeyboardController : public IKeyboardController
 {
 public:
@@ -68,6 +72,7 @@ public:
 
     // Operations
     void receiveKARTByte(uint8_t nextByte);
+    void processPendingInput();
 
     // Overrides
     virtual Ag::string_cref_t getName() const override;
@@ -121,9 +126,10 @@ private:
     SynchronisedByteQueue *_txQueue;
     std::atomic<int32_t> _mouseDeltaX;
     std::atomic<int32_t> _mouseDeltaY;
+    KeyEventQueueUPtr _pendingKeyEvents;
     SystemContext *_context;
     ScanCodeMap _scanCodeMap;
-    LEDStateBits _ledStates;
+    std::atomic<LEDStateBits> _ledStates;
     ControllerState _state;
     bool _keyScanningEnabled;
     bool _mouseTxEnabled;
