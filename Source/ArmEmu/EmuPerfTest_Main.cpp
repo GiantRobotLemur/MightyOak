@@ -138,6 +138,7 @@ protected:
                                const String &value, String &error) override
     {
         bool isOK = true;
+        std::string_view configsToken("CONFIGS");
 
         switch (id)
         {
@@ -146,7 +147,7 @@ protected:
             {
                 _command = EmuPerfTestCommand::ShowHelp;
             }
-            else if (value.compareIgnoreCase("CONFIGS") == 0)
+            else if (value.compareIgnoreCase(configsToken) == 0)
             {
                 _command = EmuPerfTestCommand::ListConfigs;
             }

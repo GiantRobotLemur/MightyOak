@@ -245,11 +245,9 @@ CliOptions::CliOptions(const Ag::AppMetadata &appMetadata)
     using namespace Ag::Cli;
 
     SchemaBuilder optionSchema;
-    optionSchema.setAppName(appMetadata.AppName);
-    optionSchema.setDescription(appMetadata.Description);
+    optionSchema.setAppInfo(appMetadata, true);
 
     optionSchema.addShowHelpCommand();
-    optionSchema.addShowVersionCommand(appMetadata.AppVersion);
 
     std::string descriptionBuilder;
 

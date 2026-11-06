@@ -508,18 +508,22 @@ TEST_F(MemcRomBootTests, CinitRegisterStored)
     // Cinit = case 3, so bits [19:17] = 011 = 0x60000.
     // The address encodes the value: _cursorInitAddr = offset & 0x1FFFC.
     // Offset for Cinit: 0x3600000 | (3 << 17) = 0x3660000
-    // With a value encoded in the lower bits: 0x3660000 | 0x1234C
-    uint32_t memcAddr = 0x3660000 | 0x1234C;
+    // The least significant two bits of the value are ignored and the
+    // value must be aligned on a 16-byte boundary.
+    // With a value encoded in the lower bits: 0x3660000 | (0x12340 >> 2))
+    constexpr uint32_t CInitTest1 = 0x12340;
+    uint32_t memcAddr = 0x3660000 | (CInitTest1 >> 2);
     EXPECT_TRUE(memc.write<uint32_t>(memcAddr, 0));
 
-    EXPECT_EQ(specimen->getCursorInitAddr(), 0x1234Cu)
+    EXPECT_EQ(specimen->getCursorInitAddr(), CInitTest1)
         << "Cinit register did not store the expected value.";
 
     // Write a different value.
-    memcAddr = 0x3660000 | 0x1FFF8;
+    constexpr uint32_t CInitTest2 = 0x1FFF0;
+    memcAddr = 0x3660000 | (CInitTest2 >> 2);
     EXPECT_TRUE(memc.write<uint32_t>(memcAddr, 0));
 
-    EXPECT_EQ(specimen->getCursorInitAddr(), 0x1FFF8u)
+    EXPECT_EQ(specimen->getCursorInitAddr(), CInitTest2)
         << "Cinit register did not update to the new value.";
 
     // Verify reset clears Cinit.

@@ -194,6 +194,12 @@ void VideoFrameSampler::captureDisplayData(const void *vram, uint32_t initAddr,
     static constexpr FrameDiffBits Diff_DisplayIncompatible =
         FrameDiff_DisplayFormat | FrameDiff_DisplaySize;
 
+    // TODO: Fix "Internal error: address exception at &03812CA4" when
+    // going to the desktop.
+
+    // TODO: When entering desktop mode, the endAddr only allows half the display
+    // to be sampled, initAddr and startAddr are 0, having never been changed.
+
     auto &target = currentFrame.getDisplayData();
     size_t dmaBufferSize = endAddr - startAddr;
     size_t dmaOffset = (initAddr >= endAddr) ? startAddr : initAddr;

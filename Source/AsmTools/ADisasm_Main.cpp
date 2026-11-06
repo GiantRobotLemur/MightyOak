@@ -142,6 +142,9 @@ protected:
     virtual bool processOption(uint32_t id, const String &/*original*/,
                                const String &value, String &error) override
     {
+        std::string_view fpaToken("FPA");
+        std::string_view thumbToken("THUMB");
+
         InstructionSet instructionSet = InstructionSet::Max;
         bool isOK = true;
 
@@ -178,11 +181,11 @@ protected:
             break;
 
         case Extension:
-            if (value.compareIgnoreCase("FPA") == 0)
+            if (value.compareIgnoreCase(fpaToken) == 0)
             {
                 _disasmFlags |= InstructionInfo::AllowFPA;
             }
-            else if (value.compareIgnoreCase("THUMB"))
+            else if (value.compareIgnoreCase(thumbToken))
             {
                 _disasmFlags |= InstructionInfo::AllowThumb;
             }
