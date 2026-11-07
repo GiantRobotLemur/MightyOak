@@ -2,7 +2,7 @@
 //! @brief The declaration of template implementations of various ARM ALU
 //! instructions.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2023
+//! @date 2023-2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -310,7 +310,8 @@ uint32_t execDataProcOpStatus(TRegisterFile &regs, uint32_t instruction,
                               uint32_t op2, uint8_t carryOut) noexcept
 {
     uint32_t cycleCount = 1;
-    uint32_t op1 = regs.getRn(Ag::Bin::extractEnum<GeneralRegister, 16, 4>(instruction));
+    GeneralRegister rn = Ag::Bin::extractEnum<GeneralRegister, 16, 4>(instruction);
+    uint32_t op1 = regs.getRn(rn);
     uint32_t result;
     uint8_t status = 0;
     uint8_t opCode = Ag::Bin::extractBits<uint8_t, 21, 4>(instruction);
@@ -523,12 +524,12 @@ uint32_t execDataProcOp(TRegisterFile &regs, uint32_t instruction,
         result = op1 + op2 + Ag::Bin::extractBit<PsrShift::Carry>(regs.getPSR());
         break;
 
-    case 6: // SBC
-        result = op1 - (op2 + Ag::Bin::extractBit<PsrShift::Carry>(regs.getPSR()));
+    case 6: // SBC: Rd = op1 - op2 - NOT(C)
+        result = op1 - op2 - (1 - Ag::Bin::extractBit<PsrShift::Carry>(regs.getPSR()));
         break;
 
-    case 7: // RSC
-        result = op2 - (op1 + Ag::Bin::extractBit<PsrShift::Carry>(regs.getPSR()));
+    case 7: // RSC: Rd = op2 - op1 - NOT(C)
+        result = op2 - op1 - (1 - Ag::Bin::extractBit<PsrShift::Carry>(regs.getPSR()));
         break;
 
     case 8: // TST

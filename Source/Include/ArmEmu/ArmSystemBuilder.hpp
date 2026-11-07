@@ -2,7 +2,7 @@
 //! @brief The declaration of an object used to incrementally construct another
 //! object representing an emulated ARM-based system.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2023-2024
+//! @date 2023-2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -17,17 +17,10 @@
 #include "EmuOptions.hpp"
 #include "AddressMap.hpp"
 #include "ArmSystem.hpp"
-
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
+#include "IHostConnection.hpp"
 
 namespace Mo {
 namespace Arm {
-
-////////////////////////////////////////////////////////////////////////////////
-// Data Type Declarations
-////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////
 // Class Declarations
@@ -43,6 +36,10 @@ public:
     ~ArmSystemBuilder() = default;
 
     // Accessors
+    bool isDiagnosticsEnabled() const;
+    void setDiagnosticsEnabled(bool isEnabled);
+    const IHostConnectionSPtr &getHostConnection() const;
+    void setHostConnection(const IHostConnectionSPtr &host);
 
     // Operations
     void addDevice(IHardwareDeviceUPtr &&device);
@@ -57,6 +54,8 @@ private:
     AddressMap _readMap;
     AddressMap _writeMap;
     HardwareDevicePool _devices;
+    IHostConnectionSPtr _hostConnection;
+    bool _enableDiagnostics = false;
 };
 
 }} // namespace Mo::Arm

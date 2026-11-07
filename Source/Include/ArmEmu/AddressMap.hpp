@@ -18,6 +18,9 @@
 
 #include <vector>
 
+#include <readerwriterqueue.h>
+
+#include "Ag/Core/Memory.hpp"
 #include "Ag/Core/String.hpp"
 
 namespace Mo {
@@ -37,9 +40,10 @@ enum class RegionType : uint8_t
 ////////////////////////////////////////////////////////////////////////////////
 // Class Declarations
 ////////////////////////////////////////////////////////////////////////////////
-class ConnectionContext;
 class SystemContext;
 using SystemContextPtr = SystemContext *;
+
+using DMABlock = std::vector<uint8_t, Ag::AlignedAllocator<uint8_t, 16>>;
 
 //! @brief Describes a mapping of a virtual address to a physical address.
 struct PageMapping
@@ -92,11 +96,19 @@ struct IHardwareDevice
     //! @brief Gets a string describing the region to the user.
     virtual Ag::string_cref_t getDescription() const = 0;
 
+    //! @brief Registers the device with the context, including any aliases
+    //! and sub-devices.
+    //! @param[in] context The context to register devices with.
+    //! @remarks The base implementation simply registers the current instance
+    //! against its built-in name.
+    virtual void registerDevice(SystemContext &context);
+
     //! @brief Connects the device to the wider emulated system before it is
     //! started.
     //! @param[in] context An object which provides useful information and
-    //! services before the emulator starts.
-    virtual void connect(const ConnectionContext &context) = 0;
+    //! services within the emulated system.
+    //! @remarks The base implementation does nothing.
+    virtual void connect(SystemContext &context);
 };
 
 //! @brief An alias for a pointer to an implementation of the
@@ -128,9 +140,6 @@ struct IAddressRegion : public IHardwareDevice
     //! @brief Gets the count of bytes in the range and of addresses mapped.
     //! @note This must be a whole multiple of 4.
     virtual uint32_t getSize() const = 0;
-
-    // Overrides
-    virtual void connect(const ConnectionContext &context) override;
 };
 
 //! @brief An alias for a raw pointer to an address region implementation.
@@ -154,28 +163,6 @@ struct IHostBlock : public IAddressRegion
 using IHostBlockPtr = IHostBlock *;
 
 class AddressMap;
-
-//! @brief A class used to connect emulated devices to the host system.
-class ConnectionContext
-{
-public:
-    // Construction/Destruction
-    ConnectionContext(SystemContextPtr interopContext);
-    ~ConnectionContext() = default;
-
-    // Accessors
-    bool tryFindDevice(Ag::string_cref_t name, IHardwareDevicePtr &device) const;
-    SystemContextPtr getInteropContext() const;
-
-    // Operations
-    void addDevice(IHardwareDevicePtr device);
-private:
-    // Internal Fields
-
-    // Internal Fields
-    std::unordered_map<Ag::String, IHardwareDevicePtr> _devicesByName;
-    SystemContextPtr _interopContext;
-};
 
 //! @brief An interface to a range of physical addresses on the emulated system
 //! which interface with an emulated hardware device.
@@ -268,6 +255,9 @@ public:
     uint32_t getSize() const override;
     void *getHostAddress() override;
 };
+
+//! @brief An alias for a cross-thread queue of bytes.
+using SynchronisedByteQueue = moodycamel::ReaderWriterQueue<uint8_t>;
 
 }} // namespace Mo::Arm
 

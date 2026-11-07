@@ -18,9 +18,11 @@
 #include <memory>
 
 #include "Ag/Core/EnumInfo.hpp"
+#include "Ag/Core/Utils.hpp"
 #include "ArmEmu/AddressMap.hpp"
 #include "ArmEmu/ExecutionMetrics.hpp"
-#include "ArmEmu/GuestEventQueue.hpp"
+#include "ArmEmu/HostMessageID.hpp"
+#include "ArmEmu/IVideoFrameProvider.hpp"
 
 //! @brief Contains all source code elements of the Mighty Oak application.
 namespace Mo {
@@ -163,6 +165,42 @@ public:
     virtual bool logicalToPhysicalAddress(uint32_t logicalAddr,
                                           PageMapping &mapping) const = 0;
 
+    //! @brief Attempts to look up an object which emulates a named hardware
+    //! device within the system.
+    //! @param[in] name The name of the device to look up.
+    //! @param[out] device Receives a pointer to the device instance, if one
+    //! was found.
+    //! @retval true A device with a matching name was found and its pointer
+    //! returned in @p device. The lifetime of the pointer matches that of the
+    //! current object.
+    //! @retval false The system did not contain any device with an identifier
+    //! which matched @p name.
+    virtual bool tryFindDevice(Ag::string_cref_t name,
+                               IHardwareDevicePtr &device) const = 0;
+
+    //! @brief Attempts to find a named device in the system and convert
+    //! it to the required data type.
+    //! @tparam TDevice The data type of the device to obtain.
+    //! @param[in] name The device identifier.
+    //! @param[out] device Receives the typed pointer to the device if successful.
+    //! @retval true A device with a matching name was found and its pointer
+    //! returned in @p device. The lifetime of the pointer matches that of the
+    //! current object.
+    //! @retval false The system did not contain any device with an identifier
+    //! which matched @p name, or it could not be cast to @p TDevice.
+    template<typename TDevice>
+    bool tryFindTypedDevice(Ag::string_cref_t name,
+                            TDevice *&device) const
+    {
+        IHardwareDevicePtr rawDevice;
+
+        if (tryFindDevice(name, rawDevice))
+            return Ag::tryCast(rawDevice, device);
+
+        device = nullptr;
+        return false;
+    }
+
     // Operations
     //! @brief Runs the processor until a host or debug interrupt occurs.
     //! @return Metrics summarising how many instructions were executed and
@@ -186,15 +224,6 @@ public:
     //! @brief Raises an external interrupt to force a call to run() to
     //! return.
     virtual void raiseHostInterrupt() = 0;
-
-    //! @brief Attempts to extract a message from the system's external
-    //! event queue.
-    //! @param[out] next Receives the next message if one is available.
-    //! @retval true A message was retrieved.
-    //! @retval false No messages were available.
-    //! @note This and only this member function can be called from a separate
-    //! thread from that which the processor is running in.
-    virtual bool tryGetNextMessage(GuestEvent &next) = 0;
 };
 
 //! @brief A custom deleter for IArmSystem implementations.

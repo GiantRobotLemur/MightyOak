@@ -1,5 +1,5 @@
 //! @file MightyOakLib/Test/Test_CliOptions.cpp
-//! @brief  The definition of unit tests for the CliOptions class.
+//! @brief The definition of unit tests for the CliOptions class.
 //! @author GiantRobotLemur@na-se.co.uk
 //! @date 2026
 //! @copyright This file is part of the Mighty Oak project which is released
@@ -22,7 +22,8 @@ namespace {
 // Local Data
 ////////////////////////////////////////////////////////////////////////////////
 const Ag::AppMetadata metadata(Ag::Version(0, 1, 0, 0, "Test"),
-                               "TestApp", "TestProduct", "Test",
+                               "TestApp", "Test App", "A test product",
+                               "Testy McTestface Ltd.", "Test Product",
                                "Testy McTestface",
                                "(c) Testy McTestFace. All rights reserved.");
 

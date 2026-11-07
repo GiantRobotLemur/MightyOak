@@ -1,5 +1,5 @@
 # Root CMakeLists for the MightyOak emulator built on the Silver cross-platform runtime library.
-cmake_minimum_required(VERSION 3.21)
+cmake_minimum_required(VERSION 3.25...3.31)
 
 set(MO_VERSION "0.0.1.0")
 set(MO_AUTHOR "GiantRobotLemur@na-se.co.uk")
@@ -59,7 +59,7 @@ ag_configure_build()
 message(STATUS "Obtaining Moody Camel Reader/Writer Queue...")
 FetchContent_Declare(readerwriterqueue
                      GIT_REPOSITORY https://github.com/cameron314/readerwriterqueue.git
-                     GIT_TAG v1.0.6)
+                     GIT_TAG v1.0.7)
 FetchContent_MakeAvailable(readerwriterqueue)
 
 # Download and build Google Test.

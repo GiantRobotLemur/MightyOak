@@ -1,7 +1,7 @@
-//! @file Test_MemcHardware.cpp
+//! @file ArmEmu/Test/Test_MemcHardware.cpp
 //! @brief The definition of unit tests for the MemcHardware class.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2023-2024
+//! @date 2023-2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -12,7 +12,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 #include <gtest/gtest.h>
 
-#include "MemcHardware.hpp"
+#include "MEMC.inl"
 
 namespace Mo {
 namespace Arm {
@@ -24,16 +24,20 @@ namespace {
 class MemcHardwareTests : public ::testing::Test
 {
 protected:
+    using MemcType = MemcHardware<false>;
     AddressMap _readDevices, _writeDevices;
-    MemcHardware specimen;
+    MemcType specimen;
 
     MemcHardwareTests() :
         specimen(Options(), _readDevices, _writeDevices)
     {
+        uint32_t dummyWord;
         specimen.reset();
+
+        // Ensure the ROM is deactivated after reset.
+        specimen.read(MEMC::PhysRamStart, dummyWord);
     }
 };
-
 
 ////////////////////////////////////////////////////////////////////////////////
 // Local Functions
@@ -102,8 +106,8 @@ uint32_t make32KMapping(uint16_t logicalPage, uint16_t physPage, uint8_t ppl)
 
     address |= Ag::Bin::extractAndShiftBits<uint32_t, 0, 3, 4>(physPage);
     address |= Ag::Bin::extractAndShiftBits<uint32_t, 4, 0, 1>(physPage);
-    address |= Ag::Bin::extractAndShiftBits<uint32_t, 5, 2, 1>(physPage);
-    address |= Ag::Bin::extractAndShiftBits<uint32_t, 6, 1, 1>(physPage);
+    address |= Ag::Bin::extractAndShiftBits<uint32_t, 5, 1, 1>(physPage);
+    address |= Ag::Bin::extractAndShiftBits<uint32_t, 6, 2, 1>(physPage);
 
     address |= Ag::Bin::extractAndShiftBits<uint32_t, 0, 8, 2>(ppl);
 
@@ -643,8 +647,11 @@ TEST_F(MemcHardwareTests, InitialROMMapping)
         0x42692496,
     };
 
-    specimen.setLowRom(reinterpret_cast<const uint8_t *>(sampleRomBytes),
-                       sizeof(sampleRomBytes));
+    specimen.setHighRom(reinterpret_cast<const uint8_t *>(sampleRomBytes),
+                        sizeof(sampleRomBytes));
+
+    // Re-reset the MEMC to re-enable ROM activation.
+    specimen.reset();
 
     // Verify that reading from low logical addresses read the ROM.
     uint32_t value = 0;
@@ -661,15 +668,15 @@ TEST_F(MemcHardwareTests, InitialROMMapping)
 
     // Verify the contents of the ROM in-place.
     value = 0;
-    EXPECT_TRUE(specimen.read(MEMC::LowRomStart, value));
+    EXPECT_TRUE(specimen.read(MEMC::HighRomStart, value));
     EXPECT_EQ(value, sampleRomBytes[0]);
 
     value = 0;
-    EXPECT_TRUE(specimen.read(MEMC::LowRomStart + 4, value));
+    EXPECT_TRUE(specimen.read(MEMC::HighRomStart + 4, value));
     EXPECT_EQ(value, sampleRomBytes[1]);
 
     value = 0;
-    EXPECT_TRUE(specimen.read(MEMC::LowRomStart + 8, value));
+    EXPECT_TRUE(specimen.read(MEMC::HighRomStart + 8, value));
     EXPECT_EQ(value, sampleRomBytes[2]);
 }
 
@@ -839,6 +846,49 @@ TEST_F(MemcHardwareTests, ExchangeBytes)
     EXPECT_EQ(value, Sample8);
     EXPECT_TRUE(specimen.read(physicalAddr, value));
     EXPECT_EQ(value, AltSample8);
+}
+
+TEST_F(MemcHardwareTests, Create32KMappingHighPhysPage)
+{
+    // Regression test: physical page bits 5 and 6 were swapped in 32KB mode,
+    // causing pages 32-63 and 64-95 to be mixed up.
+    specimen.setPrivilegedMode(true);
+
+    constexpr uint8_t PageSizePow2 = 15;
+    constexpr uint32_t PageSize = static_cast<uint32_t>(1) << PageSizePow2;
+
+    EXPECT_TRUE(specimen.write<uint32_t>(0x36E0000 | (PageSizePow2 - 12) << 2, 0));
+
+    // Map physical page 35 (bit 5 set, bit 6 clear) to logical page 5.
+    // If bits 5 and 6 are swapped, phys page 67 would be mapped instead.
+    constexpr uint16_t PhysPage = 35;
+    constexpr uint16_t LogicalPage = 5;
+
+    EXPECT_TRUE(specimen.write<uint32_t>(make32KMapping(LogicalPage, PhysPage, 0), 0));
+
+    // Write via logical address.
+    constexpr uint32_t SampleValue = 0xDEADBEEF;
+    uint32_t logicalAddr = 0x0C + (PageSize * LogicalPage);
+    EXPECT_TRUE(specimen.write(logicalAddr, SampleValue));
+
+    // Read back via direct physical access to page 35.
+    uint32_t physicalAddr = MEMC::PhysRamStart + (PageSize * PhysPage) + 0x0C;
+    uint32_t value = 0;
+    EXPECT_TRUE(specimen.read(physicalAddr, value));
+    EXPECT_EQ(value, SampleValue);
+
+    // Verify the swapped page (67) does NOT have the value.
+    constexpr uint16_t SwappedPage = 67;
+    uint32_t swappedAddr = MEMC::PhysRamStart + (PageSize * SwappedPage) + 0x0C;
+    value = 0;
+    EXPECT_TRUE(specimen.read(swappedAddr, value));
+    EXPECT_NE(value, SampleValue);
+
+    // Write direct to physical page 35 and read via logical.
+    constexpr uint32_t SampleValue2 = 0xCAFEBABE;
+    EXPECT_TRUE(specimen.write(physicalAddr, SampleValue2));
+    EXPECT_TRUE(specimen.read(logicalAddr, value));
+    EXPECT_EQ(value, SampleValue2);
 }
 
 } // Anonymous namespace

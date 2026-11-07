@@ -2,7 +2,7 @@
 //! @brief The declaration of an interface to a hardware device representing
 //! the an emulated keyboard and mouse for the host to manipulate.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2024
+//! @date 2024-2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -14,6 +14,8 @@
 ////////////////////////////////////////////////////////////////////////////////
 // Dependent Header Files
 ////////////////////////////////////////////////////////////////////////////////
+#include "Ag/Core/LinearSortedMap.hpp"
+
 #include "AddressMap.hpp"
 
 namespace Mo {
@@ -34,18 +36,38 @@ public:
 
     enum MouseButton : uint32_t
     {
+        NoButton = 0,
         LeftButton = 1,
         MiddleButton = 2,
         RightButton = 4,
         ButtonMask = 7
     };
 
+    //! @brief Expresses the keyboard LED states.
+    enum LEDState : uint8_t
+    {
+        LED_None        = 0x00,
+        LED_CapsLock    = 0x01,
+        LED_NumLock     = 0x02,
+        LED_ScrollLock  = 0x04,
+        LED_All         = 0x07,
+    };
+
+    using LEDStateBits = std::underlying_type_t<LEDState>;
+
     // Construction/Destruction
     virtual ~IKeyboardController() = default;
 
     // Accessors
+    //! @brief Gets the current state of the keyboard LEDs.
+    virtual LEDStateBits getLEDStates() const = 0;
 
     // Operations
+    //! @brief Connects the emulated device to the queue used to transmit bytes
+    //! back to the guest system via KART.
+    //! @param[in] txQueue A new pointer to the transmission queue.
+    virtual void connectToTxQueue(SynchronisedByteQueue *txQueue) = 0;
+
     //! @brief Reports a key press.
     //! @param[in] hostScanCode The host scan code to map to a native key
     //! press and report.

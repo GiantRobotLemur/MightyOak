@@ -2,7 +2,7 @@
 //! @brief The declaration of various tools shared between unit tests of the
 //! AsmTools library.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2022-2023
+//! @date 2022-2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -117,6 +117,7 @@ InputContext createInput(const char *sourceCode);
 void appendLog(::testing::AssertionResult &result, const Messages &log);
 ::testing::AssertionResult compareWords(uint32_t lhs, uint32_t rhs);
 ::testing::AssertionResult assemblySuccess(const Messages &log);
+std::string summariseMessages(const Messages &messages);
 
 const Options &getDefaultOptions();
 void registerInstructionTests();

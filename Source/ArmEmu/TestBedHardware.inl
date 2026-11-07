@@ -284,6 +284,9 @@ public:
 
     // Implemented for compatibility with GenericHardware.
     void addIntegralHardware(IHardwareDeviceCollection &/*devices*/) {}
+
+    // Implemented for compatibility with GenericHardware.
+    void connect(SystemContext &/*context*/) {}
 };
 
 }} // namespace Mo::Arm

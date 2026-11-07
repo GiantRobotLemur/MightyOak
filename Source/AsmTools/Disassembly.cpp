@@ -1,7 +1,7 @@
 //! @file Disassembly.cpp
 //! @brief The definition of logic to disassembly 32-bit ARM machine code.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2022-2024
+//! @date 2022-2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -983,6 +983,13 @@ OperationClass disassembleInstruction(DisassemblyParams &params)
             int32_t offset = static_cast<int32_t>(params.Instructions[params.Decoded] << 8) >> 6;
             uint32_t pcAddr = params.LoadAddress + 8;
             params.Params->BranchOp.Address = pcAddr + static_cast<uint32_t>(offset);
+
+            if ((params.Flags & InstructionInfo::DisasmBits::Is32Bit) == 0)
+            {
+                // Ensure the resultant PC is 26-bit.
+                params.Params->BranchOp.Address &= 0x03FFFFF;
+            }
+
             ++params.Decoded;
         }
         break;

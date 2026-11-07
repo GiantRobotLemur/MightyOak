@@ -2,7 +2,7 @@
 //! @brief The declaration of a system of objects used to set and verify the
 //! state of an emulated system in tests.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2023-2024
+//! @date 2023-2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -364,7 +364,19 @@ public:
                 break;
 
             case SystemRegister::IrqStatus:
+                // Value maps directly to IrqState bits: 1=FIQ, 2=IRQ, 3=both
+                if (constraint.Value & IrqState::FastIrqPending)
+                    target.getHardare().setGuestFastIrq(true);
+                if (constraint.Value & IrqState::IrqPending)
+                    target.getHardare().setGuestIrq(true);
+                break;
+
             case SystemRegister::IrqMask:
+                target.getHardare().updateIrqMask(
+                    static_cast<uint8_t>(constraint.Value),
+                    IrqState::GuestIrqsMask);
+                break;
+
             case SystemRegister::SPSR:
             default:
                 isSet = false;

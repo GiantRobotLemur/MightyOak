@@ -142,6 +142,9 @@ protected:
     virtual bool processOption(uint32_t id, const String &/*original*/,
                                const String &value, String &error) override
     {
+        std::string_view fpaToken("FPA");
+        std::string_view thumbToken("THUMB");
+
         InstructionSet instructionSet = InstructionSet::Max;
         bool isOK = true;
 
@@ -178,11 +181,11 @@ protected:
             break;
 
         case Extension:
-            if (value.compareIgnoreCase("FPA") == 0)
+            if (value.compareIgnoreCase(fpaToken) == 0)
             {
                 _disasmFlags |= InstructionInfo::AllowFPA;
             }
-            else if (value.compareIgnoreCase("THUMB"))
+            else if (value.compareIgnoreCase(thumbToken))
             {
                 _disasmFlags |= InstructionInfo::AllowThumb;
             }
@@ -297,22 +300,41 @@ private:
     bool _isPIC;
 
     // Internal Functions
-    static void flushBytesToOutput(std::vector<uint8_t> &bytes, FILE *output)
+    static void flushBytesToOutput(std::vector<uint8_t> &bytes, uint32_t addr, FILE *output)
     {
         const size_t MaxBytesPerLine = 20;
         size_t bytesInLine = 0;
+        uint32_t byteCount = static_cast<uint32_t>(bytes.size());
         bool isFirstInLine = true;
 
-        for (uint8_t next : bytes)
+        for (uint32_t i = 0; i < byteCount; ++i)
         {
+            uint32_t bytesLeft = byteCount - i;
+
             if (isFirstInLine)
             {
-                fprintf(output, "EQUB 0x%.2X", next);
-                isFirstInLine = false;
+                if ((addr & 0x03) || (bytesLeft < 4))
+                {
+                    // The bytes aren't 4-byte aligned or is an odd number of bytes.
+                    fprintf(output, "0x%.8X:        : EQUB 0x%.2X", addr + i, bytes[i]);
+                    isFirstInLine = false;
+                }
+                else
+                {
+                    // Print a single line encoding 4 bytes.
+                    fprintf(output, "0x%.8X:        : EQUD 0x%.8X", addr + i,
+                            *reinterpret_cast<const uint32_t *>(bytes.data() + i));
+
+                    // Increment the counter by an extra 3 bytes.
+                    i += 3;
+
+                    // Force a new line.
+                    bytesInLine = MaxBytesPerLine;
+                }
             }
             else
             {
-                fprintf(output, ", 0x%.2X", next);
+                fprintf(output, ", 0x%.2X", bytes[i]);
             }
 
             ++bytesInLine;
@@ -326,6 +348,9 @@ private:
             }
         }
 
+        if (!isFirstInLine)
+            fputc('\n', output);
+
         bytes.clear();
     }
 
@@ -334,8 +359,15 @@ private:
         InstructionInfo instruction;
         int processResult = 0;
         uint32_t objAddr = _isPIC ? 0x00000000 : _baseAddr;
-        FormatterOptions formatter(objAddr, _disasmFlags);
+        uint32_t formatFlags = FormatterOptions::UseCoreRegAliases |
+                               FormatterOptions::UseDecimalComments;
+
+        if (_isPIC)
+            formatFlags |= FormatterOptions::ShowOffsets;
+
+        FormatterOptions formatter(objAddr, formatFlags);
         std::vector<uint8_t> buffer;
+        uint32_t bufferOffset = objAddr;
 
         while (!feof(input))
         {
@@ -357,16 +389,18 @@ private:
                 if ((bytesRead == 4) &&
                     instruction.disassemble(instructionWord, objAddr, _disasmFlags))
                 {
-                    // Write any previous un-decoded bytes.
-                    flushBytesToOutput(buffer, output);
+                    // Write any previous n-decoded bytes.
+                    flushBytesToOutput(buffer, bufferOffset, output);
 
                     // The instruction was successfully disassembled.
                     formatter.setInstructionAddress(objAddr);
                     String statement = instruction.toString(&formatter);
 
-                    fprintf(output, "0x%.6X: %s\n", objAddr, statement.getUtf8Bytes());
+                    fprintf(output, "0x%.8X:%.8X: %s\n", objAddr,
+                            instructionWord, statement.getUtf8Bytes());
 
                     objAddr += 4;
+                    bufferOffset = objAddr;
                 }
                 else
                 {
@@ -380,7 +414,7 @@ private:
         }
 
         // Write last un-decode bytes, if any.
-        flushBytesToOutput(buffer, output);
+        flushBytesToOutput(buffer, bufferOffset, output);
 
         // Add a trailing line break.
         fputc('\n', output);

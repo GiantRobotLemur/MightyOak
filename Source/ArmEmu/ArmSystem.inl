@@ -14,12 +14,14 @@
 ////////////////////////////////////////////////////////////////////////////////
 // Dependent Header Files
 ////////////////////////////////////////////////////////////////////////////////
+#include <cstring>
 #include <set>
+#include <type_traits>
 
 #include "Ag/Core/Utils.hpp"
 
 #include "ArmEmu/ArmSystem.hpp"
-#include "ArmEmu/GuestEventQueue.hpp"
+#include "ArmEmu/IDiagnosticSink.hpp"
 #include "ArmEmu/EmuOptions.hpp"
 #include "ArmEmu/SystemContext.hpp"
 #include "SystemConfigurations.inl"
@@ -42,7 +44,6 @@ private:
     using ExecutionUnit = typename TSysTraits::ExecutionUnitType;
 
     // Internal Fields
-    GuestEventQueueUPtr _eventQueue;
     SystemContext _interop;
     Hardware _hardware;
     RegisterFile _registers;
@@ -81,25 +82,14 @@ private:
         // Register integral hardware which doesn't appear on the address maps.
         _hardware.addIntegralHardware(allDevices);
 
-        // Ensure each entry in the list is unique.
-        std::sort(allDevices.begin(), allDevices.end());
-        auto last = std::unique(allDevices.begin(), allDevices.end());
-        allDevices.erase(last, allDevices.end());
+        // Index and connect all devices together and to inter-op services.
+        _interop.connectAllDevices(allDevices);
 
-        // Connect all devices together and to inter-op services.
-        ConnectionContext connection(&_interop);
+        // Allow hardware to connect to (possibly external) devices.
+        _hardware.connect(_interop);
 
-        // Create an index of named devices.
-        for (IHardwareDevicePtr device : allDevices)
-        {
-            connection.addDevice(device);
-        }
-
-        // Allow all devices the change to connect to any other device.
-        for (IHardwareDevicePtr device : allDevices)
-        {
-            device->connect(connection);
-        }
+        // Connect the execution unit to the same devices, if needed.
+        _execUnit.connect();
     }
 public:
     // Construction/Destruction
@@ -107,9 +97,9 @@ public:
     //! hardware over and above what the hardware types supplies.
     //! @param[in] options An object describing the preferred configuration of
     //! the emulated system.
-    ArmSystem(const Options &options) :
-        _eventQueue(Ag::createUniqueAligned<GuestEventQueue>(reinterpret_cast<uintptr_t>(static_cast<IArmSystem *>(this)))),
-        _interop(options, *_eventQueue.get(), this),
+    //! @param[in] host An optional reference to a connection to the host system.
+    ArmSystem(const Options &options, const IHostConnectionSPtr &host) :
+        _interop(options, host, this),
         _hardware(options),
         _registers(_hardware),
         _execUnit(_hardware, _registers, _interop),
@@ -135,9 +125,9 @@ public:
     //! @param[in] write The additional mappings of regions of memory which can
     //! be written over and above standard devices, ROM and RAM.
     ArmSystem(const Options &options, HardwareDevicePool &&devices,
-              const AddressMap &read, const AddressMap &write) :
-        _eventQueue(Ag::createUniqueAligned<GuestEventQueue>(reinterpret_cast<uintptr_t>(static_cast<IArmSystem *>(this)))),
-        _interop(options, *_eventQueue.get(), this),
+              const AddressMap &read, const AddressMap &write,
+              const IHostConnectionSPtr &host) :
+        _interop(options, host, this),
         _hardware(options, read, write),
         _registers(_hardware),
         _execUnit(_hardware, _registers, _interop),
@@ -172,13 +162,16 @@ public:
     }
 
     // Overrides
+    // Inherited from IArmSystem.
     virtual bool isRunning() const override { return _isRunning; }
 
+    // Inherited from IArmSystem.
     virtual ProcessorMode getMode() const override
     {
         return _registers.getMode();
     }
 
+    // Inherited from IArmSystem.
     virtual uint32_t getCoreRegister(CoreRegister id) const
     {
         uint32_t result = 0;
@@ -213,6 +206,7 @@ public:
         return result;
     }
 
+    // Inherited from IArmSystem.
     virtual void setCoreRegister(CoreRegister id, uint32_t value) override
     {
         switch (id)
@@ -245,23 +239,34 @@ public:
         }
     }
 
+    // Inherited from IArmSystem.
     virtual const AddressMap &getReadAddresses() const override
     {
         return _addrDecoderReadMap;
     }
 
+    // Inherited from IArmSystem.
     virtual const AddressMap &getWriteAddresses() const override
     {
         return _addrDecoderWriteMap;
     }
 
+    // Inherited from IArmSystem.
     virtual bool logicalToPhysicalAddress(uint32_t logicalAddr,
                                           PageMapping &mapping) const override
     {
         return _hardware.logicalToPhysicalAddress(logicalAddr, mapping);
     }
 
+    // Inherited from IArmSystem.
+    virtual bool tryFindDevice(Ag::string_cref_t name,
+                               IHardwareDevicePtr &device) const override
+    {
+        return _interop.tryFindDevice(name, device);
+    }
+
     // Operations
+    // Inherited from IArmSystem.
     virtual ExecutionMetrics run()  override
     {
         Ag::ValueScope<std::atomic_bool, bool> isRunning(_isRunning, true);
@@ -269,12 +274,14 @@ public:
         return _execUnit.runPipeline(0);
     }
 
+    // Inherited from IArmSystem.
     virtual ExecutionMetrics runSingleStep() override
     {
         Ag::ValueScope<std::atomic_bool, bool> isRunning(_isRunning, true);
         return _execUnit.runPipeline(-1);
     }
 
+    // Inherited from IArmSystem.
     virtual ExecutionMetrics runLimited(int32_t maxCycles) override
     {
         Ag::ValueScope<std::atomic_bool, bool> isRunning(_isRunning, true);
@@ -282,14 +289,10 @@ public:
         return _execUnit.runPipeline(static_cast<int32_t>(maxCycles));
     }
 
+    // Inherited from IArmSystem.
     virtual void raiseHostInterrupt() override
     {
         _hardware.setHostIrq(true);
-    }
-
-    virtual bool tryGetNextMessage(GuestEvent &next) override
-    {
-        return _eventQueue->tryDeque(next);
     }
 };
 

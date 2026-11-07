@@ -1,7 +1,7 @@
 //! @file ArmEmu/Test/Test_MemcRomBoot.cpp
 //! @brief The definition of unit tests which exercise the MEMC-based system
 //! boot sequence using the embedded MemcTestSystemRom.
-//! @author GiantRobotLemur@na-se.co.uk
+//! @author GiantRobotLemur@na-se.co.uk and Claude Code
 //! @date 2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
@@ -15,10 +15,18 @@
 
 #include "AsmTools.hpp"
 
+#include <iostream>
+#include <sstream>
+#include <mutex>
+#include <thread>
+
 #include "ArmSystem.inl"
 #include "SystemConfigurations.inl"
-#include "MemcHardware.hpp"
+#include "MEMC.inl"
 #include "MemcTestRom.hpp"
+#include "ArmEmu/RingBufferTrace.hpp"
+#include "ArmEmu/BootProgressMonitor.hpp"
+#include "ArmEmu/CompositeDiagnosticSink.hpp"
 
 namespace Mo {
 namespace Arm {
@@ -27,8 +35,8 @@ namespace {
 ////////////////////////////////////////////////////////////////////////////////
 // Local Data Types
 ////////////////////////////////////////////////////////////////////////////////
-//! @brief The concrete MEMC system type used for testing.
-using MemcSystem = ArmSystem<ArmV2MemcSystemTraits>;
+//! @brief The concrete MEMC system type, which enables diagnostics, used for testing.
+using MemcSystem = ArmSystem<ArmV2MemcSystemTraits<true>>;
 
 //! @brief A test fixture which creates a MEMC-based system loaded with the
 //! embedded test ROM and provides helpers for stepping/running.
@@ -123,24 +131,43 @@ protected:
         _lastPC(0),
         _lastBkPt(~0u)
     {
+    }
+
+    IArmSystem *createSystem(IHardwareDeviceUPtr &&extraDevice)
+    {
+        if (_system)
+            return _system.get();
+
         Options opts;
         opts.setHardwareArchitecture(SystemModel::Archimedies);
         opts.setProcessorVariant(ProcessorModel::ARM2);
         opts.setSystemRom(SystemROMPreset::Custom);
         opts.setRamSizeKb(RamSizeKb);
 
-        _system = std::make_unique<MemcSystem>(opts, HardwareDevicePool(),
-                                               AddressMap(), AddressMap());
+        HardwareDevicePool devicePool;
+
+        if (extraDevice)
+            devicePool.emplace_back(std::move(extraDevice));
+
+        _system = std::make_unique<MemcSystem>(opts, std::move(devicePool),
+                                               AddressMap(), AddressMap(), nullptr);
 
         // Load the embedded test ROM into low ROM.
         size_t romByteCount;
         const uint8_t *romData = getMemcTestRomData(romByteCount);
 
-        _system->getHardare().setLowRom(romData, romByteCount);
+        _system->getHardare().setHighRom(romData, romByteCount);
 
         // Re-reset so that the CPU starts from address 0 with the ROM data
         // in place for the initial page mappings.
         _system->reset();
+
+        return _system.get();
+    }
+
+    IArmSystem *createSystem()
+    {
+        return createSystem({ });
     }
 
     //! @brief Runs the system for up to maxSteps single steps, stopping early
@@ -152,11 +179,13 @@ protected:
     template<typename Predicate>
     uint32_t runUntil(Predicate predicate, uint32_t maxSteps = MaxSteps)
     {
+        auto sysToRun = createSystem();
+
         uint32_t steps = 0;
 
         for (; steps < maxSteps; ++steps)
         {
-            _lastResult = _system->runSingleStep();
+            _lastResult = sysToRun->runSingleStep();
 
             if (_lastResult.ExecResult == ExecutionMetrics::Result::DebugIrq)
             {
@@ -164,7 +193,7 @@ protected:
                 break;
             }
 
-            if (predicate(_system.get()))
+            if (predicate(sysToRun))
             {
                 break;
             }
@@ -179,11 +208,12 @@ protected:
     //! @return The execution result of the last step.
     ExecutionMetrics::Result runSteps(uint32_t count)
     {
+        auto sysToRun = createSystem();
         ExecutionMetrics::Result lastResult = ExecutionMetrics::Result::Unset;
 
         for (uint32_t i = 0; i < count; ++i)
         {
-            _lastResult = _system->runSingleStep();
+            _lastResult = sysToRun->runSingleStep();
             lastResult = _lastResult.ExecResult;
 
             if (lastResult == ExecutionMetrics::Result::DebugIrq)
@@ -196,13 +226,49 @@ protected:
         return lastResult;
     }
 
+    //! @brief Runs in a separate thread to implement a timeout.
+    //! @param[in] systemToWatch The emulator to raise a host IRQ on at timeout.
+    //! @param[in] isRunning The lock indicating if the emulator is still running.
+    //! @param[in] timeoutMs The maximum amount of time the emulator can run for.
+    static void watchDogThread(IArmSystem *systemToWatch,
+                               std::timed_mutex *isRunning,
+                               uint32_t timeoutMs)
+    {
+        if (!isRunning->try_lock_until(std::chrono::steady_clock::now() +
+                                       std::chrono::milliseconds(timeoutMs)))
+        {
+            // We failed to acquire the lock, the emulated system has run away.
+            systemToWatch->raiseHostInterrupt();
+        }
+    }
+
     //! @brief Runs the system until the PC stops changing (branch to self) or
     //! a BKPT is hit.
     //! @return True if a BKPT was hit, false if the PC was stuck.
-    bool runUntilHaltOrBkpt(int32_t maxSteps = MaxSteps)
+    bool runUntilHaltOrBkpt(int32_t maxSteps = MaxSteps, uint32_t timeoutMs = 30000)
     {
-        _lastResult = _system->runLimited(maxSteps);
-        analyseExecution();
+        std::timed_mutex isRunning;
+        std::thread watchdog;
+
+        auto sysToRun = createSystem();
+
+        if (sysToRun != nullptr)
+        {
+            // Acquire the lock while the emulator is running.
+            std::lock_guard guard(isRunning);
+
+            // Run a watchdog thread to monitor the lock and trigger a
+            // host IRQ after a timeout.
+            watchdog = std::thread(watchDogThread, sysToRun, &isRunning, timeoutMs);
+
+            // Run the emulator.
+            _lastResult = sysToRun->runLimited(maxSteps);
+            analyseExecution();
+        }
+
+        // Ensure the watchdog thread exits.
+        if (watchdog.joinable())
+            watchdog.join();
 
         return (_lastResult.ExecResult == ExecutionMetrics::Result::DebugIrq);
     }
@@ -225,7 +291,6 @@ protected:
 ////////////////////////////////////////////////////////////////////////////////
 // Unit Tests
 ////////////////////////////////////////////////////////////////////////////////
-
 //! @brief Verify that after reset, the PC advances from address 0 into the
 //! ROM branch sequence, confirming low ROM is correctly mapped to logical
 //! address 0.
@@ -259,14 +324,14 @@ TEST_F(MemcRomBootTests, JumpsToPhysicalRom)
     // After which the PC should be >= 0x3400000.
     uint32_t steps = runUntil([](IArmSystem *sys) {
         uint32_t pc = sys->getCoreRegister(CoreRegister::PC);
-        return pc >= MEMC::LowRomStart;
+        return pc >= MEMC::HighRomStart;
     }, 10);
 
     uint32_t pc = getLastPC();
-    EXPECT_GE(pc, MEMC::LowRomStart)
+    EXPECT_GE(pc, MEMC::HighRomStart)
         << "PC did not reach physical ROM region after " << steps << " steps.";
-    EXPECT_LT(pc, MEMC::HighRomStart)
-        << "PC is beyond the low ROM region.";
+    EXPECT_LT(pc, MEMC::AddrSpaceEnd)
+        << "PC is beyond the high ROM region.";
     EXPECT_LT(steps, 10u)
         << "Jump to physical ROM took too many steps.";
 }
@@ -285,7 +350,8 @@ TEST_F(MemcRomBootTests, MemorySizeDetection)
     ASSERT_GE(workspace.State, BootState::MemDetected);
 
     // The default Options RAM size is <RamSizeKb> KB.
-    EXPECT_EQ(workspace.DetectedRamSize, RamSizeKb << 10) << "Detected RAM size incorrect: " << workspace.DetectedRamSize;
+    EXPECT_EQ(workspace.DetectedRamSize, RamSizeKb << 10)
+        << "Detected RAM size incorrect: " << workspace.DetectedRamSize;
 }
 
 //! @brief After the ROM programs MEMC for 8KB pages and identity-maps the first
@@ -313,14 +379,16 @@ TEST_F(MemcRomBootTests, MEMCControlRegisterProgrammed)
                                                 SampleWordCount * sizeof(uint32_t));
 
     // The value should be non-zero (it's the RAM size and other bits).
-    ASSERT_EQ(bytesRead, SampleWordCount * sizeof(uint32_t)) << "Could not read from identity-mapped logical addresses.";
+    ASSERT_EQ(bytesRead, SampleWordCount * sizeof(uint32_t))
+        << "Could not read from identity-mapped logical addresses.";
 
     // Verify the same bytes exist in physically mapped RAM.
     bytesRead = readFromPhysicalAddress(getSystem(), OS_Workspace + MEMC::PhysRamStart,
                                         physicalMemSample,
                                         SampleWordCount * sizeof(uint32_t));
 
-    ASSERT_EQ(bytesRead, SampleWordCount * sizeof(uint32_t)) << "Could not read from physical addresses.";
+    ASSERT_EQ(bytesRead, SampleWordCount * sizeof(uint32_t))
+        << "Could not read from physical addresses.";
 
     for (uint32_t i = 0; i < SampleWordCount; ++i)
     {
@@ -371,15 +439,17 @@ TEST_F(MemcRomBootTests, HardwareVectorsInstalledInRAM)
         //   current vector table entry.
         EXPECT_EQ(hwVectors[i], 0xE59FF018);
 
-        // Handler addresses should point into the ROM region (>= 0x3400000).
-        EXPECT_GE(handlerAddr, MEMC::LowRomStart)
+        // Handler addresses should point into the ROM region (>= 0x3800000).
+        EXPECT_GE(handlerAddr, MEMC::HighRomStart)
             << "Handler address at 0x" << std::hex << addr
             << " points to 0x" << handlerAddr
-            << ", expected ROM region (>= 0x3400000).";
-        EXPECT_LT(handlerAddr, MEMC::HighRomStart)
+            << ", expected ROM region (>= 0x"
+            << std::hex << MEMC::HighRomStart << ").";
+        EXPECT_LT(handlerAddr, MEMC::AddrSpaceEnd)
             << "Handler address at 0x" << std::hex << addr
             << " points to 0x" << handlerAddr
-            << ", expected low ROM region (< 0x3800000).";
+            << ", expected low ROM region (< 0x"
+            << std::hex << MEMC::AddrSpaceEnd << ").";
     }
 }
 
@@ -400,10 +470,10 @@ TEST_F(MemcRomBootTests, IOCInitCompletes)
 
     // Verify the PC is in the ROM region (the B $ is in the IOC init code).
     uint32_t pc = getLastPC();
-    EXPECT_GE(pc, MEMC::LowRomStart)
+    EXPECT_GE(pc, MEMC::HighRomStart)
         << "PC is not in the ROM region at halt.";
-    EXPECT_LT(pc, MEMC::HighRomStart)
-        << "PC is beyond the low ROM region at halt.";
+    EXPECT_LT(pc, MEMC::AddrSpaceEnd)
+        << "PC is beyond the high ROM region at halt.";
 }
 
 //! @brief Unit test for the Cinit fix: write to MEMC address space with
@@ -411,36 +481,54 @@ TEST_F(MemcRomBootTests, IOCInitCompletes)
 TEST_F(MemcRomBootTests, CinitRegisterStored)
 {
     // Create a standalone MemcHardware to test the Cinit register directly.
+    using MemcType = typename MemcHardware<false>;
     AddressMap readDevices, writeDevices;
-    MemcHardware memc(Options(), readDevices, writeDevices);
+    MemcType memc(Options(), readDevices, writeDevices);
+    IHardwareDeviceCollection devices;
+    MemcType::VIDCType *specimen = nullptr;
+
+    memc.addIntegralHardware(devices);
+
+    for (auto device : devices)
+    {
+        if (Ag::tryCast(device, specimen))
+            break;
+    }
+
+    ASSERT_NE(specimen, nullptr) << "VIDC10 instance not found!";
+
     memc.reset();
     memc.setPrivilegedMode(true);
 
     // Verify initial value is 0.
-    EXPECT_EQ(memc.getCursorInitAddr(), 0u);
+    EXPECT_EQ(specimen->getCursorInitAddr(), 0u);
 
     // Write a Cinit register value. The MEMC register encoding for Cinit is:
     // Base address 0x3600000, register ID = 3 (bits [19:17]).
     // Cinit = case 3, so bits [19:17] = 011 = 0x60000.
     // The address encodes the value: _cursorInitAddr = offset & 0x1FFFC.
     // Offset for Cinit: 0x3600000 | (3 << 17) = 0x3660000
-    // With a value encoded in the lower bits: 0x3660000 | 0x1234C
-    uint32_t memcAddr = 0x3660000 | 0x1234C;
+    // The least significant two bits of the value are ignored and the
+    // value must be aligned on a 16-byte boundary.
+    // With a value encoded in the lower bits: 0x3660000 | (0x12340 >> 2))
+    constexpr uint32_t CInitTest1 = 0x12340;
+    uint32_t memcAddr = 0x3660000 | (CInitTest1 >> 2);
     EXPECT_TRUE(memc.write<uint32_t>(memcAddr, 0));
 
-    EXPECT_EQ(memc.getCursorInitAddr(), 0x1234Cu)
+    EXPECT_EQ(specimen->getCursorInitAddr(), CInitTest1)
         << "Cinit register did not store the expected value.";
 
     // Write a different value.
-    memcAddr = 0x3660000 | 0x1FFF8;
+    constexpr uint32_t CInitTest2 = 0x1FFF0;
+    memcAddr = 0x3660000 | (CInitTest2 >> 2);
     EXPECT_TRUE(memc.write<uint32_t>(memcAddr, 0));
 
-    EXPECT_EQ(memc.getCursorInitAddr(), 0x1FFF8u)
+    EXPECT_EQ(specimen->getCursorInitAddr(), CInitTest2)
         << "Cinit register did not update to the new value.";
 
     // Verify reset clears Cinit.
     memc.reset();
-    EXPECT_EQ(memc.getCursorInitAddr(), 0u)
+    EXPECT_EQ(specimen->getCursorInitAddr(), 0u)
         << "Cinit register was not cleared on reset.";
 }
 
@@ -460,8 +548,55 @@ TEST_F(MemcRomBootTests, BootRunsToCompletion)
 
     uint32_t pc = getLastPC();
 
-    EXPECT_GE(pc, MEMC::LowRomStart)
+    EXPECT_GE(pc, MEMC::HighRomStart)
         << "PC is not in the ROM region at halt.";
+}
+
+//! @brief Run the boot sequence with diagnostic sinks attached and verify
+//! that the trace and boot monitor capture meaningful data.
+TEST_F(MemcRomBootTests, DiagnosticBootTrace)
+{
+    RingBufferTrace trace(4096);
+    BootProgressMonitor monitor;
+    auto compSinkUPtr = std::make_unique<CompositeDiagnosticSink>(CompositeDiagnosticSink({ &trace, &monitor }));
+    auto sys = createSystem(std::move(compSinkUPtr));
+
+    // Ensure the sink was integrated into the system.
+    CompositeDiagnosticSink *compSink = nullptr;
+
+    EXPECT_TRUE(sys->tryFindTypedDevice("DiagnosticSink", compSink));
+    EXPECT_NE(compSink, nullptr);
+
+    // Run the full boot sequence with diagnostics.
+    runUntilHaltOrBkpt(100000000);
+
+    // Verify the trace captured instructions.
+    EXPECT_GT(trace.getInstructionCount(), 0u)
+        << "No instructions were captured by the trace.";
+
+    // Verify the boot monitor detected progress.
+    EXPECT_GT(monitor.getInstructionCount(), 0u)
+        << "Boot monitor did not count any instructions.";
+
+    // We should have seen IOC accesses during boot (the IOC is accessed
+    // through the MMIO path and therefore captured by the diagnostic sink).
+    EXPECT_GT(monitor.getIocAccessCount(), 0u)
+        << "No IOC accesses detected during boot.";
+
+    // Dump the boot progress to test output for inspection.
+    std::ostringstream oss;
+    monitor.printSummary(oss);
+    oss << "\n";
+    trace.dumpToStream(oss);
+
+    // Print to test output so it can be reviewed.
+    std::cout << oss.str() << std::endl;
+
+    // The boot should have reached at least IOCInit.
+    GuestWorkspace workspace;
+    ASSERT_TRUE(tryGetGuestWorkspace(workspace));
+    EXPECT_GE(workspace.State, BootState::IOCInit)
+        << "Boot with diagnostics attached did not reach IOC init.";
 }
 
 } // Anonymous namespace

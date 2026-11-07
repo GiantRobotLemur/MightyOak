@@ -14,7 +14,10 @@
 #include <map>
 
 #include "Ag/Core/Binary.hpp"
+#include "Ag/Core/Exception.hpp"
 #include "Ag/Core/Format.hpp"
+#include "Ag/Core/FsPath.hpp"
+#include "Ag/Core/FsDirectory.hpp"
 #include "Ag/Core/Variant.hpp"
 
 #include "ArmEmu/EmuOptions.hpp"
@@ -835,6 +838,56 @@ bool Options::isValidRiscPCRAMSize(uint32_t ramSizeKb)
     }
 
     return false;
+}
+
+//! @brief Attempts to find the path containing ROM image files.
+//! @param[in] baseSearchPath An absolute path to folder at the tip of the folder
+//! hierarchy to start searching from.
+//! @param[in] leafPath The relative path to the sub-folder to check for at
+//! each level of @p baseSearchPath.
+//! @retval true A matching path made up of @p baseSearchPath or some ancestor
+//! thereof with @p leafPath appended exists and was set as the ROM directory.
+//! @retval false No matching folder was found.
+bool Options::findRomImagePath(const Ag::Fs::Path &baseSearchPath,
+                               const Ag::Fs::Path &leafPath)
+{
+    using namespace Ag::Fs;
+
+    if (baseSearchPath.isEmpty() || (baseSearchPath.hasRoot() == false))
+        throw Ag::ArgumentException("The search path is not absolute.", "baseSearchPath");
+
+    if (leafPath.hasRoot())
+        throw Ag::ArgumentException("The leaf path is not relative.", "leafPath");
+
+    PathBuilder search(baseSearchPath);
+    Path romBasePath;
+
+    do
+    {
+        Path possiblePath = leafPath.convertToAbsolute(search);
+        Entry possibleDir(possiblePath);
+
+        if (possibleDir.exists() && possibleDir.isDirectory())
+        {
+            // We've found a matching directory path.
+            romBasePath = std::move(possiblePath);
+        }
+        else if (search.getElementCount() > 0)
+        {
+            // Try the parent folder.
+            search.popElement();
+        }
+        else
+        {
+            // We failed to find the path;
+            return false;
+        }
+    } while (romBasePath.isEmpty());
+
+    // Apply the path we found.
+    setRomImageBasePath(romBasePath);
+
+    return true;
 }
 
 //! @brief Sets the path to the folder containing the 'known' OS ROM images.

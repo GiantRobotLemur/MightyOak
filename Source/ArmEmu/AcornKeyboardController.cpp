@@ -15,8 +15,10 @@
 #include <algorithm>
 #include <cstdint>
 
+#include "ArmEmu/HostMessageID.hpp"
+
 #include "AcornKeyboardController.hpp"
-#include "ArmEmu/IOC.hpp"
+#include "IOC.hpp"
 
 namespace Mo {
 namespace Arm {
@@ -63,11 +65,16 @@ bool tryMapMouseButton(AcornKeyboardController::MouseButton button,
 AcornKeyboardController::AcornKeyboardController() :
     _name("Keyboard Controller"),
     _description("Maps host key and mouse events to guest-compatible scan codes."),
-    _ioController(nullptr),
+    _txQueue(nullptr),
     _mouseDeltaX(0),
     _mouseDeltaY(0),
     _pendingKeyEvents(Ag::AlignmentTraits<KeyEventQueue>::create()),
-    _state(ControllerState::PreReset)
+    _context(nullptr),
+    _ledStates(LED_None),
+    _state(ControllerState::PreReset),
+    _keyScanningEnabled(false),
+    _mouseTxEnabled(false),
+    _secondTxByte(0)
 {
 }
 
@@ -76,28 +83,35 @@ AcornKeyboardController::AcornKeyboardController() :
 void AcornKeyboardController::receiveKARTByte(uint8_t nextByte)
 {
     // We can't do anything if we can't send bytes back to IOC.
-    if (_ioController == nullptr)
+    if (_txQueue == nullptr)
         return;
 
     bool hasError = true;
+
+    // HRST is always accepted regardless of state and resets the protocol.
+    // Key scanning and mouse reporting remain disabled until the host
+    // re-enables them after the handshake.
+    if (nextByte == HRST)
+    {
+        _state = ControllerState::ReceivedHRST;
+        _keyScanningEnabled = false;
+        _mouseTxEnabled = false;
+        _txQueue->enqueue(HRST);
+        return;
+    }
 
     switch (_state)
     {
     case ControllerState::PreReset:
     default:
-        if (nextByte == HRST)
-        {
-            _state = ControllerState::ReceivedHRST;
-            _ioController->writeKartByte(HRST);
-            hasError = false;
-        }
+        // Only HRST is accepted in PreReset (handled above).
         break;
 
     case ControllerState::ReceivedHRST:
         if (nextByte == RAK1)
         {
             _state = ControllerState::ReceivedRAK1;
-            _ioController->writeKartByte(RAK1);
+            _txQueue->enqueue(RAK1);
             hasError = false;
         }
         break;
@@ -107,7 +121,7 @@ void AcornKeyboardController::receiveKARTByte(uint8_t nextByte)
         {
             // Handshake complete. Transition to Initialised state.
             _state = ControllerState::Initialised;
-            _ioController->writeKartByte(RAK2);
+            _txQueue->enqueue(RAK2);
             hasError = false;
         }
         break;
@@ -115,51 +129,70 @@ void AcornKeyboardController::receiveKARTByte(uint8_t nextByte)
     case ControllerState::Initialised:
         hasError = false;
 
-        if (nextByte == HRST)
-        {
-            // Host requested a hard reset.
-            _state = ControllerState::ReceivedHRST;
-            _ioController->writeKartByte(RAK1);
-        }
-        else if (nextByte == PRST)
+        if (nextByte == PRST)
         {
             // Protocol reset - restart the handshake.
             _state = ControllerState::PreReset;
-            _ioController->writeKartByte(HRST);
+            _txQueue->enqueue(HRST);
         }
         else if (nextByte == RQID)
         {
             // Host requested the keyboard ID.
-            _ioController->writeKartByte(KBID_Bits | KeyboardId);
+            _txQueue->enqueue(KBID_Bits | KeyboardId);
         }
         else if (nextByte == RQMP)
         {
             // Host requested mouse position data.
-            sendMouseData();
+            beginSendMouseData();
         }
         else if (nextByte <= LEDS_Mask)
         {
-            // LED state control (0x00-0x07). Acknowledge and send status.
-            _ioController->writeKartByte(getStatusByte());
-        }
-        else if (nextByte == SACK || nextByte == NACK ||
-                 nextByte == MACK || nextByte == SMAK ||
-                 nextByte == BACK)
-        {
-            // Host acknowledgement. Send any pending key/mouse data
-            // or a status byte.
-            sendPendingData();
+            // LED state control (0x00-0x07). No response needed; the
+            // host does not wait for one.
+            LEDStateBits newState = nextByte & LED_All;
+
+            if (_ledStates.exchange(newState, std::memory_order_relaxed) != newState)
+            {
+                // The LED state has changed. Inform the host.
+                if (_context != nullptr)
+                    _context->postMessageToHost(KeyboardLEDsChanged, newState, 0);
+            }
         }
         else if ((nextByte & ~RQPD_Mask) == RQPD_Bits)
         {
             // Host requested key data for a specific row. Send an empty
             // response as row-level polling is not yet fully supported.
-            _ioController->writeKartByte(PDAT_Bits | 0);
+            _txQueue->enqueue(PDAT_Bits | 0);
         }
         else
         {
             // Unrecognised command.
-            hasError = true;
+            hasError = (handleAcknowledge(nextByte) == false);
+        }
+        break;
+
+    case ControllerState::AfterFirstByteSent:
+        if (nextByte == BACK)
+        {
+            // Host requests the second byte of the current key/mouse
+            // exchange.
+            _state = ControllerState::AfterSecondByteSent;
+            _txQueue->enqueue(_secondTxByte);
+
+            hasError = false;
+        }
+        break;
+
+    case ControllerState::AfterSecondByteSent:
+        // Host enable/acknowledge bytes. These configure which data
+        // the keyboard should report (keys, mouse, both, or neither)
+        // but do not elicit a response. The host does not wait for
+        // one; sending a response would de-synchronise the protocol.
+        if (handleAcknowledge(nextByte))
+        {
+            _state = ControllerState::Initialised;
+
+            hasError = false;
         }
         break;
     }
@@ -168,7 +201,41 @@ void AcornKeyboardController::receiveKARTByte(uint8_t nextByte)
     {
         // Re-send the hard reset signal and reset the protocol.
         _state = ControllerState::PreReset;
-        _ioController->writeKartByte(HRST);
+        _txQueue->enqueue(HRST);
+    }
+}
+
+//! @brief Starts sending the next item of pending input to the host, if
+//! the protocol is idle and reporting of that input has been enabled.
+//! @details This must be called on the emulation thread, i.e. the thread
+//! which calls receiveKARTByte(), each time the KART could transfer a byte.
+//! Key events are given priority over unsolicited mouse movement data.
+void AcornKeyboardController::processPendingInput()
+{
+    if (_keyScanningEnabled == false)
+    {
+        // Key scanning is disabled, discard key events rather than report
+        // them once it is next enabled.
+        KeyEvent discarded;
+
+        while (_pendingKeyEvents->try_dequeue(discarded)) {}
+    }
+
+    // Wait for the handshake or any data exchange in progress to complete.
+    if ((_state != ControllerState::Initialised) || (_txQueue == nullptr))
+        return;
+
+    KeyEvent event;
+
+    if (_keyScanningEnabled && _pendingKeyEvents->try_dequeue(event))
+    {
+        beginSendKeyEvent(event.ScanCode, event.IsDown);
+    }
+    else if (_mouseTxEnabled &&
+             ((_mouseDeltaX.load(std::memory_order_relaxed) != 0) ||
+              (_mouseDeltaY.load(std::memory_order_relaxed) != 0)))
+    {
+        beginSendMouseData();
     }
 }
 
@@ -184,15 +251,23 @@ Ag::string_cref_t AcornKeyboardController::getDescription() const
     return _description;
 }
 
-// Inherited from IHardwareDevice.
-void AcornKeyboardController::connect(const ConnectionContext &context)
+void AcornKeyboardController::connect(SystemContext &context)
 {
-    IHardwareDevicePtr iocDevice;
+    // Capture the system context so that input events can be
+    // scheduled.
+    _context = &context;
+}
 
-    if (context.tryFindDevice("IOC", iocDevice))
-    {
-        _ioController = dynamic_cast<IOC *>(iocDevice);
-    }
+// Inherited from IKeyboardController.
+IKeyboardController::LEDStateBits AcornKeyboardController::getLEDStates() const
+{
+    return _ledStates.load(std::memory_order_relaxed);
+}
+
+// Inherited from IKeyboardController.
+void AcornKeyboardController::connectToTxQueue(SynchronisedByteQueue *txQueue)
+{
+    _txQueue = txQueue;
 }
 
 // Inherited from IKeyboardController.
@@ -202,10 +277,7 @@ void AcornKeyboardController::keyDown(uint32_t hostScanCode)
 
     if (_scanCodeMap.tryFind(hostScanCode, guestScanCode))
     {
-        KeyEvent event;
-        event.ScanCode = static_cast<uint8_t>(guestScanCode);
-        event.IsDown = true;
-        _pendingKeyEvents->enqueue(event);
+        _pendingKeyEvents->enqueue(KeyEvent{ static_cast<uint8_t>(guestScanCode), true });
     }
 }
 
@@ -216,10 +288,7 @@ void AcornKeyboardController::keyUp(uint32_t hostScanCode)
 
     if (_scanCodeMap.tryFind(hostScanCode, guestScanCode))
     {
-        KeyEvent event;
-        event.ScanCode = static_cast<uint8_t>(guestScanCode);
-        event.IsDown = false;
-        _pendingKeyEvents->enqueue(event);
+        _pendingKeyEvents->enqueue(KeyEvent{ static_cast<uint8_t>(guestScanCode), false });
     }
 }
 
@@ -230,10 +299,7 @@ void AcornKeyboardController::mouseButtonDown(AcornKeyboardController::MouseButt
 
     if (tryMapMouseButton(button, guestScanCode))
     {
-        KeyEvent event;
-        event.ScanCode = static_cast<uint8_t>(guestScanCode);
-        event.IsDown = true;
-        _pendingKeyEvents->enqueue(event);
+        _pendingKeyEvents->enqueue(KeyEvent{ static_cast<uint8_t>(guestScanCode), true });
     }
 }
 
@@ -244,16 +310,14 @@ void AcornKeyboardController::mouseButtonUp(AcornKeyboardController::MouseButton
 
     if (tryMapMouseButton(button, guestScanCode))
     {
-        KeyEvent event;
-        event.ScanCode = static_cast<uint8_t>(guestScanCode);
-        event.IsDown = false;
-        _pendingKeyEvents->enqueue(event);
+        _pendingKeyEvents->enqueue(KeyEvent{ static_cast<uint8_t>(guestScanCode), false });
     }
 }
 
 // Inherited from IKeyboardController.
 void AcornKeyboardController::mouseDelta(int32_t deltaX, int32_t deltaY)
 {
+    // The deltas are sent by processPendingInput() or in response to RQMP.
     _mouseDeltaX.fetch_add(deltaX, std::memory_order_relaxed);
     _mouseDeltaY.fetch_add(deltaY, std::memory_order_relaxed);
 }
@@ -271,76 +335,103 @@ void AcornKeyboardController::setKeyMapping(const ScanCodeMapping *mappings, siz
     }
 }
 
-//! @brief Determines the status byte to send to the host based on pending
-//! key and mouse data.
-//! @returns One of SACK, NACK, MACK, or SMAK.
-uint8_t AcornKeyboardController::getStatusByte() const
+//! @brief Begins sending accumulated mouse position deltas, immediately
+//! sending the first byte and setting the controller state to send the
+//! second after an appropriate acknowledgement.
+void AcornKeyboardController::beginSendMouseData()
 {
-    bool hasKeyData = _pendingKeyEvents->peek() != nullptr;
-    bool hasMouseData = (_mouseDeltaX.load(std::memory_order_relaxed) != 0) ||
-                        (_mouseDeltaY.load(std::memory_order_relaxed) != 0);
+    if (_state != ControllerState::Initialised)
+        return;
 
-    if (hasKeyData && hasMouseData)
-        return SMAK;
-    else if (hasKeyData)
-        return SACK;
-    else if (hasMouseData)
-        return MACK;
-
-    return NACK;
-}
-
-//! @brief Sends pending key event data to the host, preceded by a status byte.
-//! If no key data is pending, sends a status byte only.
-void AcornKeyboardController::sendPendingData()
-{
-    KeyEvent event;
-
-    if (_pendingKeyEvents->try_dequeue(event))
-    {
-        // Send the key event data, then a status byte indicating
-        // whether more data is available.
-        sendKeyEvent(event);
-        _ioController->writeKartByte(getStatusByte());
-    }
-    else
-    {
-        // No key data pending, send current status.
-        _ioController->writeKartByte(getStatusByte());
-    }
-}
-
-//! @brief Encodes and sends a key event as a two-byte KDDA or KUDA sequence.
-//! @param[in] event The key event to send.
-void AcornKeyboardController::sendKeyEvent(const KeyEvent &event)
-{
-    uint8_t row = (event.ScanCode >> 4) & KDDA_Mask;
-    uint8_t col = event.ScanCode & KDDA_Mask;
-
-    if (event.IsDown)
-    {
-        _ioController->writeKartByte(KDDA_Bits | row);
-        _ioController->writeKartByte(KDDA_Bits | col);
-    }
-    else
-    {
-        _ioController->writeKartByte(KUDA_Bits | row);
-        _ioController->writeKartByte(KUDA_Bits | col);
-    }
-}
-
-//! @brief Sends accumulated mouse delta data to the host as two MDAT bytes.
-void AcornKeyboardController::sendMouseData()
-{
     int32_t dx = _mouseDeltaX.exchange(0, std::memory_order_relaxed);
     int32_t dy = _mouseDeltaY.exchange(0, std::memory_order_relaxed);
+
+    if (_txQueue == nullptr)
+        return;
 
     // Clamp to 7-bit signed range (-64 to +63).
     dx = std::clamp(dx, -64, 63);
     dy = std::clamp(dy, -64, 63);
 
-    _ioController->writeKartByte(static_cast<uint8_t>(dx) & MDAT_Mask);
-    _ioController->writeKartByte(static_cast<uint8_t>(dy) & MDAT_Mask);
+    // Prepare to send the second byte.
+    _secondTxByte = static_cast<uint8_t>(dy) & MDAT_Mask;
+    _state = ControllerState::AfterFirstByteSent;
+
+    _txQueue->enqueue(static_cast<uint8_t>(dx) & MDAT_Mask);
+}
+
+//! @brief Begins sending a key event, immediately sending the first byte and
+//! setting the controller state to send the second after an appropriate
+//! acknowledgement.
+//! @param[in] scanCode The row/column scan code to send.
+//! @param[in] isPressed True for a key press event, false for a release event.
+void AcornKeyboardController::beginSendKeyEvent(uint8_t scanCode, bool isPressed)
+{
+    if ((_state != ControllerState::Initialised) || (_txQueue == nullptr))
+        return;
+
+    uint8_t row = (scanCode >> 4) & KDDA_Mask;
+    uint8_t col = scanCode & KDDA_Mask;
+
+    if (isPressed)
+    {
+        _secondTxByte = KDDA_Bits | col;
+        _state = ControllerState::AfterFirstByteSent;
+        _txQueue->enqueue(KDDA_Bits | row);
+    }
+    else
+    {
+        _secondTxByte = KUDA_Bits | col;
+        _state = ControllerState::AfterFirstByteSent;
+        _txQueue->enqueue(KUDA_Bits | row);
+    }
+}
+
+//! @brief Determines if a byte received by the controller is a form of
+//! acknowledgement and processes it accordingly.
+//! @param[in] rxByte The byte received by the controller.
+//! @retval true @p rxByte was an acknowledgement code and was processed.
+//! @retval false @p rxByte did not represent an acknowledgement.
+bool AcornKeyboardController::handleAcknowledge(uint8_t rxByte)
+{
+    bool isAck = true;
+
+    // Claude: Host enable/acknowledge bytes. These configure which data
+    // the keyboard should report (keys, mouse, both, or neither)
+    // but do not elicit a response. The host does not wait for
+    // one; sending a response would de-synchronise the protocol.
+    switch (rxByte)
+    {
+    case NACK:
+        // Disable both key scanning mode and unsolicited mouse reporting.
+        _keyScanningEnabled = false;
+        _mouseTxEnabled = false;
+        break;
+
+    case SACK:
+        // Enable key scanning mode, but disable unsolicited mouse reporting.
+        _keyScanningEnabled = true;
+        _mouseTxEnabled = false;
+        break;
+
+    case MACK:
+        // Disable key scanning mode, but enable unsolicited mouse reporting.
+        _keyScanningEnabled = false;
+        _mouseTxEnabled = true;
+        break;
+
+    case SMAK:
+        // Enable both key scanning mode and unsolicited mouse reporting.
+        _keyScanningEnabled = true;
+        _mouseTxEnabled = true;
+        break;
+
+    default:
+        isAck = false;
+        break;
+    }
+
+    return isAck;
 }
 
 }} // namespace Mo::Arm

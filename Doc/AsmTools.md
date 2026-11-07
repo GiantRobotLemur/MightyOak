@@ -133,6 +133,43 @@ addressing modes and the ADR pseudo-instruction. In such cases the offset
 between the label and the instruction using it will be taken into account when
 calculating the resultant offset.
 
+### Subroutines
+
+Labels are defined in the global scope, but it can quickly get crowded and
+polluted with all the symbols defined and changes to assembly state. Instead
+you can explicitly define subroutines which expose their entry point to the
+global namespace, but all internal labels are local by surrounding the code
+with the `PROC` and `ENDPROC` keywords. For example:
+
+```
+.loop
+; some code
+
+PROC mySubroutine
+STMFD SP!,{R1-R4,Link}
+MOV R0,#0x80000000
+.loop
+MOVS R0,R0,LSR #1
+BNE loop
+LDMFD SP!,{R1-R4,PC}
+ENDPROC
+```
+
+In the code example above, a label called `mySubroutine` is created in the global
+namespace, `loop` already exists in the global namespace, but within the
+subroutine, a duplicate is created and when it is referred to inside the subroutine,
+the local label is found.
+
+After the subroutine definition, a reference to loop will resolve to the symbol
+defined in global scope. The symbols within the subroutine can no longer be
+referenced in code, but they are recorded in the symbol table produced with the
+object code. In this case, the local label in the subroutine will be appear in
+the final symbol table as `mySubroutine.loop`.
+
+Directives which alter assembly (see below) are also local to the subroutine.
+For example, specifying `%26bit` before a subroutine and `%32bit` inside it,
+the state will return to `%26bit` when the `ENDPROC` keyword is encountered.
+
 ### Directives
 
 A number of directives exist in the assembler. Those which produce object code

@@ -102,11 +102,11 @@ B Initial_HandleIrq
     BKPT 0                                ; Break point to stop execution.
     B Infinite_Loop
 
-; Run at power-on. Low ROM (this) is mapped to 0x00000000
+; Run at power-on. High ROM (this) is mapped to 0x00000000
 ; Running in SVC mode, IRQs and FIRQs are disabled.
 .Initial_Reset
     ADR R0,Reset_MEMC                   ; Calculate the address of the ROM entry point.
-    ADD R0,R0,#0x03400000 OR 0x0C000000 ; Add the Low ROM base address plus PSR bits to disable IRQs.
+    ADD R0,R0,#0x03800000 OR 0x0C000000 ; Add the High ROM base address plus PSR bits to disable IRQs.
     ORR R0,R0,#3                        ; Ensure we remain in SVC mode.
     MOVS PC,0                           ; Jump to the same code running at the
                                         ;   ROM's native location and update the PSR.
@@ -753,14 +753,14 @@ B Initial_HandleIrq
     AND     R3,R3,#KRT_BufMask          ; Wrap around
     LDR     R1,[R0,#OS_KRT_RxTail]      ; Get Rx read index
     CMP     R3,R1                       ; Is the buffer full?
-    LDMEQFD   SP!,{R0-R3}                 ; Restore state before exit.
+    LDMEQFD SP!,{R0-R3}                 ; Restore state before exit.
     MOVEQ   PC,R14                      ; If full, drop the byte and return.
 
     MOV     R1,#KRT_RxBuffer            ; Get the Rx buffer base address
     STRB    R4,[R1,R2]                  ; Store the byte at the head position
     STR     R3,[R0,#OS_KRT_RxHead]      ; Advance the head index
     LDMFD   SP!,{R0-R3}                 ; Restore state before exit.
-    MOV     PC, R14                     ; Return to IRQ dispatch
+    MOV     PC,R14                      ; Return to IRQ dispatch
 
 ; =============================================================
 ; BUFFERED KART SEND/RECEIVE ROUTINES

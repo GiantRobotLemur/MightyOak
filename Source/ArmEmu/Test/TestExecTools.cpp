@@ -3,7 +3,7 @@
 //! various configurations of emulated system configurations for the purposes
 //! of validation.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2023
+//! @date 2023-2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -115,6 +115,83 @@ namespace Arm {
         // Switch to 26-bit or 32-bit user mode.
         systemUnderTest->setCoreRegister(CoreRegister::CPSR, 0);
 
+        return ::testing::AssertionSuccess();
+    }
+}
+
+//! @brief Prepares an emulated system for exception vector testing.
+//! @param[in] systemUnderTest The system to prepare, which is assumed to have
+//! a test bed memory map of 32KB ROM and 32 KB RAM.
+//! @param[in] source The assembly language source code to assemble and install
+//! in the test system ROM starting at address 0x0000.
+//! @details The code is assembled at address 0x0000 so that the vector table
+//! IS the start of the code. Remaining ROM is filled with sequential break
+//! point instructions. The system stays in SVC26 mode (post-reset default).
+::testing::AssertionResult prepareExceptionTestSystem(IArmSystem *systemUnderTest,
+                                                      const std::string_view &source)
+{
+    Asm::Options opts;
+    opts.setLoadAddress(0);
+    opts.setInstructionSet(Asm::InstructionSet::ArmV4);
+
+    std::string sourceCode(source);
+
+    // Append a break point to the end of the code.
+    sourceCode.append("\nBKPT 0xFFFF\n");
+
+    Asm::Messages log;
+    Asm::ObjectCode objectCode = Asm::assembleText(sourceCode, opts, log);
+
+    if (log.hasErrors())
+    {
+        ::testing::AssertionResult result = ::testing::AssertionFailure() <<
+            "Failed to assemble exception test instructions:\n";
+
+        for (const auto &msg : log.getMessages())
+        {
+            result << msg.toString().getUtf8Bytes() << '\n';
+        }
+
+        return result;
+    }
+    else
+    {
+        uint32_t codeSize = static_cast<uint32_t>(objectCode.getCodeSize());
+
+        // Install the code at address 0x0000 in ROM.
+        writeToLogicalAddress(systemUnderTest, 0x0000,
+                              objectCode.getCode(), codeSize, true);
+
+        // Fill remaining ROM (after assembled code) with sequential BKPTs.
+        Ag::String error;
+        Asm::InstructionInfo bkptInstruction;
+        bkptInstruction.reset(Asm::InstructionMnemonic::Bkpt,
+                              Asm::OperationClass::Breakpoint);
+        auto &bkptInfo = bkptInstruction.getBreakpointParameters();
+        uint32_t op;
+
+        // Round up code size to next word boundary.
+        uint32_t bkptStart = (codeSize + 3) & ~3u;
+
+        for (uint32_t romAddr = bkptStart;
+             romAddr < TestBedHardware::RomEnd; romAddr += 4)
+        {
+            bkptInfo.Comment = static_cast<uint16_t>(romAddr >> 2);
+
+            if (bkptInstruction.assemble(op, romAddr, error))
+            {
+                writeToLogicalAddress(systemUnderTest, romAddr, &op, 4, true);
+            }
+            else
+            {
+                std::string message = "Failed to assemble BKPT instruction: ";
+                Ag::appendAgString(message, error);
+
+                return ::testing::AssertionFailure() << message;
+            }
+        }
+
+        // Stay in SVC26 mode (post-reset default) — do NOT switch to user mode.
         return ::testing::AssertionSuccess();
     }
 }

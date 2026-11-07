@@ -125,10 +125,15 @@ private:
         return isChanged;
     }
 
-    uint32_t raiseException(uint32_t newPc) noexcept
+    uint32_t raiseException(uint32_t newPc, int32_t pcOffset) noexcept
     {
-        // Store the current PC + PSR in R14_<mode>.
-        uint32_t oldR15 = _coreRegisters[15] | _cpsr;
+        // Store the current PC + PSR in R14_<mode>, adjusted for the
+        // pipeline offset. During execution, _coreRegisters[15] holds
+        // instruction_addr + 8 due to the 3-stage pipeline. Most exceptions
+        // save R14 = instruction_addr + 4 (pcOffset = -4), but Data Abort
+        // and Address Exception save R14 = instruction_addr + 8 (pcOffset = 0).
+        uint32_t oldR15 = static_cast<uint32_t>(
+            static_cast<int32_t>(_coreRegisters[15]) + pcOffset) | _cpsr;
 
         // Disable normal interrupts.
         _cpsr |= PsrMask26::IrqDisableBit;
@@ -307,13 +312,14 @@ public:
             }
             else if (regId < GeneralRegister::R13)
             {
-                // The user mode register is in the current bank.
+                // The user mode register is in the current bank because
+                // we're in IRQ or SVC mode.
                 value = _coreRegisters[Ag::toScalar(regId)];
             }
             else
             {
                 // Get banked user mode R13 or R14.
-                value = _userModeRegBank[Ag::toScalar(regId) - 13];
+                value = _userModeRegBank[Ag::toScalar(regId) - 8];
             }
         }
 
@@ -427,42 +433,43 @@ public:
     uint32_t raiseUndefinedInstruction() noexcept
     {
         // Raise an exception and branch through the Undefined Instruction
-        // hardware vector.
-        return raiseException(0x00000004);
+        // hardware vector. R14 = instruction_addr + 4.
+        return raiseException(0x00000004, -4);
     }
 
     uint32_t raiseSoftwareInterrupt() noexcept
     {
         // Raise an exception and branch through the Software Interrupt
-        // hardware vector.
-        return raiseException(0x00000008);
+        // hardware vector. R14 = instruction_addr + 4.
+        return raiseException(0x00000008, -4);
     }
 
     uint32_t raisePreFetchAbort() noexcept
     {
         // Raise an exception and branch through the Pre-fetch Abort
-        // hardware vector.
-        return raiseException(0x0000000C);
+        // hardware vector. R14 = instruction_addr + 4.
+        return raiseException(0x0000000C, -4);
     }
 
     uint32_t raiseDataAbort() noexcept
     {
         // Raise an exception and branch through the Data Abort
-        // hardware vector.
-        return raiseException(0x00000010);
+        // hardware vector. R14 = instruction_addr + 8.
+        return raiseException(0x00000010, 0);
     }
 
     uint32_t raiseAddressException() noexcept
     {
         // Raise an exception and branch through the Address Exception
-        // hardware vector.
-        return raiseException(0x00000014);
+        // hardware vector. R14 = instruction_addr + 8.
+        return raiseException(0x00000014, 0);
     }
 
     uint32_t handleIrq() noexcept
     {
-        // Store the current PC + PSR in R14_Irq.
-        uint32_t oldR15 = _coreRegisters[15] | _cpsr;
+        // Store the current PC + PSR in R14_Irq, adjusted for the pipeline.
+        // R14_irq = next_instruction_addr + 4 = _coreRegisters[15] - 4.
+        uint32_t oldR15 = (_coreRegisters[15] - 4) | _cpsr;
 
         // Disable normal interrupts.
         _cpsr |= PsrMask26::IrqDisableBit;
@@ -482,8 +489,9 @@ public:
 
     uint32_t handleFirq() noexcept
     {
-        // Store the current PC + PSR in R14_Firq.
-        uint32_t oldR15 = _coreRegisters[15] | _cpsr;
+        // Store the current PC + PSR in R14_Firq, adjusted for the pipeline.
+        // R14_fiq = next_instruction_addr + 4 = _coreRegisters[15] - 4.
+        uint32_t oldR15 = (_coreRegisters[15] - 4) | _cpsr;
 
         // Disable ALL interrupts.
         _cpsr |= PsrMask26::IrqDisableBits;

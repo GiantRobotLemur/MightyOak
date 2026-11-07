@@ -1,7 +1,7 @@
 //! @file ArmDebugger/EmulatorSession.hpp
 //! @brief The declaration of an object which manages the running emulated machine.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2024
+//! @date 2024-2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -19,6 +19,8 @@
 
 #include "ArmEmu/EmuOptions.hpp"
 #include "ArmEmu/ArmSystem.hpp"
+#include "ArmEmu/BootProgressMonitor.hpp"
+#include "ArmEmu/GuestEvent.hpp"
 
 #include "Breakpoint.hpp"
 #include "EmulatorIOAdapter.hpp"
@@ -76,6 +78,7 @@ public:
     bool tryFindBreakpoint(uint32_t address, bool isLogicalAddress, uint16_t &id) const;
 
     void create(const Arm::Options &options);
+    void onGuestEvent(const Arm::GuestEvent &e);
 
 public slots:
     void destroy();
@@ -96,7 +99,6 @@ signals:
     void breakpointsChanged(const EmulatorSession *session);
 
 private slots:
-    void onPollEmulator();
     void onExecutionComplete();
 private:
     // Internal Types
@@ -105,27 +107,17 @@ private:
 
     // Internal Functions
     bool tryFindBreakpointIndex(uint32_t address, size_t &index) const;
-    void beginPollingEmulator();
-    void endPollingEmulator();
 
     // Internal Fields
-    QTimer _emulatorPollTimer;
     QEmulatorFutureWatcher _emulatorWatcher;
     Arm::IArmSystemUPtr _emulator;
+    Arm::BootProgressMonitor *_diagnostic;
     IEmulatorIOAdapterUPtr _ioAdapter;
     BreakpointCollection _breakpoints;
     SessionSettings _settings;
     EmulatorState _state;
     Breakpoint _stepBreakpoint;
 };
-
-////////////////////////////////////////////////////////////////////////////////
-// Function Declarations
-////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////
-// Templates
-////////////////////////////////////////////////////////////////////////////////
 
 } // namespace Mo
 

@@ -2,7 +2,7 @@
 //! @brief The declaration of data types which decode and execute ARM
 //! instructions for ARMv2 variants.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2023-2024
+//! @date 2023-2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -77,7 +77,6 @@ public:
             // ARMv4+ Branch/Exchange
             // ARMv4+ Load/Store half-word/signed byte.
             // ARMv5+ Breakpoint.
-            //opCode = static_cast<uint8_t>(instruction >> 4) & 0x0F;
 
             if ((static_cast<uint8_t>(instruction) & 0x90) == 0x90)
             {
@@ -310,14 +309,16 @@ uint32_t execMcrARMv2aCP15(TRegisterFile &regs, uint32_t instruction)
     return result;
 }
 
-// TODO: There should be an ARMv2aS decoder replicating the functionality of the
-// ARM250 microcell. It is based on the ARM3 core, supporting SWP, but not cache,
-// so ANY co-processor instructions should cause an Undefined instruction
-// exception.
 
 //! @brief An instruction decoder implementation which executes instructions
 //! for ARMv2a processor variants.
-template<typename THardware, typename TRegisterFile>
+//! @tparam THardware The type of hardware which underlies the processor core.
+//! @tparam TRegisterFile The type of register file the processor instructions
+//! interact with.
+//! @tparam TIsAVariant True if the object decodes instructions for the ARMv2sA,
+//! the core of the ARM250 processor, which supports the SWP instruction, but
+//! has no co-processor interface, either internally or externally.
+template<typename THardware, typename TRegisterFile, bool TIsAVariant = false>
 class ARMv2aInstructionDecoder
 {
 public:
@@ -329,6 +330,7 @@ private:
     // Internal Fields
     HardwareType &_hardware;
     RegisterFileType &_registers;
+    static constexpr bool IsARMv2sA = TIsAVariant;
 
 public:
     // Construction/Destruction
@@ -364,7 +366,6 @@ public:
             // ARMv4+ Branch/Exchange
             // ARMv4+ Load/Store half-word/signed byte.
             // ARMv5+ Breakpoint.
-            //opCode = static_cast<uint8_t>(instruction >> 4) & 0x0F;
 
             if ((static_cast<uint8_t>(instruction) & 0x90) == 0x90)
             {
@@ -520,23 +521,35 @@ public:
                 // It's a software interrupt.
                 result = _registers.raiseSoftwareInterrupt();
             }
-            else if ((instruction & 0x0EE00FFF) == 0x0E000F10)
+            else
             {
-                // It's MRC or MCR to CP15 (the System Control Co-processor).
-                if (Ag::Bin::extractBit<20>(instruction))
+                if constexpr (IsARMv2sA)
                 {
-                    // Its MRC CP15,0,Rd,CRn,CR0,0 => MOV Rd,CRn
-                    result = execMrcARMv2aCP15(_registers, instruction);
+                    // The ARM250 raises Undefined Instruction for ANY
+                    // co-processor instruction.
+                    result = _registers.raiseUndefinedInstruction();
                 }
                 else
                 {
-                    // Its MCR CP15,0,Rd,CRn,CR0,0 => MOV CRn,Rd
-                    result = execMcrARMv2aCP15(_registers, instruction);
+                    if ((instruction & 0x0EE00FFF) == 0x0E000F10)
+                    {
+                        // It's MRC or MCR to CP15 (the System Control Co-processor).
+                        if (Ag::Bin::extractBit<20>(instruction))
+                        {
+                            // Its MRC CP15,0,Rd,CRn,CR0,0 => MOV Rd,CRn
+                            result = execMrcARMv2aCP15(_registers, instruction);
+                        }
+                        else
+                        {
+                            // Its MCR CP15,0,Rd,CRn,CR0,0 => MOV CRn,Rd
+                            result = execMcrARMv2aCP15(_registers, instruction);
+                        }
+                    }
+                    else
+                    {
+                        result = _registers.raiseUndefinedInstruction();
+                    }
                 }
-            }
-            else
-            {
-                result = _registers.raiseUndefinedInstruction();
             }
             break;
 

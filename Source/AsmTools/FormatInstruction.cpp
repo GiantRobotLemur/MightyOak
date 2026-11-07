@@ -2,7 +2,7 @@
 //! @brief The definition of an entry point to a function which will format a
 //! 32-bit ARM machine code instruction as text.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2022-2024
+//! @date 2022-2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -47,13 +47,13 @@ void formatNonInstruction(FormatParams& params)
 
 //! @brief Formats the parameters of a barrel shifter operand in the instruction
 //! text being accumulated.
-//! @param[in,out] params The parameters to format and the string being
-//! accumulated.
+//! @param[in] builder The object which receives the operand elements.
+//! @param[in] formatOptions Specify the options used to format the instruction.
 //! @param[in] shifter The barrel shifter operand to format.
 //! @param[in] isNegated True if the shifter operand should be proceeded by a
 //! minus sign, either inside the constant or before the register.
 void formatShifterOperand(InstructionBuilder &builder,
-                          uint32_t formatOptions,
+                          const FormatterOptions &formatOptions,
                           const ShifterOperand &shifter,
                           bool isNegated = false)
 {
@@ -71,27 +71,39 @@ void formatShifterOperand(InstructionBuilder &builder,
         {
             builder.beginToken(FormattedInstruction::TokenType::ImmediateConstant,
                                shifter.Immediate);
-            builder.append('#');
-            builder.append(shifter.Immediate);
+            if (formatOptions.getFlags() & FormatterOptions::Flags::UseDecimalImmediates)
+            {
+                builder.append('#');
+                builder.append(shifter.Immediate);
+            }
+            else if (shifter.Immediate > 256)
+            {
+                builder.appendHexImmediate(shifter.Immediate, 2, formatOptions);
+            }
+            else
+            {
+                builder.append('#');
+                builder.append(shifter.Immediate);
+            }
         }
 
         builder.endToken();
         break;
 
     case ShifterMode::Register:
-        builder.append(shifter.Rm, formatOptions, isNegated);
+        builder.append(shifter.Rm, formatOptions.getFlags(), isNegated);
         break;
 
     case ShifterMode::ShiftByRegister:
-        builder.append(shifter.Rm, formatOptions, isNegated);
+        builder.append(shifter.Rm, formatOptions.getFlags(), isNegated);
         builder.appendSeparator();
         builder.append(shifter.Shift);
         builder.append(' ');
-        builder.append(shifter.Rs, formatOptions);
+        builder.append(shifter.Rs, formatOptions.getFlags());
         break;
 
     case ShifterMode::ShiftByConstant:
-        builder.append(shifter.Rm, formatOptions, isNegated);
+        builder.append(shifter.Rm, formatOptions.getFlags(), isNegated);
         builder.appendSeparator();
         builder.append(shifter.Shift);
         builder.append(' ');
@@ -103,7 +115,7 @@ void formatShifterOperand(InstructionBuilder &builder,
         break;
 
     case ShifterMode::RotateWithExtend:
-        builder.append(shifter.Rm, formatOptions, isNegated);
+        builder.append(shifter.Rm, formatOptions.getFlags(), isNegated);
         builder.appendSeparator();
         builder.beginToken(FormattedInstruction::TokenType::Shift,
                            Ag::toScalar(ShifterMode::RotateWithExtend));
@@ -138,7 +150,7 @@ void formatCoreAlu(FormatParams &params)
         builder.appendSeparator();
     }
 
-    formatShifterOperand(params.Builder, formatOptions, info.Op2);
+    formatShifterOperand(params.Builder, *params.Options, info.Op2);
 }
 
 //! @brief Formats an ALU comparison instruction text being accumulated.
@@ -158,7 +170,7 @@ void formatCoreComparison(FormatParams &params)
     builder.append(info.Rn, formatOptions);
     builder.appendSeparator();
 
-    formatShifterOperand(params.Builder, formatOptions, info.Op2);
+    formatShifterOperand(params.Builder, *params.Options, info.Op2);
 }
 
 //! @brief Formats an address operand into in the text being accumulated.
@@ -207,7 +219,7 @@ void formatAddressOperand(FormatParams &params, const AddrOperand &addr)
             builder.append(addr.Rn, formatOptions);
             builder.appendSeparator();
 
-            formatShifterOperand(builder, formatOptions, addr.Offset,
+            formatShifterOperand(builder, *params.Options, addr.Offset,
                                  addr.Flags & AddrOperand::NegativeOffset);
 
             builder.appendToken(']', FormattedInstruction::TokenType::EndAddrOperand);
@@ -223,7 +235,7 @@ void formatAddressOperand(FormatParams &params, const AddrOperand &addr)
         builder.append(addr.Rn, formatOptions);
         builder.appendToken(']', FormattedInstruction::TokenType::EndAddrOperand);
         builder.appendSeparator();
-        formatShifterOperand(builder, formatOptions, addr.Offset,
+        formatShifterOperand(builder, *params.Options, addr.Offset,
                              addr.Flags & AddrOperand::NegativeOffset);
     }
 }
@@ -261,7 +273,6 @@ void formatCoreDataTransfer(FormatParams &params)
 
     formatAddressOperand(params, info.Addr);
 }
-
 
 //! @brief Formats a core multi-register data transfer instruction in the text
 //! being accumulated.

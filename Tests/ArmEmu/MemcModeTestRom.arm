@@ -1,0 +1,715 @@
+; MemcModeTestRom.arm
+; A ROM image to test ARM2 mode switching, SWI handling, and TEQP behaviour
+; on MEMC-based hardware as part of the MightyOak project.
+
+; =====================================================================
+; RAM Layout
+; =====================================================================
+.SVC_StackTop       0x8000      ; 32 KB
+.IRQ_StackTop       0x6000      ; 24 KB
+.FIRQ_StackTop      0x7000      ; 28 KB
+.USR_StackTop       0x5000      ; 20 KB
+
+; =====================================================================
+; Test Feedback Device Registers (MMIO at 0x3100000)
+; =====================================================================
+.FB_Base            0x3100000
+.FB_Milestone       0x00
+.FB_Result          0x04
+.FB_Expected        0x08
+.FB_Actual          0x0C
+
+; =====================================================================
+; Milestone Codes
+; =====================================================================
+.MS_BootStart       0x01
+.MS_BootComplete    0x02
+
+.MS_Test1_Begin     0x10
+.MS_Test1_Complete  0x11
+
+.MS_Test2_Begin     0x20
+.MS_Test2_Complete  0x21
+
+.MS_Test3_Begin     0x30
+.MS_Test3_Complete  0x31
+
+.MS_Test4_Begin     0x40
+.MS_Test4_Complete  0x41
+
+.MS_Test5_Begin     0x50
+.MS_Test5_Complete  0x51
+
+.MS_Test6_Begin     0x60
+.MS_Test6_Complete  0x61
+
+.MS_Test7_Begin     0x70
+.MS_Test7_Complete  0x71
+
+.MS_Test8_Begin     0x80
+.MS_Test8_Complete  0x81
+
+.MS_AllPassed       0xFF
+
+; =====================================================================
+; Error Codes (written to FB_Result on failure)
+; =====================================================================
+.ERR_Test1_Mode     0x10
+.ERR_Test1_Irq      0x11
+.ERR_Test2_Psr      0x20
+.ERR_Test3_NoHandler 0x30
+.ERR_Test4_NoHandler 0x40
+.ERR_Test5_Inner    0x50
+.ERR_Test5_Outer    0x51
+.ERR_Test6_Psr      0x60
+.ERR_Test7_Number   0x70
+.ERR_Test8_Psr      0x80
+.ERR_Test8_Addr     0x81
+
+; =====================================================================
+; Hardware Vector Table at Address 0x0000000
+; =====================================================================
+B Initial_Reset
+B Initial_Exception             ; Undefined Instruction
+B Initial_Exception             ; Software Interrupt
+B Initial_Exception             ; Prefetch Abort
+B Initial_Exception             ; Data Abort
+B Initial_Exception             ; Address Exception
+B Initial_Exception             ; IRQ
+B Initial_Exception             ; FIRQ
+
+.Initial_Exception
+    BKPT 0xFE
+    B Initial_Exception
+
+; =====================================================================
+; Initial Reset Handler
+; Jump from low ROM mapping to physical high ROM address.
+; =====================================================================
+.Initial_Reset
+    ADR R0,Boot_Start
+    ADD R0,R0,#0x03800000 OR 0x0C000000
+    ORR R0,R0,#3
+    MOVS PC,R0
+
+; =====================================================================
+; Boot Sequence (runs at physical ROM address 0x3800000+)
+; =====================================================================
+.Boot_Start
+    ; Report boot start via feedback device
+    MOV R0,#FB_Base
+    MOV R1,#MS_BootStart
+    STR R1,[R0,#FB_Milestone]
+
+    ; ---- RAM Size Detection ----
+    MOV R0,#0x2000000               ; Physical RAM base
+    MOV R1,#4096                    ; Address increment
+    MOV R2,R1                       ; Initialise RAM size
+    LDR R3,Boot_Markers
+    LDR R4,Boot_Markers + 4
+    B Boot_SizeLoop
+
+.Boot_Markers
+    EQUD 0xAA55AA55
+    EQUD 0x55AA55AA
+
+.Boot_SizeLoop
+    CMP R2,#0x1000000               ; 16 MB limit
+    BGE Boot_SizeLoopEnd
+    STR R3,[R0]
+    STR R4,[R0,R2]
+    LDR R5,[R0]
+    CMP R5,R4
+    BEQ Boot_SizeLoopEnd
+    LDR R5,[R0,R2]
+    CMP R5,R4
+    BNE Boot_SizeLoopEnd
+    ADD R2,R2,R1
+    B Boot_SizeLoop
+
+.Boot_SizeLoopEnd
+    MOV R11,R2                      ; Stash RAM size
+
+    ; ---- Program MEMC for 8 KB pages ----
+    MOV R0,#0x3000000
+    ORR R0,R0,#0x6E0000
+    ORR R0,R0,#4
+    STR R2,[R0]
+
+    ; ---- Identity map first 1 MB (128 x 8KB pages) ----
+    MOV R0,#0x3800000               ; CAM base
+    MOV R1,#0                       ; Page counter
+    MOV R6,#1 << 10
+    SUB R6,R6,#1                    ; 10-bit mask
+
+.Boot_MapLoop
+    MOV R2,R0
+    AND R4,R1,#0x3F
+    ORR R2,R2,R4,LSL #1
+    AND R3,R1,#0x40
+    ORR R2,R2,R3,LSR #6
+    AND R4,R1,R6
+    ORR R2,R2,R4,LSL #13
+    AND R4,R1,#0xC00
+    ORR R2,R2,R4,LSL #10
+    STR R2,[R2]
+    ADD R1,R1,#1
+    CMP R1,#128
+    BLT Boot_MapLoop
+
+    ; ---- Set up SVC stack ----
+    MOV R13,#SVC_StackTop
+    SUB R13,R13,#4
+
+    ; ---- Set up FIRQ stack ----
+    MOV R0,PC
+    TEQP R0,#2                     ; Switch to FIRQ mode
+    MOV R0,R0
+    MOV R13,#FIRQ_StackTop
+    SUB R13,R13,#4
+
+    ; ---- Set up IRQ stack ----
+    MOV R0,PC
+    TEQP R0,#3                     ; Switch to IRQ mode
+    MOV R0,R0
+    MOV R13,#IRQ_StackTop
+    SUB R13,R13,#4
+
+    ; ---- Switch back to SVC mode ----
+    MOV R0,PC
+    TEQP R0,#1                     ; Back to SVC
+    MOV R0,R0
+
+    ; ---- Install RAM-based hardware vectors ----
+    MOV R0,#0
+    ADR R1,Do_HandleReset
+    BL Write_HW_Vector
+
+    MOV R0,#1
+    ADR R1,Do_HandleUndef
+    BL Write_HW_Vector
+
+    MOV R0,#2
+    ADR R1,Do_DefaultSWI
+    BL Write_HW_Vector
+
+    MOV R0,#3
+    ADR R1,Do_HandlePrefetchAbort
+    BL Write_HW_Vector
+
+    MOV R0,#4
+    ADR R1,Do_HandleDataAbort
+    BL Write_HW_Vector
+
+    MOV R0,#5
+    ADR R1,Do_HandleAddressException
+    BL Write_HW_Vector
+
+    MOV R0,#6
+    ADR R1,Do_HandleIrq
+    BL Write_HW_Vector
+
+    MOV R0,#7
+    ADR R1,Do_HandleFirq
+    BL Write_HW_Vector
+
+    ; ---- Report boot complete ----
+    MOV R0,#FB_Base
+    MOV R1,#MS_BootComplete
+    STR R1,[R0,#FB_Milestone]
+
+    ; ---- Begin tests ----
+    B Test1_Start
+
+; =====================================================================
+; Helper: Write Hardware Vector
+; Entry: R0 = vector number, R1 = handler address
+; =====================================================================
+.HW_Vector_Instruction
+    EQUD 0xE59FF018                 ; LDR PC,[PC,#24]
+
+.Write_HW_Vector
+    STMFD SP!,{R0-R2,Link}
+    MOV R2,R0,LSL #2
+    STR R1,[R2,#32]
+    LDR R1,HW_Vector_Instruction
+    STR R1,[R2]
+    LDMFD SP!,{R0-R2,PC}
+
+; =====================================================================
+; Default Exception Handlers (halt with breakpoint)
+; =====================================================================
+.Do_HandleReset
+    BKPT 100
+    B Do_HandleReset
+
+.Do_HandleUndef
+    BKPT 101
+    B Do_HandleUndef
+
+.Do_DefaultSWI
+    BKPT 102
+    B Do_DefaultSWI
+
+.Do_HandlePrefetchAbort
+    BKPT 103
+    B Do_HandlePrefetchAbort
+
+.Do_HandleDataAbort
+    BKPT 104
+    B Do_HandleDataAbort
+
+.Do_HandleAddressException
+    BKPT 105
+    B Do_HandleAddressException
+
+.Do_HandleIrq
+    BKPT 106
+    B Do_HandleIrq
+
+.Do_HandleFirq
+    BKPT 107
+    B Do_HandleFirq
+
+; =====================================================================
+; Test 1: TEQP R15, #3 — Force SVC mode with IRQs enabled
+;
+; Starting in SVC mode with IRQs disabled (post-boot default).
+; TEQP R15, #3 should XOR PC(bottom bits=00) with 3 → mode=11(SVC),
+; I=0, F=0, NZCV=0000.
+; =====================================================================
+.Test1_Start
+    MOV R0,#FB_Base
+    MOV R1,#MS_Test1_Begin
+    STR R1,[R0,#FB_Milestone]
+
+    ; Execute TEQP R15, #3
+    TEQP R15,#3
+    MOV R0,R0                      ; Pipeline flush NOP
+
+    ; Read PSR via STM: stores (PC+12)|PSR
+    STMFD SP!,{R15}
+    LDMFD SP!,{R0}
+
+    ; Check mode bits: should be SVC (3)
+    AND R1,R0,#3
+    CMP R1,#3
+    BNE Test1_FailMode
+
+    ; Check I and F bits: should be 0 (IRQs enabled)
+    TST R0,#0x0C000000
+    BNE Test1_FailIrq
+
+    ; Test 1 passed
+    MOV R0,#FB_Base
+    MOV R1,#MS_Test1_Complete
+    STR R1,[R0,#FB_Milestone]
+    B Test2_Start
+
+.Test1_FailMode
+    MOV R2,#FB_Base
+    MOV R3,#3                       ; Expected mode = SVC
+    STR R3,[R2,#FB_Expected]
+    STR R1,[R2,#FB_Actual]          ; R1 = actual mode bits
+    MOV R3,#ERR_Test1_Mode
+    STR R3,[R2,#FB_Result]          ; Non-zero → halt
+    B $
+
+.Test1_FailIrq
+    MOV R2,#FB_Base
+    MOV R3,#0                       ; Expected: I=0, F=0
+    STR R3,[R2,#FB_Expected]
+    AND R1,R0,#0x0C000000           ; Actual IF bits
+    STR R1,[R2,#FB_Actual]
+    MOV R3,#ERR_Test1_Irq
+    STR R3,[R2,#FB_Result]
+    B $
+
+; =====================================================================
+; Test 2: TEQP Rn, #0 — PSR transfer from register
+;
+; Standard RISC OS idiom: build desired PSR in register, then
+; TEQP Rn, #0 sets PSR = Rn XOR 0 = Rn.
+; =====================================================================
+.Test2_Start
+    MOV R0,#FB_Base
+    MOV R1,#MS_Test2_Begin
+    STR R1,[R0,#FB_Milestone]
+
+    ; Build desired PSR: SVC mode, IRQs disabled, flags clear
+    MOV R0,#0x0C000000              ; I=1, F=1
+    ORR R0,R0,#3                    ; mode=SVC
+    TEQP R0,#0                     ; PSR = R0 XOR 0 = R0
+    MOV R0,R0                      ; NOP
+
+    ; Verify: should be SVC with I=1, F=1
+    STMFD SP!,{R15}
+    LDMFD SP!,{R0}
+    AND R1,R0,#0x0C000003          ; Extract mode + IF bits
+    MOV R2,#0x0C000000
+    ORR R2,R2,#3                    ; Expected: 0x0C000003
+    CMP R1,R2
+    BNE Test2_Fail
+
+    ; Test 2 passed
+    MOV R0,#FB_Base
+    MOV R1,#MS_Test2_Complete
+    STR R1,[R0,#FB_Milestone]
+    B Test3_Start
+
+.Test2_Fail
+    MOV R3,#FB_Base
+    STR R2,[R3,#FB_Expected]        ; R2 = expected
+    STR R1,[R3,#FB_Actual]          ; R1 = actual
+    MOV R2,#ERR_Test2_Psr
+    STR R2,[R3,#FB_Result]
+    B $
+
+; =====================================================================
+; Test 3: SWI entry and return via MOVS PC, R14
+;
+; Install a simple SWI handler that sets R8=1 and returns.
+; Verify the handler ran and we returned correctly.
+; =====================================================================
+.Test3_Start
+    MOV R0,#FB_Base
+    MOV R1,#MS_Test3_Begin
+    STR R1,[R0,#FB_Milestone]
+
+    ; Install Test 3 SWI handler
+    MOV R0,#2
+    ADR R1,Test3_SWI_Handler
+    BL Write_HW_Vector
+
+    ; Call SWI
+    MOV R8,#0
+    SWI 0x42
+
+    ; Verify handler ran
+    CMP R8,#1
+    BNE Test3_Fail
+
+    ; Restore default SWI handler
+    MOV R0,#2
+    ADR R1,Do_DefaultSWI
+    BL Write_HW_Vector
+
+    ; Test 3 passed
+    MOV R0,#FB_Base
+    MOV R1,#MS_Test3_Complete
+    STR R1,[R0,#FB_Milestone]
+    B Test4_Start
+
+.Test3_SWI_Handler
+    MOV R8,#1
+    MOVS PC,R14                    ; Return, restoring caller PSR
+
+.Test3_Fail
+    MOV R2,#FB_Base
+    MOV R3,#1
+    STR R3,[R2,#FB_Expected]
+    STR R8,[R2,#FB_Actual]
+    MOV R3,#ERR_Test3_NoHandler
+    STR R3,[R2,#FB_Result]
+    B $
+
+; =====================================================================
+; Test 4: SWI with STMFD/LDMFD {PC}^ return (RISC OS pattern)
+;
+; Install a SWI handler that saves state with STMFD, does work,
+; and returns via LDMFD {PC}^ to restore caller PSR.
+; =====================================================================
+.Test4_Start
+    MOV R0,#FB_Base
+    MOV R1,#MS_Test4_Begin
+    STR R1,[R0,#FB_Milestone]
+
+    ; Install Test 4 SWI handler
+    MOV R0,#2
+    ADR R1,Test4_SWI_Handler
+    BL Write_HW_Vector
+
+    ; Call SWI
+    MOV R8,#0
+    SWI 0x43
+
+    ; Verify handler ran
+    CMP R8,#1
+    BNE Test4_Fail
+
+    ; Restore default SWI handler
+    MOV R0,#2
+    ADR R1,Do_DefaultSWI
+    BL Write_HW_Vector
+
+    ; Test 4 passed
+    MOV R0,#FB_Base
+    MOV R1,#MS_Test4_Complete
+    STR R1,[R0,#FB_Milestone]
+    B Test5_Start
+
+.Test4_SWI_Handler
+    STMFD SP!,{R0-R3,R14}
+    MOV R8,#1
+    LDMFD SP!,{R0-R3,PC}^          ; Return, restoring PSR
+
+.Test4_Fail
+    MOV R2,#FB_Base
+    MOV R3,#1
+    STR R3,[R2,#FB_Expected]
+    STR R8,[R2,#FB_Actual]
+    MOV R3,#ERR_Test4_NoHandler
+    STR R3,[R2,#FB_Result]
+    B $
+
+; =====================================================================
+; Test 5: Nested SWI (OS_WriteI pattern)
+;
+; Outer handler (SWI 1) saves state, does TEQP R15, #3 to enable IRQs,
+; calls inner SWI 0, then returns. This replicates the RISC OS
+; OS_WriteI calling OS_WriteC pattern.
+; =====================================================================
+.Test5_Start
+    MOV R0,#FB_Base
+    MOV R1,#MS_Test5_Begin
+    STR R1,[R0,#FB_Milestone]
+
+    ; Install Test 5 SWI handler
+    MOV R0,#2
+    ADR R1,Test5_SWI_Handler
+    BL Write_HW_Vector
+
+    ; Call outer SWI
+    MOV R8,#0
+    MOV R9,#0
+    SWI 1
+
+    ; Verify both handlers ran
+    CMP R8,#1
+    BNE Test5_FailInner
+    CMP R9,#1
+    BNE Test5_FailOuter
+
+    ; Restore default SWI handler
+    MOV R0,#2
+    ADR R1,Do_DefaultSWI
+    BL Write_HW_Vector
+
+    ; Test 5 passed
+    MOV R0,#FB_Base
+    MOV R1,#MS_Test5_Complete
+    STR R1,[R0,#FB_Milestone]
+    B Test6_Start
+
+.Test5_SWI_Handler
+    ; Extract SWI number
+    BIC R12,R14,#0xFC000003         ; R12 = clean PC from R14
+    LDR R11,[R12,#-4]              ; Load SWI instruction
+    BIC R11,R11,#0xFF000000         ; Mask to SWI number
+
+    CMP R11,#1
+    BEQ Test5_OuterHandler
+    CMP R11,#0
+    BEQ Test5_InnerHandler
+
+    ; Unknown SWI — return with error
+    MOVS PC,R14
+
+.Test5_InnerHandler
+    MOV R8,#1                       ; Flag: inner handler ran
+    MOVS PC,R14
+
+.Test5_OuterHandler
+    ; Save state (including R14 which holds caller return address)
+    STMFD SP!,{R0,R14}
+    ; Enable IRQs while staying in SVC mode (RISC OS pattern)
+    TEQP R15,#3
+    MOV R0,R0                      ; NOP
+    MOV R9,#1                       ; Flag: outer handler ran
+    SWI 0                           ; Call inner handler (nested SWI)
+    LDMFD SP!,{R0,PC}^             ; Return to original caller
+
+.Test5_FailInner
+    MOV R2,#FB_Base
+    MOV R3,#1
+    STR R3,[R2,#FB_Expected]
+    STR R8,[R2,#FB_Actual]
+    MOV R3,#ERR_Test5_Inner
+    STR R3,[R2,#FB_Result]
+    B $
+
+.Test5_FailOuter
+    MOV R2,#FB_Base
+    MOV R3,#1
+    STR R3,[R2,#FB_Expected]
+    STR R9,[R2,#FB_Actual]
+    MOV R3,#ERR_Test5_Outer
+    STR R3,[R2,#FB_Result]
+    B $
+
+; =====================================================================
+; Test 6: TEQP R15, #3 effect on flags and IRQ state
+;
+; Set known PSR state (N=1, C=1, I=1, F=1, SVC), then TEQP R15, #3.
+; Since R15 delivers PC only (bottom bits=00), XOR 3 gives:
+; mode=3(SVC), I=0, F=0, NZCV=0000.
+; =====================================================================
+.Test6_Start
+    MOV R0,#FB_Base
+    MOV R1,#MS_Test6_Begin
+    STR R1,[R0,#FB_Milestone]
+
+    ; Set known state: SVC, I=1, F=1, N=1, C=1
+    ; 0xAC000003 = N(1) + C(1) + I(1) + F(1) + SVC(3)
+    ; = 0x80000000 | 0x20000000 | 0x08000000 | 0x04000000 | 0x03
+    MOV R0,#0xAC000000
+    ORR R0,R0,#3
+    TEQP R0,#0                     ; Set PSR to known state
+    MOV R0,R0                      ; NOP
+
+    ; Now execute TEQP R15, #3
+    TEQP R15,#3
+    MOV R0,R0                      ; NOP
+
+    ; Read PSR via STM
+    STMFD SP!,{R15}
+    LDMFD SP!,{R0}
+
+    ; Expected: mode=3(SVC), I=0, F=0, NZCV=0000
+    ; PSR bits should be exactly 0x00000003
+    AND R1,R0,#0xFC000003           ; Mask PSR bits
+    CMP R1,#3                       ; Expected PSR = 0x00000003
+    BNE Test6_Fail
+
+    ; Test 6 passed
+    MOV R0,#FB_Base
+    MOV R1,#MS_Test6_Complete
+    STR R1,[R0,#FB_Milestone]
+    B Test7_Start
+
+.Test6_Fail
+    MOV R2,#FB_Base
+    MOV R3,#3                       ; Expected: 0x00000003
+    STR R3,[R2,#FB_Expected]
+    STR R1,[R2,#FB_Actual]          ; R1 = actual PSR bits
+    MOV R3,#ERR_Test6_Psr
+    STR R3,[R2,#FB_Result]
+    B $
+
+; =====================================================================
+; Test 7: SWI number extraction from instruction
+;
+; The SWI handler reads [R14-4] to get the SWI instruction.
+; Verify R14 points to the correct instruction and the extracted
+; SWI number matches what was called.
+; =====================================================================
+.Test7_Start
+    MOV R0,#FB_Base
+    MOV R1,#MS_Test7_Begin
+    STR R1,[R0,#FB_Milestone]
+
+    ; Install Test 7 SWI handler
+    MOV R0,#2
+    ADR R1,Test7_SWI_Handler
+    BL Write_HW_Vector
+
+    ; Call SWI with known number
+    MOV R7,#0
+    SWI 0x42
+
+    ; Verify extracted number matches
+    CMP R7,#0x42
+    BNE Test7_FailNumber
+
+    ; Restore default SWI handler
+    MOV R0,#2
+    ADR R1,Do_DefaultSWI
+    BL Write_HW_Vector
+
+    ; Test 7 passed
+    MOV R0,#FB_Base
+    MOV R1,#MS_Test7_Complete
+    STR R1,[R0,#FB_Milestone]
+    B Test8_Start
+
+.Test7_SWI_Handler
+    BIC R12,R14,#0xFC000003         ; Clean PC from R14
+    LDR R7,[R12,#-4]               ; Load SWI instruction
+    BIC R7,R7,#0xFF000000           ; Extract SWI number
+    MOVS PC,R14                    ; Return
+
+.Test7_FailNumber
+    MOV R2,#FB_Base
+    MOV R3,#0x42
+    STR R3,[R2,#FB_Expected]
+    STR R7,[R2,#FB_Actual]
+    MOV R3,#ERR_Test7_Number
+    STR R3,[R2,#FB_Result]
+    B $
+
+; =====================================================================
+; Test 8: R15 stored by STM — verify PC+12 and PSR inclusion
+;
+; ARM2 stores R15 as (PC+12)|PSR in STM. This is critical for RISC OS
+; exception return sequences.
+; =====================================================================
+.Test8_Start
+    MOV R0,#FB_Base
+    MOV R1,#MS_Test8_Begin
+    STR R1,[R0,#FB_Milestone]
+
+    ; Set known PSR state: SVC, I=1, F=1
+    MOV R0,#0x0C000000
+    ORR R0,R0,#3
+    TEQP R0,#0
+    MOV R0,R0                      ; NOP
+
+    ; Store R15 via STM
+    STMFD SP!,{R15}
+    LDMFD SP!,{R0}
+
+    ; Verify PSR bits are present
+    AND R1,R0,#0x0C000003           ; Extract mode + IF
+    MOV R2,#0x0C000000
+    ORR R2,R2,#3                    ; Expected: SVC + I + F = 0x0C000003
+    CMP R1,R2
+    BNE Test8_FailPsr
+
+    ; Verify address portion is reasonable (should be in ROM: >= 0x3800000)
+    BIC R1,R0,#0xFC000003           ; Extract address bits
+    CMP R1,#0x3800000
+    BCC Test8_FailAddr              ; Should be in ROM range
+
+    ; Test 8 passed
+    MOV R0,#FB_Base
+    MOV R1,#MS_Test8_Complete
+    STR R1,[R0,#FB_Milestone]
+    B AllTestsPassed
+
+.Test8_FailPsr
+    MOV R3,#FB_Base
+    STR R2,[R3,#FB_Expected]        ; R2 = expected
+    STR R1,[R3,#FB_Actual]          ; R1 = actual
+    MOV R2,#ERR_Test8_Psr
+    STR R2,[R3,#FB_Result]
+    B $
+
+.Test8_FailAddr
+    MOV R3,#FB_Base
+    MOV R2,#0x3800000
+    STR R2,[R3,#FB_Expected]
+    STR R1,[R3,#FB_Actual]
+    MOV R2,#ERR_Test8_Addr
+    STR R2,[R3,#FB_Result]
+    B $
+
+; =====================================================================
+; All Tests Passed
+; =====================================================================
+.AllTestsPassed
+    MOV R0,#FB_Base
+    MOV R1,#MS_AllPassed
+    STR R1,[R0,#FB_Milestone]
+    ; Result stays 0 (success)
+    BKPT 0
+    B $

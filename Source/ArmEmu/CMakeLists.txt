@@ -2,57 +2,73 @@
 
 # Define the library.
 ag_add_library(ArmEmu   FOLDER      ARM
-                        SOURCES     ArmCore.hpp
-                                    ArmCore.cpp
-                                    Hardware.inl
-                                    TestBedHardware.inl
-                                    MemcHardware.cpp
-                                    MemcHardware.hpp
-                                    RegisterFile.inl
-                                    ARMv2CoreRegisterFile.inl
-                                    AluInstructions.inl
-                                    AluOperations.h
-                                    DataTransferInstructions.inl
-                                    InstructionDecoder.inl
-                                    ARMv2InstructionDecoder.inl
-                                    InstructionPipeline.inl
-                                    ExecutionUnit.inl
-                                    SystemConfigurations.inl
-                                    ArmSystem.inl
-                                    ArmEmu.cpp
-                                    EmuOptions.cpp
-                                    ${MO_INCLUDE_DIR}/ArmEmu/EmuOptions.hpp
-                                    AddressMap.cpp
-                                    ${MO_INCLUDE_DIR}/ArmEmu/AddressMap.hpp
-                                    ${MO_INCLUDE_DIR}/ArmEmu/IKeyboardController.hpp
-                                    AcornKeyboardController.cpp
-                                    AcornKeyboardController.hpp
-                                    IOC.cpp
-                                    ${MO_INCLUDE_DIR}/ArmEmu/IOC.hpp
-                                    VIDC10.cpp
-                                    ${MO_INCLUDE_DIR}/ArmEmu/VIDC10.hpp
-                                    Display.cpp
-                                    ${MO_INCLUDE_DIR}/ArmEmu/Display.hpp
-                                    ArmSystemBuilder.cpp
-                                    ${MO_INCLUDE_DIR}/ArmEmu/ArmSystemBuilder.hpp
-                                    ExecutionMetrics.cpp
-                                    ${MO_INCLUDE_DIR}/ArmEmu/ExecutionMetrics.hpp
-                                    GuestEventQueue.cpp
-                                    ${MO_INCLUDE_DIR}/ArmEmu/GuestEventQueue.hpp
-                                    SystemContext.cpp
-                                    ${MO_INCLUDE_DIR}/ArmEmu/SystemContext.hpp
-                                    ${MO_INCLUDE_DIR}/ArmEmu/HostMessageID.hpp
-                                    ArmSystem.cpp
-                                    ${MO_INCLUDE_DIR}/ArmEmu/ArmSystem.hpp
-                        HEADERS     ${MO_INCLUDE_DIR}/ArmEmu.hpp
+                        SOURCES     "ArmCore.hpp"
+                                    "ArmCore.cpp"
+                                    "Hardware.inl"
+                                    "TestBedHardware.inl"
+                                    "RegisterFile.inl"
+                                    "ARMv2CoreRegisterFile.inl"
+                                    "AluInstructions.inl"
+                                    "AluOperations.h"
+                                    "DataTransferInstructions.inl"
+                                    "InstructionDecoder.inl"
+                                    "ARMv2InstructionDecoder.inl"
+                                    "InstructionPipeline.inl"
+                                    "ExecutionUnit.inl"
+                                    "SystemConfigurations.inl"
+                                    "ArmSystem.inl"
+                                    "ArmEmu.cpp"
+                                    "EmuOptions.cpp"
+                                    "${MO_INCLUDE_DIR}/ArmEmu/EmuOptions.hpp"
+                                    "AddressMap.cpp"
+                                    "${MO_INCLUDE_DIR}/ArmEmu/AddressMap.hpp"
+                                    "${MO_INCLUDE_DIR}/ArmEmu/IInterruptController.hpp"
+                                    "${MO_INCLUDE_DIR}/ArmEmu/IKeyboardController.hpp"
+                                    "AcornKeyboardController.cpp"
+                                    "AcornKeyboardController.hpp"
+                                    "IOC.cpp"
+                                    "IOC.hpp"
+                                    "I2CBus.cpp"
+                                    "I2CBus.hpp"
+                                    "PCF8583.cpp"
+                                    "PCF8583.hpp"
+                                    "IVideoFrameProvider.cpp"
+                                    "${MO_INCLUDE_DIR}/ArmEmu/IVideoFrameProvider.hpp"
+                                    "VideoFrameSampler.cpp"
+                                    "VideoFrameSampler.hpp"
+                                    "MEMC.inl"
+                                    "VIDC10.inl"
+                                    "ArmSystemBuilder.cpp"
+                                    "${MO_INCLUDE_DIR}/ArmEmu/ArmSystemBuilder.hpp"
+                                    "ExecutionMetrics.cpp"
+                                    "${MO_INCLUDE_DIR}/ArmEmu/ExecutionMetrics.hpp"
+                                    "GuestEvent.cpp"
+                                    "${MO_INCLUDE_DIR}/ArmEmu/GuestEvent.hpp"
+                                    "SystemContext.cpp"
+                                    "${MO_INCLUDE_DIR}/ArmEmu/SystemContext.hpp"
+                                    "${MO_INCLUDE_DIR}/ArmEmu/HostMessageID.hpp"
+                                    "${MO_INCLUDE_DIR}/ArmEmu/IHostConnection.hpp"
+                                    "ArmSystem.cpp"
+                                    "${MO_INCLUDE_DIR}/ArmEmu/ArmSystem.hpp"
+                                    "${MO_INCLUDE_DIR}/ArmEmu/IDiagnosticSink.hpp"
+                                    "RingBufferTrace.cpp"
+                                    "${MO_INCLUDE_DIR}/ArmEmu/RingBufferTrace.hpp"
+                                    "BootProgressMonitor.cpp"
+                                    "${MO_INCLUDE_DIR}/ArmEmu/BootProgressMonitor.hpp"
+                                    "BootStallDetector.cpp"
+                                    "${MO_INCLUDE_DIR}/ArmEmu/BootStallDetector.hpp"
+                                    "${MO_INCLUDE_DIR}/ArmEmu/CompositeDiagnosticSink.hpp"
+                                    "WatchpointManager.cpp"
+                                    "${MO_INCLUDE_DIR}/ArmEmu/WatchpointManager.hpp"
+                        HEADERS     "${MO_INCLUDE_DIR}/ArmEmu.hpp"
                         PUBLIC_LIBS AgCore readerwriterqueue)
 
 if(DEFINED CMAKE_ASM_MASM_COMPILER AND "${USE_ASM}")
     target_sources(ArmEmu PRIVATE AluOperations_Win32_x64.asm)
-    source_group(Emulation FILES AluOperations_Win32_x64.asm)
+    source_group(Processor FILES AluOperations_Win32_x64.asm)
 else()
     target_sources(ArmEmu PRIVATE AluOperations_NoArch.cpp)
-    source_group(Emulation FILES AluOperations_NoArch.cpp)
+    source_group(Processor FILES AluOperations_NoArch.cpp)
 endif()
 
 list(APPEND DOC_SRCS "${CMAKE_CURRENT_SOURCE_DIR}"
@@ -60,82 +76,114 @@ list(APPEND DOC_SRCS "${CMAKE_CURRENT_SOURCE_DIR}"
                      "${MO_INCLUDE_DIR}/ArmEmu")
 
 source_group(Tools FILES
-             ArmCore.hpp
-             ArmCore.cpp)
+             "ArmCore.hpp"
+             "ArmCore.cpp")
 
-source_group(Emulation FILES
-             Hardware.inl
-             TestBedHardware.inl
-             MemcHardware.cpp
-             MemcHardware.hpp
-             AcornKeyboardController.cpp
-             AcornKeyboardController.hpp
-             RegisterFile.inl
-             ARMv2CoreRegisterFile.inl
-             AluInstructions.inl
-             AluOperations.h
-             DataTransferInstructions.inl
-             InstructionDecoder.inl
-             ARMv2InstructionDecoder.inl
-             InstructionPipeline.inl
-             ExecutionUnit.inl
-             SystemConfigurations.inl
-             ArmSystem.inl)
+source_group(Processor FILES
+             "RegisterFile.inl"
+             "ARMv2CoreRegisterFile.inl"
+             "AluInstructions.inl"
+             "AluOperations.h"
+             "DataTransferInstructions.inl"
+             "InstructionDecoder.inl"
+             "ARMv2InstructionDecoder.inl"
+             "InstructionPipeline.inl"
+             "ExecutionUnit.inl"
+             "SystemConfigurations.inl"
+             "ArmSystem.inl"
+)
 
 source_group(Interface FILES
-             EmuOptions.cpp
-             ${MO_INCLUDE_DIR}/ArmEmu/EmuOptions.hpp
-             ArmEmu.cpp
-             ${MO_INCLUDE_DIR}/ArmEmu.hpp
-             AddressMap.cpp
-             ${MO_INCLUDE_DIR}/ArmEmu/AddressMap.hpp
-             ${MO_INCLUDE_DIR}/ArmEmu/IKeyboardController.hpp
-             IOC.cpp
-             ${MO_INCLUDE_DIR}/ArmEmu/IOC.hpp
-             VIDC10.cpp
-             ${MO_INCLUDE_DIR}/ArmEmu/VIDC10.hpp
-             Display.cpp
-             ${MO_INCLUDE_DIR}/ArmEmu/Display.hpp
-             ArmSystemBuilder.cpp
-             ${MO_INCLUDE_DIR}/ArmEmu/ArmSystemBuilder.hpp
-             ExecutionMetrics.cpp
-             ${MO_INCLUDE_DIR}/ArmEmu/ExecutionMetrics.hpp
-             GuestEventQueue.cpp
-             ${MO_INCLUDE_DIR}/ArmEmu/GuestEventQueue.hpp
-             ${MO_INCLUDE_DIR}/ArmEmu/HostMessageID.hpp
-             SystemContext.cpp
-             ${MO_INCLUDE_DIR}/ArmEmu/SystemContext.hpp
-             ArmSystem.cpp
-             ${MO_INCLUDE_DIR}/ArmEmu/ArmSystem.hpp)
+             "EmuOptions.cpp"
+             "${MO_INCLUDE_DIR}/ArmEmu/EmuOptions.hpp"
+             "ArmEmu.cpp"
+             "${MO_INCLUDE_DIR}/ArmEmu.hpp"
+             "AddressMap.cpp"
+             "${MO_INCLUDE_DIR}/ArmEmu/AddressMap.hpp"
+             "${MO_INCLUDE_DIR}/ArmEmu/IKeyboardController.hpp"
+             "IVideoFrameProvider.cpp"
+             "${MO_INCLUDE_DIR}/ArmEmu/IVideoFrameProvider.hpp"
+             "${MO_INCLUDE_DIR}/ArmEmu/IKeyboardController.hpp"
+             "ArmSystemBuilder.cpp"
+             "${MO_INCLUDE_DIR}/ArmEmu/ArmSystemBuilder.hpp"
+             "ExecutionMetrics.cpp"
+             "${MO_INCLUDE_DIR}/ArmEmu/ExecutionMetrics.hpp"
+             "GuestEvent.cpp"
+             "${MO_INCLUDE_DIR}/ArmEmu/GuestEvent.hpp"
+             "${MO_INCLUDE_DIR}/ArmEmu/HostMessageID.hpp"
+             "SystemContext.cpp"
+             "${MO_INCLUDE_DIR}/ArmEmu/SystemContext.hpp"
+             "ArmSystem.cpp"
+             "${MO_INCLUDE_DIR}/ArmEmu/ArmSystem.hpp"
+             "${MO_INCLUDE_DIR}/ArmEmu/IHostConnection.hpp"
+)
+
+source_group(Diagnostics FILES
+             "${MO_INCLUDE_DIR}/ArmEmu/IDiagnosticSink.hpp"
+             "RingBufferTrace.cpp"
+             "${MO_INCLUDE_DIR}/ArmEmu/RingBufferTrace.hpp"
+             "BootProgressMonitor.cpp"
+             "${MO_INCLUDE_DIR}/ArmEmu/BootProgressMonitor.hpp"
+             "BootStallDetector.cpp"
+             "${MO_INCLUDE_DIR}/ArmEmu/BootStallDetector.hpp"
+             "${MO_INCLUDE_DIR}/ArmEmu/CompositeDiagnosticSink.hpp"
+             "WatchpointManager.cpp"
+             "${MO_INCLUDE_DIR}/ArmEmu/WatchpointManager.hpp"
+)
+
+source_group(Hardware FILES
+             "Hardware.inl"
+             "TestBedHardware.inl"
+             "MEMC.inl"
+             "IOC.cpp"
+             "IOC.hpp"
+             "VIDC10.inl"
+             "VideoFrameSampler.cpp"
+             "VideoFrameSampler.hpp"
+             "AcornKeyboardController.cpp"
+             "AcornKeyboardController.hpp"
+             "I2CBus.cpp"
+             "I2CBus.hpp"
+             "PCF8583.cpp"
+             "PCF8583.hpp"
+)
 
 # Define the unit test harness.
 ag_add_test_app(ArmEmu_Tests    TEST_LIB ArmEmu
-                                SOURCES  Test/TestTools.cpp
-                                         Test/TestTools.hpp
-                                         Test/LoggerDevice.cpp
-                                         Test/LoggerDevice.hpp
-                                         Test/TestConstraints.cpp
-                                         Test/TestConstraints.hpp
-                                         Test/TestExecTools.cpp
-                                         Test/TestExecTools.hpp
-                                         Test/Test_Constraints.cpp
-                                         Test/Test_Core.cpp
-                                         Test/Test_RegisterFile.cpp
-                                         Test/Test_Hardware.cpp
-                                         Test/Test_MemcHardware.cpp
-                                         Test/Test_MemcSystem.cpp
-                                         Test/Test_MemcRomBoot.cpp
-                                         Test/Test_AluOperations.cpp
-                                         Test/Test_ALU.cpp
-                                         Test/Test_DataTransfer.cpp
-                                         Test/Test_CoProcessor.cpp
-                                         Test/Test_Options.cpp
-                                         Test/Test_GuestEventQueue.cpp
-                                         Test/Test_ArmSystemBuilder.cpp
-                                         Test/Test_VIDC10.cpp
-                                         Test/Test_Display.cpp
-                                         Test/Test_KeyboardController.cpp
-                                         Test/Test_Main.cpp)
+                                SOURCES  "Test/TestTools.cpp"
+                                         "Test/TestTools.hpp"
+                                         "Test/LoggerDevice.cpp"
+                                         "Test/LoggerDevice.hpp"
+                                         "Test/TestConstraints.cpp"
+                                         "Test/TestConstraints.hpp"
+                                         "Test/TestExecTools.cpp"
+                                         "Test/TestExecTools.hpp"
+                                         "Test/Test_Constraints.cpp"
+                                         "Test/Test_Core.cpp"
+                                         "Test/Test_RegisterFile.cpp"
+                                         "Test/Test_Hardware.cpp"
+                                         "Test/Test_MemcHardware.cpp"
+                                         "Test/Test_MemcSystem.cpp"
+                                         "Test/Test_MemcRomBoot.cpp"
+                                         "Test/Test_AluOperations.cpp"
+                                         "Test/Test_ALU.cpp"
+                                         "Test/Test_Pipeline.cpp"
+                                         "Test/Test_DataTransfer.cpp"
+                                         "Test/Test_CoProcessor.cpp"
+                                         "Test/Test_Options.cpp"
+                                         "Test/Test_ArmSystemBuilder.cpp"
+                                         "Test/Test_VIDC10.cpp"
+                                         "Test/Test_KeyboardController.cpp"
+                                         "Test/Test_I2CBus.cpp"
+                                         "Test/Test_PCF8583.cpp"
+                                         "Test/Test_RiscOSBoot.cpp"
+                                         "Test/Test_Diagnostics.cpp"
+                                         "Test/Test_WatchpointManager.cpp"
+                                         "Test/TestFeedbackDevice.cpp"
+                                         "Test/TestFeedbackDevice.hpp"
+                                         "Test/Test_MemcModeSwitch.cpp"
+                                         "Test/Test_Main.cpp"
+                                         )
 
 target_include_directories(ArmEmu_Tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
 
@@ -192,3 +240,22 @@ ag_add_static_data(EmuPerf_Test "MemcTestRom.hpp" BINARY
 # Embed the same MEMC test ROM in the unit test executable.
 ag_add_static_data(ArmEmu_Tests "MemcTestRom.hpp" BINARY
                    SOURCES "${MemcTestRomImagePath}")
+
+# Add a custom command to assemble the Mode Test ROM source code into
+# ARM machine code.
+set(ModeTestSourceIn "${PROJECT_SOURCE_DIR}/Tests/ArmEmu/MemcModeTestRom.arm")
+set(ModeTestRomPath "${CMAKE_CURRENT_BINARY_DIR}/ModeTestRom.bin")
+
+cmake_path(ABSOLUTE_PATH ModeTestSourceIn
+           NORMALIZE OUTPUT_VARIABLE ModeTestSource)
+
+add_custom_command(OUTPUT "${ModeTestRomPath}"
+                   COMMAND AAsm
+                   ARGS "${ModeTestSource}" "-o" "${ModeTestRomPath}"
+                   DEPENDS "${ModeTestSource}"
+                   WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+                   COMMENT "Assembling ${ModeTestSource}...")
+
+# Embed the mode test ROM in the unit test executable.
+ag_add_static_data(ArmEmu_Tests "ModeTestRom.hpp" BINARY
+                   SOURCES "${ModeTestRomPath}")

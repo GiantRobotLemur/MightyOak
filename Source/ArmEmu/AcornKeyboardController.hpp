@@ -17,12 +17,11 @@
 ////////////////////////////////////////////////////////////////////////////////
 #include <atomic>
 
-#include "readerwriterqueue.h"
-
 #include "Ag/Core/Memory.hpp"
 #include "Ag/Core/LinearSortedMap.hpp"
 
 #include "ArmEmu/IKeyboardController.hpp"
+#include "ArmEmu/SystemContext.hpp"
 
 namespace Mo {
 namespace Arm {
@@ -30,11 +29,13 @@ namespace Arm {
 ////////////////////////////////////////////////////////////////////////////////
 // Class Declarations
 ////////////////////////////////////////////////////////////////////////////////
-class IOC;
-
 //! @brief An object which represents the 87C51 keyboard controller,
 //! translating between key press and mouse movement and the internal
 //! KART protocol.
+//! @details Key, mouse button and mouse movement events are reported by a
+//! single host thread and only ever queued or accumulated. All protocol state
+//! is owned by the emulation thread, which calls receiveKARTByte() and
+//! processPendingInput() as the KART is clocked.
 class AcornKeyboardController : public IKeyboardController
 {
 public:
@@ -71,12 +72,15 @@ public:
 
     // Operations
     void receiveKARTByte(uint8_t nextByte);
+    void processPendingInput();
 
     // Overrides
     virtual Ag::string_cref_t getName() const override;
     virtual Ag::string_cref_t getDescription() const override;
-    virtual void connect(const ConnectionContext &context) override;
+    virtual void connect(SystemContext &context) override;
 
+    virtual LEDStateBits getLEDStates() const override;
+    virtual void connectToTxQueue(SynchronisedByteQueue *txQueue) override;
     virtual void keyDown(uint32_t hostScanCode) override;
     virtual void keyUp(uint32_t hostScanCode) override;
     virtual void mouseButtonDown(MouseButton button) override;
@@ -91,6 +95,8 @@ private:
         ReceivedHRST,
         ReceivedRAK1,
         Initialised,
+        AfterFirstByteSent,
+        AfterSecondByteSent,
     };
 
     //! @brief Represents a key or mouse button event queued for transmission.
@@ -110,20 +116,24 @@ private:
     static constexpr uint8_t KeyboardId = 1;
 
     // Internal Functions
-    uint8_t getStatusByte() const;
-    void sendPendingData();
-    void sendKeyEvent(const KeyEvent &event);
-    void sendMouseData();
+    void beginSendMouseData();
+    void beginSendKeyEvent(uint8_t keyCode, bool isPressed);
+    bool handleAcknowledge(uint8_t rxByte);
 
     // Internal Fields
     Ag::String _name;
     Ag::String _description;
-    IOC *_ioController;
+    SynchronisedByteQueue *_txQueue;
     std::atomic<int32_t> _mouseDeltaX;
     std::atomic<int32_t> _mouseDeltaY;
-    ScanCodeMap _scanCodeMap;
     KeyEventQueueUPtr _pendingKeyEvents;
+    SystemContext *_context;
+    ScanCodeMap _scanCodeMap;
+    std::atomic<LEDStateBits> _ledStates;
     ControllerState _state;
+    bool _keyScanningEnabled;
+    bool _mouseTxEnabled;
+    uint8_t _secondTxByte;
 };
 
 }} // namespace Mo::Arm

@@ -54,7 +54,8 @@ source_group(Build  FILES
 
 # Define the unit test harness.
 ag_add_test_app(MightyOak_Tests TEST_LIB MightyOakLib
-                                SOURCES  "Test/Test_CliOptions.cpp"
+                                SOURCES  "Test/Test_Main.cpp"
+                                         "Test/Test_CliOptions.cpp"
                                          )
 
 target_include_directories(MightyOak_Tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")

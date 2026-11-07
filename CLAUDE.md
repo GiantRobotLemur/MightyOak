@@ -82,6 +82,7 @@ Optional x64 MASM assembly optimizations exist in `AluOperations_Win32_x64.asm` 
 
 - Avoid C++ virtual functions in performance-critical emulation code — use templates instead
 - Use Doxygen comments (`//!`, `@file`, `@brief`, `@author`, `@date`, `@copyright`) for documentation
+- Where possible, add Doxygen comments for member functions in the .cpp file rather than the header file.
 - Namespaces: lowercase (`Mo`, `Ag`). Classes/enums: PascalCase. Functions: camelCase
 - Public headers go in `Source/Include/AsmTools/` or `Source/Include/ArmEmu/`
 - Test files follow the pattern `Test_*.cpp` using Google Test

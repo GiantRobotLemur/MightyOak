@@ -245,11 +245,9 @@ CliOptions::CliOptions(const Ag::AppMetadata &appMetadata)
     using namespace Ag::Cli;
 
     SchemaBuilder optionSchema;
-    optionSchema.setAppName(appMetadata.AppName);
-    optionSchema.setDescription(appMetadata.Description);
+    optionSchema.setAppInfo(appMetadata, true);
 
     optionSchema.addShowHelpCommand();
-    optionSchema.addShowVersionCommand(appMetadata.AppVersion);
 
     std::string descriptionBuilder;
 
@@ -362,6 +360,10 @@ CliOptions::CliOptions(const Ag::AppMetadata &appMetadata)
     defineSDLSchema(optionSchema);
 
     setSchema(optionSchema);
+
+    // Define default system to emulate.
+    _emulatorOptions = Arm::Options::makeProductionModel(Arm::ProductionModel::A3020);
+    _emulatorOptions.setRamSizeKb(4096);
 }
 
 //! @brief Gets a reference to the configuration of the desired emulated system.

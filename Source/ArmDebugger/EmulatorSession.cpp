@@ -1,7 +1,7 @@
 //! @file ArmDebugger/EmulatorSession.cpp
 //! @brief The definition of an object which manages the running emulated machine.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2024
+//! @date 2024-2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -23,15 +23,10 @@
 
 #include "Ag/QtInterop/Conversion.hpp"
 #include "ArmEmu/ArmSystemBuilder.hpp"
-#include "ArmEmu/GuestEventQueue.hpp"
+#include "ArmEmu/GuestEvent.hpp"
 
 #include "DebuggerApp.hpp"
-#include "MemcIOAdapter.hpp"
 #include "Tools.hpp"
-
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
 
 namespace Mo {
 
@@ -49,6 +44,29 @@ public:
     bool operator()(const Breakpoint &rhs) const
     {
         return rhs.getBreakpointID() == _matchID;
+    }
+};
+
+
+class DebugSessionConnection : public Arm::IHostConnection
+{
+private:
+    EmulatorSession *_session;
+public:
+    // Construction/Destruction
+    DebugSessionConnection(EmulatorSession *session) :
+        _session(session)
+    {
+    }
+
+    virtual ~DebugSessionConnection() = default;
+
+    // Overrides
+    virtual void onGuestEvent(Arm::IArmSystem *instance,
+                              const Arm::GuestEvent &e)
+    {
+        if (_session->getEmulator() == instance)
+            _session->onGuestEvent(e);
     }
 };
 
@@ -73,17 +91,12 @@ Arm::ExecutionMetrics runEmulator(Arm::IArmSystem *emulator)
 ////////////////////////////////////////////////////////////////////////////////
 EmulatorSession::EmulatorSession(QObject *owner) :
     QObject(owner),
-    _emulatorPollTimer(this),
     _emulatorWatcher(this),
+    _diagnostic(nullptr),
     _state(EmulatorState::Uninitialised)
 {
-    connect(&_emulatorPollTimer, &QTimer::timeout,
-            this, &EmulatorSession::onPollEmulator);
     connect(&_emulatorWatcher, &QEmulatorFutureWatcher::finished,
             this, &EmulatorSession::onExecutionComplete);
-
-    _emulatorPollTimer.setSingleShot(false);
-    _emulatorPollTimer.setInterval(1);
 
     // DEBUG: Preset a valid config for quick testing.
     auto sessionOptions = _settings.getEmulatorOptions();
@@ -304,24 +317,32 @@ void EmulatorSession::create(const Arm::Options &options)
     {
         Arm::ArmSystemBuilder builder(options);
 
+        // Add a diagnostic monitor.
+        auto bootMonitor = std::make_unique<Arm::BootProgressMonitor>();
+
+        _diagnostic = bootMonitor.get();
+        builder.addDevice(std::move(bootMonitor));
+        builder.setDiagnosticsEnabled(true);
+        builder.setHostConnection(std::make_shared<DebugSessionConnection>(this));
+
         _emulator = builder.createSystem();
         _settings.setEmulatorOptions(options);
         _state = EmulatorState::Paused;
-
-        switch (options.getHardwareArchitecture())
-        {
-        case Arm::SystemModel::Archimedies:
-        case Arm::SystemModel::ASeries:
-            _ioAdapter = std::make_unique<MemcIOAdapter>(_emulator.get(),
-                                                         _settings.getEmulatorOptions());
-            break;
-        }
 
         emit sessionStarted(options, _emulator.get());
     }
     catch (const Ag::Exception &error)
     {
         reportError(nullptr, tr("Emulator Error"), error);
+    }
+}
+
+void EmulatorSession::onGuestEvent(const Arm::GuestEvent &e)
+{
+    // Process guest event in the main thread.
+    if (_ioAdapter)
+    {
+        _ioAdapter->handleGuestEvent(e);
     }
 }
 
@@ -344,7 +365,7 @@ void EmulatorSession::destroy()
         emit sessionEnded(_emulator.get());
 
         _state = EmulatorState::Uninitialised;
-        _ioAdapter.reset();
+        //_ioAdapter.reset();
         _emulator.reset();
     }
 }
@@ -385,9 +406,6 @@ void EmulatorSession::step()
     if (_emulator && (_state == EmulatorState::Paused))
     {
         _emulator->runSingleStep();
-
-        // Drain the guest event queue.
-        onPollEmulator();
 
         emit sessionSingleStep(_emulator.get());
     }
@@ -433,8 +451,6 @@ void EmulatorSession::resume()
             currentBreakpoint.apply();
         }
 
-        beginPollingEmulator();
-
         // Set the emulator to run without restriction.
         QEmulatorFuture pendingResult = QtConcurrent::run(runEmulator, _emulator.get());
         _emulatorWatcher.setFuture(pendingResult);
@@ -450,10 +466,6 @@ void EmulatorSession::pause()
 
         // Wait for emulator to stop.
         _emulatorWatcher.waitForFinished();
-
-        // Stop polling for event, but drain the guest event queue.
-        endPollingEmulator();
-        onPollEmulator();
     }
 }
 
@@ -476,31 +488,11 @@ void EmulatorSession::stop()
     }
 }
 
-void EmulatorSession::onPollEmulator()
-{
-    if (_emulator)
-    {
-        // Drain the emulator guest event queue.
-        Arm::GuestEvent emulatorEvent;
-
-        while (_emulator->tryGetNextMessage(emulatorEvent))
-        {
-            // Process guest event in the main thread.
-            if (_ioAdapter)
-                _ioAdapter->handleGuestEvent(emulatorEvent);
-        }
-    }
-}
-
 void EmulatorSession::onExecutionComplete()
 {
     if (_emulator)
     {
         _state = EmulatorState::Paused;
-
-        // Stop polling for emulator events and drain the queue.
-        _emulatorPollTimer.stop();
-        onPollEmulator();
 
         size_t breakpointIndex;
         uint32_t lastPC = _emulator->getCoreRegister(Arm::CoreRegister::PC) - 4;
@@ -561,23 +553,6 @@ bool EmulatorSession::tryFindBreakpointIndex(uint32_t address,
 
     return isFound;
 }
-
-void EmulatorSession::beginPollingEmulator()
-{
-    if (_emulator)
-    {
-        _emulatorPollTimer.start();
-    }
-}
-
-void EmulatorSession::endPollingEmulator()
-{
-    _emulatorPollTimer.stop();
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// Global Function Definitions
-////////////////////////////////////////////////////////////////////////////////
 
 } // namespace Mo
 ////////////////////////////////////////////////////////////////////////////////

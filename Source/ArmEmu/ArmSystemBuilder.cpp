@@ -2,7 +2,7 @@
 //! @brief The definition of an object used to incrementally construct another
 //! object representing an emulated ARM-based system.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2023-2024
+//! @date 2023-2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -55,6 +55,40 @@ ArmSystemBuilder::ArmSystemBuilder()
 ArmSystemBuilder::ArmSystemBuilder(const Options &baseOptions)
 {
     reset(baseOptions);
+}
+
+//! @brief Gets whether the performance-intensive components of the created
+//! system will integrate with diagnostics, slowing them down.
+//! @retval true Diagnostics are enabled.
+//! @retval false Diagnostics will not be enabled.
+bool ArmSystemBuilder::isDiagnosticsEnabled() const
+{
+    return _enableDiagnostics;
+}
+
+//! @brief Specifies whether the performance-intensive components of the created
+//! system will integrate with diagnostics, slowing them down.
+//! @param[in] isEnabled True to enable diagnostics integration, false to
+//! leave them optimized out.
+void ArmSystemBuilder::setDiagnosticsEnabled(bool isEnabled)
+{
+    _enableDiagnostics = isEnabled;
+}
+
+//! @brief Gets the implementation which connects the constructed emulator to
+//! the host which manages it.
+const IHostConnectionSPtr &ArmSystemBuilder::getHostConnection() const
+{
+    return _hostConnection;
+}
+
+//! @brief Sets the connection to the host embedded in any created emulator.
+//! @param[in] host The new host connection implementation, possibly nullptr.
+//! @remarks The lifetime of the instance embedded within any created emulator
+//! needs to be managed external to the emulator.
+void ArmSystemBuilder::setHostConnection(const IHostConnectionSPtr &host)
+{
+    _hostConnection = host;
 }
 
 //! @brief Adds a device which the emulated system being built will take
@@ -154,6 +188,8 @@ void ArmSystemBuilder::reset(const Options &baseOptions)
     _readMap.clear();
     _writeMap.clear();
     _devices.clear();
+    _hostConnection = nullptr;
+    _enableDiagnostics = false;
 }
 
 //! @brief Instantiates an appropriate implementation of IArmSystem based on
@@ -175,16 +211,45 @@ IArmSystemUPtr ArmSystemBuilder::createSystem()
             if (_baseOptions.getProcessorVariant() == ProcessorModel::ARM2)
             {
                 // A test system with an ARM 2 processor.
-                sys = new ArmSystem<ArmV2TestSystemTraits>(_baseOptions,
-                                                           std::move(_devices),
-                                                           _readMap, _writeMap);
+                if (_enableDiagnostics)
+                {
+                    sys = new ArmSystem<ArmV2TestSystemTraits<true>>(_baseOptions,
+                        std::move(_devices), _readMap, _writeMap, _hostConnection);
+                }
+                else
+                {
+                    sys = new ArmSystem<ArmV2TestSystemTraits<false>>(_baseOptions,
+                        std::move(_devices),_readMap, _writeMap, _hostConnection);
+                }
+            }
+            else if (_baseOptions.getProcessorVariant() == ProcessorModel::ARM250)
+            {
+                // A test system with an ARM 250 processor.
+                if (_enableDiagnostics)
+                {
+                    sys = new ArmSystem<ArmV2aSTestSystemTraits<true>>(_baseOptions,
+                        std::move(_devices),_readMap, _writeMap, _hostConnection);
+                }
+                else
+                {
+                    sys = new ArmSystem<ArmV2aSTestSystemTraits<false>>(_baseOptions,
+                        std::move(_devices), _readMap, _writeMap, _hostConnection);
+                }
+
             }
             else if (_baseOptions.getProcessorVariant() == ProcessorModel::ARM3)
             {
                 // A test system with an ARM 3 processor.
-                sys = new ArmSystem<ArmV2aTestSystemTraits>(_baseOptions,
-                                                            std::move(_devices),
-                                                            _readMap, _writeMap);
+                if (_enableDiagnostics)
+                {
+                    sys = new ArmSystem<ArmV2aTestSystemTraits<true>>(_baseOptions,
+                        std::move(_devices), _readMap, _writeMap, _hostConnection);
+                }
+                else
+                {
+                    sys = new ArmSystem<ArmV2aTestSystemTraits<false>>(_baseOptions,
+                        std::move(_devices), _readMap, _writeMap, _hostConnection);
+                }
             }
             else
             {
@@ -201,15 +266,42 @@ IArmSystemUPtr ArmSystemBuilder::createSystem()
         case SystemModel::ASeries:
             if (_baseOptions.getProcessorVariant() == ProcessorModel::ARM2)
             {
-                sys = new ArmSystem<ArmV2MemcSystemTraits>(_baseOptions,
-                                                           std::move(_devices),
-                                                           _readMap, _writeMap);
+                if (_enableDiagnostics)
+                {
+                    sys = new ArmSystem<ArmV2MemcSystemTraits<true>>(_baseOptions,
+                        std::move(_devices), _readMap, _writeMap, _hostConnection);
+                }
+                else
+                {
+                    sys = new ArmSystem<ArmV2MemcSystemTraits<false>>(_baseOptions,
+                        std::move(_devices), _readMap, _writeMap, _hostConnection);
+                }
+            }
+            else if (_baseOptions.getProcessorVariant() == ProcessorModel::ARM250)
+            {
+                if (_enableDiagnostics)
+                {
+                    sys = new ArmSystem<ArmV2aSMemcSystemTraits<true>>(_baseOptions,
+                        std::move(_devices), _readMap, _writeMap, _hostConnection);
+                }
+                else
+                {
+                    sys = new ArmSystem<ArmV2aSMemcSystemTraits<false>>(_baseOptions,
+                        std::move(_devices), _readMap, _writeMap, _hostConnection);
+                }
             }
             else if (_baseOptions.getProcessorVariant() == ProcessorModel::ARM3)
             {
-                sys = new ArmSystem<ArmV2aMemcSystemTraits>(_baseOptions,
-                                                            std::move(_devices),
-                                                            _readMap, _writeMap);
+                if (_enableDiagnostics)
+                {
+                    sys = new ArmSystem<ArmV2aMemcSystemTraits<true>>(_baseOptions,
+                        std::move(_devices), _readMap, _writeMap, _hostConnection);
+                }
+                else
+                {
+                    sys = new ArmSystem<ArmV2aMemcSystemTraits<false>>(_baseOptions,
+                        std::move(_devices), _readMap, _writeMap, _hostConnection);
+                }
             }
             else
             {
@@ -244,6 +336,7 @@ IArmSystemUPtr ArmSystemBuilder::createSystem()
         // Reset the object state.
         _readMap.clear();
         _writeMap.clear();
+        _devices.clear();
 
         return IArmSystemUPtr(sys);
     }

@@ -1,8 +1,11 @@
 //! @file ArmEmu/AluOperations_NoArch.cpp
 //! @brief The definition of inner ALU operations which return status flags
 //! implemented in platform-agnostic C++ code.
-//! @author Nick Arkell
-//! @copyright (c) 2023 Nick Arkell : Software Engineer
+//! @author GiantRobotLemur@na-se.co.uk
+//! @date 2023-2026
+//! @copyright This file is part of the Mighty Oak project which is released
+//! under LGPL 3 license. See LICENSE file at the repository root or go to
+//! https://github.com/GiantRobotLemur/MightyOak for full license details.
 ////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -12,19 +15,7 @@
 
 #include "AluOperations.h"
 
-////////////////////////////////////////////////////////////////////////////////
-// Macro Definitions
-////////////////////////////////////////////////////////////////////////////////
-
-
 namespace {
-////////////////////////////////////////////////////////////////////////////////
-// Local Data Types
-////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////
-// Local Data
-////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////
 // Local Functions
@@ -84,15 +75,14 @@ constexpr uint8_t addResultStatus(uint32_t op1, uint32_t op2, uint32_t result) n
 constexpr uint8_t subResultStatus(uint32_t op1, uint32_t op2, uint32_t result) noexcept
 {
     uint32_t flags = ((op1 ^ op2) & (op1 ^ result) & 0x80000000) >> 31;
-    flags |= (op1 < op2) ? StatusFlag_C : 0;
+    flags |= (op1 >= op2) ? StatusFlag_C : 0;
     flags |= (result == 0) ? StatusFlag_Z : 0;
     flags |= (result & 0x80000000) >> 28;
 
     return static_cast<uint8_t>(flags);
 }
 
-} // TED
-
+} // Anonymous namespace
 
 ////////////////////////////////////////////////////////////////////////////////
 // Global Function Definitions
@@ -124,18 +114,32 @@ extern "C" uint32_t ALU_Adc(uint32_t op1, uint32_t op2, uint8_t &statusFlags)
 
 extern "C" uint32_t ALU_Sbc(uint32_t op1, uint32_t op2, uint8_t &statusFlags)
 {
-    op2 += (statusFlags >> 1) & 1;
-    uint32_t result = op1 - op2;
-    statusFlags = subResultStatus(op1, op2, result);
+    // ARM SBC: Rd = op1 - op2 - NOT(C)
+    uint32_t borrowIn = 1 - ((statusFlags >> 1) & 1);
+    uint32_t result = op1 - op2 - borrowIn;
+
+    uint32_t flags = ((op1 ^ op2) & (op1 ^ result) & 0x80000000) >> 31;
+    flags |= ((uint64_t)op1 >= (uint64_t)op2 + (uint64_t)borrowIn) ? StatusFlag_C : 0;
+    flags |= (result == 0) ? StatusFlag_Z : 0;
+    flags |= (result & 0x80000000) >> 28;
+
+    statusFlags = static_cast<uint8_t>(flags);
 
     return result;
 }
 
 extern "C" uint32_t ALU_Rsc(uint32_t op1, uint32_t op2, uint8_t &statusFlags)
 {
-    op1 += (statusFlags >> 1) & 1;
-    uint32_t result = op2 - op1;
-    statusFlags = subResultStatus(op2, op1, result);
+    // ARM RSC: Rd = op2 - op1 - NOT(C)
+    uint32_t borrowIn = 1 - ((statusFlags >> 1) & 1);
+    uint32_t result = op2 - op1 - borrowIn;
+
+    uint32_t flags = ((op2 ^ op1) & (op2 ^ result) & 0x80000000) >> 31;
+    flags |= ((uint64_t)op2 >= (uint64_t)op1 + (uint64_t)borrowIn) ? StatusFlag_C : 0;
+    flags |= (result == 0) ? StatusFlag_Z : 0;
+    flags |= (result & 0x80000000) >> 28;
+
+    statusFlags = static_cast<uint8_t>(flags);
 
     return result;
 }

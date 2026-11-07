@@ -2,7 +2,7 @@
 //! @brief The declaration of an ISyntaxNode implementation which holds the
 //! top level collection of statements.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2021-2023
+//! @date 2021-2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -124,6 +124,11 @@ private:
     void processIncludedFile(ParseContext &parentContext,
                              Ag::string_cref_t inputSourceId,
                              const Location &includedFrom);
+    void processLabel(Messages &messages, StatementUPtr &&statement);
+    void processSubroutineStart(Messages &messages,
+                                Statement *parsedStatement);
+    void processSubroutineEnd(Messages &messages,
+                              Statement *parsedStatement);
     void appendObjectCode(const ObjectCodeBuilder &objectCode);
     void deferAssembly(StatementUPtr &&statement, uint32_t predictedSize);
     IScopedContext *getScope();
@@ -135,7 +140,6 @@ private:
     uint32_t _baseAddress;
     uint32_t _initialAssemblyOffset;
 };
-
 
 }} // namespace Mo::Asm
 

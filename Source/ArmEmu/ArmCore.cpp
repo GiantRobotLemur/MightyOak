@@ -2,7 +2,7 @@
 //! @brief The definition of functionality pervasive across all emulated
 //! ARM core configurations.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2023
+//! @date 2023-2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -121,10 +121,9 @@ void initialiseConditionMatrix(uint16_t(&conditionMatrix)[16]) noexcept
             state |= 0x0800;
         }
 
-        // Condition GT (12).
-        if (((statusFlagState & ZNV) == N) ||
-            ((statusFlagState & ZNV) == V) ||
-            ((statusFlagState & NV) == 0))
+        // Condition GT (12): Z=0 AND N=V.
+        if (((statusFlagState & ZNV) == NV) ||
+            ((statusFlagState & ZNV) == 0))
         {
             state |= 0x1000;
         }
@@ -163,17 +162,17 @@ bool canExecuteInstruction(uint32_t instruction, uint8_t statusFlags) noexcept
     // defined above and output as part of unit tests co be copied here.
     static const uint16_t ConditionMatrix[] = {
         0x56AA,
-        0x7A6A,
+        0x6A6A,
         0x55A6,
-        0x7966,
-        0x76A9,
+        0x6966,
+        0x66A9,
         0x6A69,
-        0x76A5,
+        0x66A5,
         0x6A65,
-        0x7A9A,
-        0x465A,
-        0x7996,
-        0x4556,
+        0x6A9A,
+        0x565A,
+        0x6996,
+        0x5556,
         0x6A99,
         0x6659,
         0x6A95,

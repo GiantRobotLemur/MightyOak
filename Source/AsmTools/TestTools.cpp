@@ -2,7 +2,7 @@
 //! @brief The definition of various functions shared between unit tests of
 //! the AsmTools library.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2022-2023
+//! @date 2022-2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -399,6 +399,41 @@ void appendLog(::testing::AssertionResult &result, const Messages &log)
     appendLog(result, log);
 
     return result;
+}
+
+//! @brief Summarises a collection of messages into a single string.
+//! @param[in] messages The collection to summarise.
+//! @return The collection as a single string.
+std::string summariseMessages(const Messages &messages)
+{
+    std::string summary;
+
+    if (messages.isEmpty())
+    {
+        summary.assign("[no messages]");
+    }
+    else
+    {
+        bool isFirst = true;
+
+        for (const Message &message : messages.getMessages())
+        {
+            auto messageSummary = message.toString();
+
+            if (isFirst)
+            {
+                isFirst = false;
+            }
+            else
+            {
+                summary.push_back('\n');
+            }
+
+            Ag::appendAgString(summary, messageSummary);
+        }
+    }
+
+    return summary;
 }
 
 //! @brief Gets some basic assembly settings suitable for an ARM3 assembling at

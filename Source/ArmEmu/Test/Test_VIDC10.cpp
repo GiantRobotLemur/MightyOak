@@ -1,4 +1,4 @@
-//! @file Test_VIDC10.cpp
+//! @file ArmEmu/Test/Test_VIDC10.cpp
 //! @brief The definition of unit tests for the VIDC10 video controller
 //! emulation.
 //! @author GiantRobotLemur@na-se.co.uk
@@ -15,7 +15,7 @@
 
 #include "Ag/Core/Binary.hpp"
 
-#include "ArmEmu/VIDC10.hpp"
+#include "VIDC10.inl"
 
 namespace Mo {
 namespace Arm {
@@ -41,48 +41,32 @@ uint32_t makeTimingWord(uint8_t regId, uint16_t timingValue)
     return makeVidcWord(regId, static_cast<uint32_t>(timingValue) << 14);
 }
 
+//! @brief Constructs a value used to write the VIDC control word.
+//! @param[in] clockIndex The index of the clock source to choose.
+//! @param[in] formatIndex The index of the format to choose.
+//! @param[in] dmaRequest The index of the DMA stride timing.
+//! @param[in] interlace Indicates whether interlaced timing is selected.
+//! @param[in] compositeSync Indicates whether composite sync is selected.
+//! @return A word to write to the VIDC.
+uint32_t makeControlWord(uint8_t clockIndex, uint8_t formatIndex,
+                         uint8_t dmaRequest, bool interlace,
+                         bool compositeSync)
+{
+    return 0xE0000000 | (clockIndex & 0x03) |
+        ((formatIndex << VIDCControl::BppShift) & VIDCControl::BppMask) |
+         ((dmaRequest & 0x03) << 4) |
+         (interlace ? 0x40 : 0x00) |
+         (compositeSync ? 0x80 : 0x00);
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // Unit Tests
 ////////////////////////////////////////////////////////////////////////////////
+using VIDCDevice = VIDC10<false>;
 
-// Since VIDC10 requires a MemcHardware reference, but we only need to test
-// register storage, we use a minimal approach: create a MemcHardware-compatible
-// stub or test at the writeMEMC level. For now, we test writeRegister()
-// directly using a reinterpret trick with a temporary object.
-
-class VIDC10Test : public ::testing::Test
+GTEST_TEST(VIDC10Test, PaletteRegisters)
 {
-protected:
-    // We need a MemcHardware reference for the VIDC10 constructor.
-    // Since we're only testing register storage, not hardware interaction,
-    // we construct the VIDC10 with a dummy reference. The reference is
-    // never dereferenced in the methods we test.
-    VIDC10 &getVidc()
-    {
-        return *reinterpret_cast<VIDC10 *>(_storage);
-    }
-
-    void SetUp() override
-    {
-        // Placement new with a null-ish reference. Safe because we never
-        // call methods that access the parent reference.
-        // This is only acceptable for unit testing register storage.
-        void *dummyParent = nullptr;
-        new (_storage) VIDC10(*reinterpret_cast<MemcHardware *>(&dummyParent));
-    }
-
-    void TearDown() override
-    {
-        getVidc().~VIDC10();
-    }
-
-private:
-    alignas(VIDC10) uint8_t _storage[sizeof(VIDC10)];
-};
-
-TEST_F(VIDC10Test, PaletteRegisters)
-{
-    auto &vidc = getVidc();
+    VIDCDevice vidc;
 
     // Write all 16 palette entries with distinct colours.
     for (uint8_t i = 0; i < 16; ++i)
@@ -97,18 +81,18 @@ TEST_F(VIDC10Test, PaletteRegisters)
     EXPECT_EQ(vidc.getPaletteEntry(16), 0);
 }
 
-TEST_F(VIDC10Test, BorderColourRegister)
+GTEST_TEST(VIDC10Test, BorderColourRegister)
 {
-    auto &vidc = getVidc();
+    VIDCDevice vidc;
 
     uint16_t colour = 0x1ABC & 0x1FFF;
     vidc.writeRegister(makeVidcWord(VIDCRegister::BorderColour, colour));
     EXPECT_EQ(vidc.getBorderColour(), colour);
 }
 
-TEST_F(VIDC10Test, CursorColourRegisters)
+GTEST_TEST(VIDC10Test, CursorColourRegisters)
 {
-    auto &vidc = getVidc();
+    VIDCDevice vidc;
 
     uint16_t colours[] = { 0x0123, 0x0456, 0x0789 };
 
@@ -124,53 +108,17 @@ TEST_F(VIDC10Test, CursorColourRegisters)
     EXPECT_EQ(vidc.getCursorColour(3), 0);
 }
 
-TEST_F(VIDC10Test, HorizontalTimingRegisters)
+GTEST_TEST(VIDC10Test, SoundFrequencyRegister)
 {
-    auto &vidc = getVidc();
-
-    uint16_t values[] = { 100, 10, 20, 30, 80, 90, 50, 5 };
-
-    for (uint8_t i = 0; i < 8; ++i)
-    {
-        vidc.writeRegister(makeTimingWord(VIDCRegister::HorizontalBase + i,
-                                          values[i]));
-        EXPECT_EQ(vidc.getHorizontalReg(i), values[i])
-            << "Horizontal register " << static_cast<int>(i);
-    }
-
-    // Out-of-range returns 0.
-    EXPECT_EQ(vidc.getHorizontalReg(8), 0);
-}
-
-TEST_F(VIDC10Test, VerticalTimingRegisters)
-{
-    auto &vidc = getVidc();
-
-    uint16_t values[] = { 312, 3, 18, 34, 290, 296, 100, 108 };
-
-    for (uint8_t i = 0; i < 8; ++i)
-    {
-        vidc.writeRegister(makeTimingWord(VIDCRegister::VerticalBase + i,
-                                          values[i]));
-        EXPECT_EQ(vidc.getVerticalReg(i), values[i])
-            << "Vertical register " << static_cast<int>(i);
-    }
-
-    // Out-of-range returns 0.
-    EXPECT_EQ(vidc.getVerticalReg(8), 0);
-}
-
-TEST_F(VIDC10Test, SoundFrequencyRegister)
-{
-    auto &vidc = getVidc();
+    VIDCDevice vidc;
 
     vidc.writeRegister(makeVidcWord(VIDCRegister::SoundFreq, 0x7F));
     EXPECT_EQ(vidc.getSoundFreqReg(), 0x7F);
 }
 
-TEST_F(VIDC10Test, ControlRegister)
+GTEST_TEST(VIDC10Test, ControlRegister)
 {
-    auto &vidc = getVidc();
+    VIDCDevice vidc;
 
     // Set 4 BPP, 16 MHz pixel rate.
     // Pixel rate: 10 (binary) = 16 MHz.
@@ -180,12 +128,12 @@ TEST_F(VIDC10Test, ControlRegister)
 
     EXPECT_EQ(vidc.getControlReg(), ctrl);
     EXPECT_EQ(vidc.getBitsPerPixel(), 4);
-    EXPECT_EQ(vidc.getPixelRateMHz(), 16);
+    EXPECT_EQ(vidc.getPixelRateHz(), 16000000u);
 }
 
-TEST_F(VIDC10Test, ControlRegisterBppValues)
+GTEST_TEST(VIDC10Test, ControlRegisterBppValues)
 {
-    auto &vidc = getVidc();
+    VIDCDevice vidc;
 
     // 1 BPP (bits 2-3 = 00)
     vidc.writeRegister(makeVidcWord(VIDCRegister::Control, 0x00));
@@ -204,62 +152,72 @@ TEST_F(VIDC10Test, ControlRegisterBppValues)
     EXPECT_EQ(vidc.getBitsPerPixel(), 8);
 }
 
-TEST_F(VIDC10Test, ControlRegisterPixelRates)
+GTEST_TEST(VIDC10Test, ControlRegisterPixelRates)
 {
-    auto &vidc = getVidc();
+    VIDCDevice vidc;
 
     // 8 MHz (bits 0-1 = 00)
     vidc.writeRegister(makeVidcWord(VIDCRegister::Control, 0x00));
-    EXPECT_EQ(vidc.getPixelRateMHz(), 8);
+    EXPECT_EQ(vidc.getPixelRateHz(), 8000000u);
 
     // 12 MHz (bits 0-1 = 01)
     vidc.writeRegister(makeVidcWord(VIDCRegister::Control, 0x01));
-    EXPECT_EQ(vidc.getPixelRateMHz(), 12);
+    EXPECT_EQ(vidc.getPixelRateHz(), 12000000u);
 
     // 16 MHz (bits 0-1 = 10)
     vidc.writeRegister(makeVidcWord(VIDCRegister::Control, 0x02));
-    EXPECT_EQ(vidc.getPixelRateMHz(), 16);
+    EXPECT_EQ(vidc.getPixelRateHz(), 16000000u);
 
     // 24 MHz (bits 0-1 = 11)
     vidc.writeRegister(makeVidcWord(VIDCRegister::Control, 0x03));
-    EXPECT_EQ(vidc.getPixelRateMHz(), 24);
+    EXPECT_EQ(vidc.getPixelRateHz(), 24000000u);
 }
 
-TEST_F(VIDC10Test, DisplayDimensions)
+GTEST_TEST(VIDC10Test, DisplayDimensions)
 {
-    auto &vidc = getVidc();
+    VIDCDevice vidc;
+
+    vidc.writeRegister(makeControlWord(3, 2, 2, false, false));
 
     // Set up a standard MODE 12 (640x256) configuration.
     // HDSR = 70, HDER = 390 => width = (390 - 70) * 2 = 640
     vidc.writeRegister(makeTimingWord(VIDCRegister::HDSR, 70));
     vidc.writeRegister(makeTimingWord(VIDCRegister::HDER, 390));
 
+    // VDSR = 39, VDER = 294 => height = 294 - 39 = 255 - is what gets actually programmed.
     // VDSR = 34, VDER = 290 => height = 290 - 34 = 256
     vidc.writeRegister(makeTimingWord(VIDCRegister::VDSR, 34));
     vidc.writeRegister(makeTimingWord(VIDCRegister::VDER, 290));
 
-    EXPECT_EQ(vidc.getDisplayWidth(), 640u);
-    EXPECT_EQ(vidc.getDisplayHeight(), 256u);
+    vidc.updateFrameConfiguration();
+    FrameGeometry geometry(vidc.getFrameConfiguration());
+
+    EXPECT_EQ(geometry.getDisplayWidth(), 640u);
+    EXPECT_EQ(geometry.getDisplayHeight(), 256u);
 }
 
-TEST_F(VIDC10Test, DisplayDimensionsZeroWhenInvalid)
+GTEST_TEST(VIDC10Test, DisplayDimensionsZeroWhenInvalid)
 {
-    auto &vidc = getVidc();
+    VIDCDevice vidc;
 
     // HDER <= HDSR => width should be 0.
     vidc.writeRegister(makeTimingWord(VIDCRegister::HDSR, 100));
     vidc.writeRegister(makeTimingWord(VIDCRegister::HDER, 50));
-    EXPECT_EQ(vidc.getDisplayWidth(), 0u);
 
     // VDER <= VDSR => height should be 0.
     vidc.writeRegister(makeTimingWord(VIDCRegister::VDSR, 200));
     vidc.writeRegister(makeTimingWord(VIDCRegister::VDER, 100));
-    EXPECT_EQ(vidc.getDisplayHeight(), 0u);
+
+    vidc.updateFrameConfiguration();
+    FrameGeometry geometry(vidc.getFrameConfiguration());
+
+    EXPECT_EQ(geometry.getDisplayWidth(), 0u);
+    EXPECT_EQ(geometry.getDisplayHeight(), 0u);
 }
 
-TEST_F(VIDC10Test, StereoRegisters)
+GTEST_TEST(VIDC10Test, StereoRegisters)
 {
-    auto &vidc = getVidc();
+    VIDCDevice vidc;
 
     // Stereo positions are 3-bit values (0-7).
     for (uint8_t i = 0; i < 8; ++i)
@@ -273,9 +231,9 @@ TEST_F(VIDC10Test, StereoRegisters)
     // Future: add getStereoPosition() accessor if needed.
 }
 
-TEST_F(VIDC10Test, ReservedRegistersIgnored)
+GTEST_TEST(VIDC10Test, ReservedRegistersIgnored)
 {
-    auto &vidc = getVidc();
+    VIDCDevice vidc;
 
     // Register IDs 20-23 (0x50-0x5C) are reserved.
     // Writing to them should not crash or affect other registers.

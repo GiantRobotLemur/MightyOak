@@ -12,8 +12,9 @@
 // Header File Includes
 ////////////////////////////////////////////////////////////////////////////////
 #include "ArmEmu/EmuOptions.hpp"
-#include "ArmEmu/GuestEventQueue.hpp"
+#include "ArmEmu/GuestEvent.hpp"
 #include "ArmEmu/SystemContext.hpp"
+#include "ArmEmu/AddressMap.hpp"
 
 namespace Mo {
 namespace Arm {
@@ -153,13 +154,13 @@ void GuestTask::execute(SystemContext &sysContext)
 //! @brief Constructs an object which provides communications with the host
 //! system to emulated hardware devices.
 //! @param[in] options An object describing the system being emulated.
-//! @param[in] eventQueue A reference to the FIFO used to pass message to the
-//! host input thread.
+//! @param[in] host An optional reference to an object used to report guest
+//! events to the host system.
 //! @param[in] parentSystem The emulated system being interfaced.
 SystemContext::SystemContext(const Options &sysConfig,
-                             GuestEventQueue &eventQueue,
+                             const IHostConnectionSPtr &host,
                              IArmSystem *parentSystem) :
-    _eventQueue(eventQueue),
+    _host(host),
     _parentSystem(parentSystem),
     _taskQueueHead(nullptr),
     _masterClock(0),
@@ -214,6 +215,30 @@ uint64_t SystemContext::getMasterClockTicks() const
 uint64_t SystemContext::getMasterClockFrequency() const
 {
     return _masterFreq;
+}
+
+//! @brief Attempts to find a hardware device mapped which forms part of
+//! the guest system by its name.
+//! @param[in] name The device name to search for.
+//! @param[out] device Receives a pointer to the matching device if one
+//! was found.
+//! @retval true A matching device was found and its pointer returned.
+//! @retval false name device was found with a matching name.
+bool SystemContext::tryFindDevice(Ag::string_cref_t name,
+                                  IHardwareDevicePtr &device) const
+{
+    auto pos = _devicesByName.find(name);
+
+    if (pos == _devicesByName.end())
+    {
+        device = nullptr;
+        return false;
+    }
+    else
+    {
+        device = pos->second;
+        return true;
+    }
 }
 
 //! @brief Gets random data to report by reads to assigned regions of memory.
@@ -285,17 +310,105 @@ bool SystemContext::SystemContext::unscheduleTask(GuestTask *taskToRemove)
     return taskToRemove->unschedule(_taskQueueHead);
 }
 
-//! @brief Attempts to post a message to the host input thread without blocking.
+//! @brief Attempts to post a message to the host without blocking.
 //! @param[in] eventID The type of the event to raise.
 //! @param[in] data1 The first item of event-specific data.
 //! @param[in] data2 The second item of event-specific data.
-//! @retval true The message was successfully posted to the input thread.
-//! @retval false The FIFO was full, no message could be posted without
-//! blocking the current thread to allocate more memory.
-bool SystemContext::postMessageToHost(uint32_t eventID, uintptr_t data1,
+void SystemContext::postMessageToHost(uint32_t eventID, uintptr_t data1,
                                       uintptr_t data2)
 {
-    return _eventQueue.enque(eventID, data1, data2);
+    if (_host)
+    {
+        _host->onGuestEvent(_parentSystem,
+                            GuestEvent(_masterClock, eventID, data1, data2));
+    }
+}
+
+//! @brief Adds a device to the internal index.
+//! @param[in] device The device implementation to add.
+//! @throws Ag::OperationException If a device with the same name, but 
+//! a different implementation already exists in the index.
+void SystemContext::addDevice(IHardwareDevicePtr device)
+{
+    Ag::string_cref_t deviceName = device->getName();
+    auto insertResult = _devicesByName.try_emplace(deviceName, device);
+
+    // Ensure that if the name was already in the map, it referred
+    // to the same device.
+    if ((insertResult.second == false) &&
+        (insertResult.first->second != device))
+    {
+        std::string message("The device name '");
+        Ag::appendAgString(message, deviceName);
+        message.append("' refers to multiple entities in the same emulated system.");
+
+        throw Ag::OperationException(std::string_view(message));
+    }
+}
+
+//! @brief A convenience function which registers all devices in a collection
+//! and then calls their connect() member function.
+//! @param[in] allDevices A collection of device instances, which will be
+//! reordered and updated to remove duplicates.
+//! @param[in] resetIndex True to remove all previously registered devices
+//! before adding the instances from @p allDevices.
+void SystemContext::connectAllDevices(IHardwareDeviceCollection &allDevices,
+                                      bool resetIndex /*= true*/)
+{
+    // Ensure each entry in the list is unique.
+    std::sort(allDevices.begin(), allDevices.end());
+    auto last = std::unique(allDevices.begin(), allDevices.end());
+    allDevices.erase(last, allDevices.end());
+
+    // Connect all devices together and to inter-op services.
+    if (resetIndex)
+        _devicesByName.clear();
+
+    // Create an index of named devices.
+    for (IHardwareDevicePtr device : allDevices)
+    {
+        device->registerDevice(*this);
+    }
+
+    // Allow all devices the change to connect to any other device.
+    for (IHardwareDevicePtr device : allDevices)
+    {
+        device->connect(*this);
+    }
+}
+
+//! @brief Adds a generic alias name for an existing device.
+//! @param[in] deviceName The name of the device to alias.
+//! @param[in] alias An alternate name by which the device might be known.
+void SystemContext::addDeviceAlias(Ag::string_cref_t deviceName,
+                                   Ag::string_cref_t alias)
+{
+    auto pos = _devicesByName.find(deviceName);
+
+    if (pos == _devicesByName.end())
+    {
+        std::string message("The device name '");
+        Ag::appendAgString(message, deviceName);
+        message.append("' does not exist within the emulated system.");
+
+        throw Ag::OperationException(std::string_view(message));
+    }
+
+    auto aliasPos = _devicesByName.find(alias);
+
+    if (aliasPos == _devicesByName.end())
+    {
+        // The device exists and the alias doesn't - add it.
+        _devicesByName[alias] = pos->second;
+    }
+    else if (aliasPos->second != pos->second)
+    {
+        std::string message("The device name '");
+        Ag::appendAgString(message, deviceName);
+        message.append("' already exists within the emulated system.");
+
+        throw Ag::OperationException(std::string_view(message));
+    }
 }
 
 }} // namespace Mo::Arm

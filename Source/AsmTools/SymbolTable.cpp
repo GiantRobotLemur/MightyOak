@@ -1,7 +1,7 @@
 //! @file AsmTools/SymbolTable.cpp
 //! @brief The definition of an object representing an indexed set of symbols.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2022-2023
+//! @date 2022-2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -51,6 +51,18 @@ SymbolDefinition::SymbolDefinition(Ag::string_cref_t id, const Location &source,
     _source(source),
     _definition(value),
     _isAddress(isAddress)
+{
+}
+
+//! @brief Constructs a copy of a symbol definition with a new identifier.
+//! @param[in] newId The new symbol identifier.
+//! @param[in] symbol The original symbol to take other attributes from.
+SymbolDefinition::SymbolDefinition(Ag::string_cref_t newId,
+                                   const SymbolDefinition &symbol) :
+    _id(newId),
+    _source(symbol._source),
+    _definition(symbol._definition),
+    _isAddress(symbol._isAddress)
 {
 }
 
@@ -209,6 +221,38 @@ bool SymbolTable::defineSymbol(Ag::string_cref_t id, const Location &source,
     auto insertPair = _symbols.emplace(id, source, value, isAddress);
 
     return insertPair.second;
+}
+
+//! @brief Integrates a nested set of symbols into the table.
+//! @param[in] prefix The prefix to prepend to all added symbols.
+//! @param[in] nestedSymbols The set of nested symbols to add.
+void SymbolTable::integrateNestedSymbols(Ag::string_cref_t &prefix,
+                                         const SymbolTable &nestedSymbols)
+{
+    size_t maxSuffixLength = 0;
+
+    for (const auto &mapping : nestedSymbols._symbols)
+    {
+        maxSuffixLength = std::max(mapping.getId().getUtf8Length(), maxSuffixLength);
+    }
+
+    std::string symbolName;
+    symbolName.reserve(prefix.getUtf8Length() + maxSuffixLength + 1);
+    Ag::appendAgString(symbolName, prefix);
+    symbolName.push_back('.');
+    size_t prefixSize = symbolName.length();
+
+    for (const auto &mapping : nestedSymbols._symbols)
+    {
+        // Remove any previous suffix.
+        symbolName.erase(prefixSize, symbolName.length() - prefixSize);
+
+        // Add the symbol suffix.
+        Ag::appendAgString(symbolName, mapping.getId());
+
+        // Create a new symbol named "prefix.symbol".
+        _symbols.emplace(symbolName, mapping);
+    }
 }
 
 }} // namespace Mo::Asm

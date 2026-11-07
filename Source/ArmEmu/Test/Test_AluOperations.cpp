@@ -2,7 +2,7 @@
 //! @brief The definition of unit tests for the implementation of optimised ALU
 //! operations.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2023
+//! @date 2023-2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -112,12 +112,12 @@ INSTANTIATE_TEST_SUITE_P(ALU_Add, AddOperation, ::testing::ValuesIn(addTestParam
                          });
 
 AluOpParams subTestParams[] = {
-    AluOpParams("Zeros", 0, 0, 0, StatusFlag_Z),
-    AluOpParams("NoFlags", 2, 1, 1, StatusFlag_None),
-    AluOpParams("Overflow", 0x80000000, 1, 0x7FFFFFFF, StatusFlag_V),
-    AluOpParams("Carry", 0, 0xFFFFFFFF, 1, StatusFlag_C),
-    AluOpParams("Zero", 1, 1, 0, StatusFlag_Z),
-    AluOpParams("Negative", 0, 1, 0xFFFFFFFF, StatusFlag_N | StatusFlag_C),
+    AluOpParams("Zeros", 0, 0, 0, StatusFlag_Z | StatusFlag_C),
+    AluOpParams("NoFlags", 2, 1, 1, StatusFlag_C),
+    AluOpParams("Overflow", 0x80000000, 1, 0x7FFFFFFF, StatusFlag_C | StatusFlag_V),
+    AluOpParams("Carry", 0, 0xFFFFFFFF, 1, StatusFlag_None),
+    AluOpParams("Zero", 1, 1, 0, StatusFlag_Z | StatusFlag_C),
+    AluOpParams("Negative", 0, 1, 0xFFFFFFFF, StatusFlag_N),
 };
 
 TEST_P(SubOperation, Sub)
@@ -170,16 +170,16 @@ INSTANTIATE_TEST_SUITE_P(ALU_Adc, AdcOperation, ::testing::ValuesIn(adcTestParam
                          });
 
 AluFlagOpParams sbcTestParams[] = {
-    AluFlagOpParams("NoFlagsCC", 2, 1, StatusFlag_None, 1, StatusFlag_None),
-    AluFlagOpParams("NoFlagsCS", 3, 1, StatusFlag_C, 1, StatusFlag_None),
-    AluFlagOpParams("OverflowCC", 0x80000000, 1, StatusFlag_None, 0x7FFFFFFF, StatusFlag_V),
-    AluFlagOpParams("OverflowCS", 0x80000000, 1, StatusFlag_C, 0x7FFFFFFE, StatusFlag_V),
-    AluFlagOpParams("CarryCC", 0, 0xFFFFFFFF, StatusFlag_None, 1, StatusFlag_C),
-    AluFlagOpParams("CarryCS", 0, 0xFFFFFFFE, StatusFlag_C, 1, StatusFlag_C),
-    AluFlagOpParams("ZeroCC", 1, 1, StatusFlag_None, 0, StatusFlag_Z),
-    AluFlagOpParams("ZeroCS", 2, 1, StatusFlag_C, 0, StatusFlag_Z),
-    AluFlagOpParams("NegativeCC", 0, 1, StatusFlag_None, 0xFFFFFFFF, StatusFlag_N | StatusFlag_C),
-    AluFlagOpParams("NegativeCS", 0, 1, StatusFlag_C, 0xFFFFFFFE, StatusFlag_N | StatusFlag_C),
+    AluFlagOpParams("NoFlagsCC", 2, 1, StatusFlag_None, 0, StatusFlag_Z | StatusFlag_C),
+    AluFlagOpParams("NoFlagsCS", 3, 1, StatusFlag_C, 2, StatusFlag_C),
+    AluFlagOpParams("OverflowCC", 0x80000000, 1, StatusFlag_None, 0x7FFFFFFE, StatusFlag_C | StatusFlag_V),
+    AluFlagOpParams("OverflowCS", 0x80000000, 1, StatusFlag_C, 0x7FFFFFFF, StatusFlag_C | StatusFlag_V),
+    AluFlagOpParams("CarryCC", 0, 0xFFFFFFFF, StatusFlag_None, 0, StatusFlag_Z),
+    AluFlagOpParams("CarryCS", 0, 0xFFFFFFFE, StatusFlag_C, 2, StatusFlag_None),
+    AluFlagOpParams("ZeroCC", 1, 1, StatusFlag_None, 0xFFFFFFFF, StatusFlag_N),
+    AluFlagOpParams("ZeroCS", 2, 1, StatusFlag_C, 1, StatusFlag_C),
+    AluFlagOpParams("NegativeCC", 0, 1, StatusFlag_None, 0xFFFFFFFE, StatusFlag_N),
+    AluFlagOpParams("NegativeCS", 0, 1, StatusFlag_C, 0xFFFFFFFF, StatusFlag_N),
 };
 
 TEST_P(SbcOperation, Sbc)
@@ -202,16 +202,16 @@ INSTANTIATE_TEST_SUITE_P(ALU_Sbc, SbcOperation, ::testing::ValuesIn(sbcTestParam
 
 
 AluFlagOpParams rscTestParams[] = {
-    AluFlagOpParams("NoFlagsCC", 1, 2, StatusFlag_None, 1, StatusFlag_None),
-    AluFlagOpParams("NoFlagsCS", 1, 3, StatusFlag_C, 1, StatusFlag_None),
-    AluFlagOpParams("OverflowCC", 1, 0x80000000, StatusFlag_None, 0x7FFFFFFF, StatusFlag_V),
-    AluFlagOpParams("OverflowCS", 1, 0x80000000, StatusFlag_C, 0x7FFFFFFE, StatusFlag_V),
-    AluFlagOpParams("CarryCC", 0xFFFFFFFF, 0, StatusFlag_None, 1, StatusFlag_C),
-    AluFlagOpParams("CarryCS", 0xFFFFFFFE, 0, StatusFlag_C, 1, StatusFlag_C),
-    AluFlagOpParams("ZeroCC", 1, 1, StatusFlag_None, 0, StatusFlag_Z),
-    AluFlagOpParams("ZeroCS", 1, 2, StatusFlag_C, 0, StatusFlag_Z),
-    AluFlagOpParams("NegativeCC", 1, 0, StatusFlag_None, 0xFFFFFFFF, StatusFlag_N | StatusFlag_C),
-    AluFlagOpParams("NegativeCS", 1, 0, StatusFlag_C, 0xFFFFFFFE, StatusFlag_N | StatusFlag_C),
+    AluFlagOpParams("NoFlagsCC", 1, 2, StatusFlag_None, 0, StatusFlag_Z | StatusFlag_C),
+    AluFlagOpParams("NoFlagsCS", 1, 3, StatusFlag_C, 2, StatusFlag_C),
+    AluFlagOpParams("OverflowCC", 1, 0x80000000, StatusFlag_None, 0x7FFFFFFE, StatusFlag_C | StatusFlag_V),
+    AluFlagOpParams("OverflowCS", 1, 0x80000000, StatusFlag_C, 0x7FFFFFFF, StatusFlag_C | StatusFlag_V),
+    AluFlagOpParams("CarryCC", 0xFFFFFFFF, 0, StatusFlag_None, 0, StatusFlag_Z),
+    AluFlagOpParams("CarryCS", 0xFFFFFFFE, 0, StatusFlag_C, 2, StatusFlag_None),
+    AluFlagOpParams("ZeroCC", 1, 1, StatusFlag_None, 0xFFFFFFFF, StatusFlag_N),
+    AluFlagOpParams("ZeroCS", 1, 2, StatusFlag_C, 1, StatusFlag_C),
+    AluFlagOpParams("NegativeCC", 1, 0, StatusFlag_None, 0xFFFFFFFE, StatusFlag_N),
+    AluFlagOpParams("NegativeCS", 1, 0, StatusFlag_C, 0xFFFFFFFF, StatusFlag_N),
 };
 
 TEST_P(RscOperation, Rsc)

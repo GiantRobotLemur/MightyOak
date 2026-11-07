@@ -95,6 +95,8 @@ template<typename T> struct AlignedAddr
 //! aligned.
 using HostBuffer = std::vector<uint8_t>;
 
+class SystemContext;
+
 ////////////////////////////////////////////////////////////////////////////////
 // Templates
 ////////////////////////////////////////////////////////////////////////////////
@@ -274,6 +276,12 @@ class GenericHardware
     //! @param[in] devices The collection of devices to add to, duplicates are
     //! allowed.
     void addIntegralHardware(IHardwareDeviceCollection &devices);
+
+    //! @brief Allows a hardware platform implementation to connect to pieces
+    //! of hardware connected externally.
+    //! @param[in] context The system context with all devices and aliases
+    //! registered.
+    void connect(SystemContext &context);
 };
 
 //! @brief An implementation of the common interrupt management requirements of
@@ -419,6 +427,12 @@ public:
     //! allowed.
     //! @note The base implementation does nothing.
     void addIntegralHardware(IHardwareDeviceCollection &/*devices*/) {}
+
+    //! @brief Allows a hardware platform implementation to connect to pieces
+    //! of hardware connected externally.
+    //! @param[in] context The system context with all devices and aliases
+    //! registered.
+    void connect(SystemContext &/*context*/) {}
 };
 
 }} // namespace Mo::Arm
