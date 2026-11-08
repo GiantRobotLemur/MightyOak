@@ -10,6 +10,8 @@
 ////////////////////////////////////////////////////////////////////////////////
 // Header File Includes
 ////////////////////////////////////////////////////////////////////////////////
+#include <algorithm>
+
 #include "Ag/Core/Binary.hpp"
 #include "Ag/Core/Exception.hpp"
 #include "Ag/Core/Utils.hpp"
@@ -331,7 +333,7 @@ OperationClass interpretLongMultiply(DisassemblyParams &params)
 {
     // Bits Interpreted:
     // 0bXXXX 0000 1??? ???? ???? ???? 1001 ????
-    // 
+    //
     // Core or Long multiply?
     OperationClass opClass = OperationClass::None;
 
