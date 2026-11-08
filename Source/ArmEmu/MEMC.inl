@@ -912,7 +912,7 @@ public:
     // Overrides
     ///////////////////////////////////////////////////////////////////////////
     // Based on GenericHardware::reset().
-    void MemcHardware::reset()
+    void reset()
     {
         // MEMC Data Sheet page 12: After reset the page size is 4 KB and the
         // ROM is "continually enabled" — reads from the logical address space

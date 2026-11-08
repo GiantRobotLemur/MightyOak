@@ -417,13 +417,13 @@ public:
     }
 
     //! @brief Gets a palette entry (0-15) as a 13-bit physical colour.
-    uint16_t VIDC10::getPaletteEntry(uint8_t index) const
+    uint16_t getPaletteEntry(uint8_t index) const
     {
         return (index < VIDCRegister::PaletteCount) ? _palette[index] : 0;
     }
 
     //! @brief Gets the border colour as a 13-bit physical colour.
-    uint16_t VIDC10::getBorderColour() const
+    uint16_t getBorderColour() const
     {
         return _borderColour;
     }

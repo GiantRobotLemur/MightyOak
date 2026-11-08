@@ -274,7 +274,7 @@ private:
 
             // Start the timer, but only trigger the callback once enough ticks have
             // taken place to send or receive a data byte.
-            start(context, TicksPerByte);
+            Counter::start(context, TicksPerByte);
         }
     };
 
