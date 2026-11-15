@@ -370,6 +370,9 @@ GTEST_TEST(DiagnosticsTest, InstructionTraceCaptures)
     // Run a small number of cycles.
     ExecutionMetrics result = system.runLimited(50);
 
+    EXPECT_GT(result.CycleCount, 0u);
+    EXPECT_GT(result.InstructionCount, 0u);
+
     // We should have captured some instructions.
     ASSERT_GT(trace->getInstructionCount(), 0u);
 

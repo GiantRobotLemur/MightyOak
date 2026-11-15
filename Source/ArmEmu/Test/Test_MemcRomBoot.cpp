@@ -481,7 +481,7 @@ TEST_F(MemcRomBootTests, IOCInitCompletes)
 TEST_F(MemcRomBootTests, CinitRegisterStored)
 {
     // Create a standalone MemcHardware to test the Cinit register directly.
-    using MemcType = typename MemcHardware<false>;
+    using MemcType = typename Mo::Arm::MemcHardware<false>;
     AddressMap readDevices, writeDevices;
     MemcType memc(Options(), readDevices, writeDevices);
     IHardwareDeviceCollection devices;

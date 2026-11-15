@@ -2,7 +2,7 @@
 //! @brief The definition of unit tests for implementations of the IInputSource
 //! object.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2021-2023
+//! @date 2021-2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -31,6 +31,23 @@ struct IsZero
 {
     bool operator()(char32_t ch) const { return ch == U'\0'; }
 };
+
+bool tryFindTestFile(Ag::string_cref_t fileName, Ag::Fs::Path &path)
+{
+    Ag::Fs::PathBuilder builder;
+
+    if (Ag::Fs::Path::getProgramDirectory().tryFindAncestor("MightyOak", builder))
+    {
+        builder.pushElement("Tests");
+        builder.pushElement("ArmEmu");
+        builder.pushElement(fileName);
+
+        path = Ag::Fs::Path(builder);
+        return true;
+    }
+
+    return false;
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // Unit Tests
@@ -188,6 +205,46 @@ GTEST_TEST(InputSource, BufferSetHasNoSecondarySources)
     // Ensure we got an error message back, not the source identifier.
     EXPECT_FALSE(errorOrId.isEmpty());
     EXPECT_STRNE(sourceId.getUtf8Bytes(), errorOrId.getUtf8Bytes());
+}
+
+GTEST_TEST(InputSource, ReadFileSource)
+{
+    Ag::Fs::Path inputFile;
+
+    ASSERT_TRUE(tryFindTestFile("MemcModeTestRom.arm", inputFile));
+
+    Ag::Fs::Entry inputFileInfo(inputFile);
+
+    ASSERT_TRUE(inputFileInfo.exists());
+
+    IInputSetUPtr specimen = createFileInputSet(inputFile, { });
+
+    ASSERT_TRUE(specimen);
+
+    IInputSourcePtr input;
+    Ag::String id;
+    ASSERT_TRUE(specimen->tryGetPrimaryInputSource(input, id));
+
+    constexpr size_t BufferSize = 256;
+    char32_t buffer[BufferSize];
+    std::fill_n(buffer, BufferSize, 0);
+
+    size_t charactersRead = input->readCharacters(buffer, BufferSize);
+    int64_t totalRead = 0;
+
+    while (charactersRead > 0)
+    {
+        totalRead += charactersRead;
+
+        charactersRead = input->readCharacters(buffer, BufferSize);
+    }
+
+    // Assuming all but a certain percentage of characters were encoded as a single
+    // byte, ensure that we successfully read all characters in the file.
+    constexpr int64_t DifferencePercent = 5;
+    int64_t sizeDifferenceThreashold = (inputFileInfo.getSize() * (100 + DifferencePercent)) / 100;
+
+    EXPECT_LT(abs(totalRead - inputFileInfo.getSize()), sizeDifferenceThreashold);
 }
 
 } // Anonymous namespace

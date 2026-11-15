@@ -24,9 +24,11 @@ namespace {
 class FileInputSource : public IInputSource
 {
 private:
+    Ag::Fs::Path _fileName;
     Ag::StdFilePtr _input;
 public:
-    FileInputSource(FILE *input) :
+    FileInputSource(FILE *input, const Ag::Fs::Path &fileName) :
+        _fileName(fileName),
         _input(input)
     {
     }
@@ -53,8 +55,21 @@ public:
                 if (next == WEOF)
                 {
                     // Close the file to ensure no further characters are read.
-                    _input.reset();
-                    break;
+                    if (ferror(_input.get()))
+                    {
+                        std::string fnName("fgetwc(From file \"");
+                        Ag::String path = _fileName.toString(Ag::Fs::PathUsage::Display);
+                        Ag::appendAgString(fnName, path);
+                        fnName.push_back('"');
+                        fnName.push_back(')');
+
+                        throw Ag::RuntimeLibraryException(fnName.c_str(), errno);
+                    }
+                    else // if (feof(_input.get()))
+                    {
+                        _input.reset();
+                        break;
+                    }
                 }
                 else if (converter.tryConvert(static_cast<wchar_t>(next),
                                                 result, hasError))
@@ -155,7 +170,7 @@ bool tryCreateFileInputSource(const Ag::Fs::Path &fileName, IInputSourcePtr &ptr
 
     if (tryOpenFile(path, "r", stream, error))
     {
-        ptr = std::make_unique<FileInputSource>(stream);
+        ptr = std::make_unique<FileInputSource>(stream, fileName);
         isOK = true;
     }
 
