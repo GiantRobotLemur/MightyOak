@@ -89,7 +89,7 @@ ag_add_library(AsmTools FOLDER      ARM
                                     CoProcInstructionStatements.cpp
                                     CoProcInstructionStatements.hpp
                         HEADERS     ${MO_INCLUDE_DIR}/AsmTools.hpp
-                        PUBLIC_LIBS AgCore)
+                        PUBLIC_LIBS AgCore AgIO)
 
 list(APPEND DOC_SRCS "${CMAKE_CURRENT_SOURCE_DIR}"
                      "${MO_INCLUDE_DIR}/AsmTools.hpp"
