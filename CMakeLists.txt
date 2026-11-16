@@ -1,5 +1,5 @@
 # Root CMakeLists for the MightyOak emulator built on the Silver cross-platform runtime library.
-cmake_minimum_required(VERSION 3.25...3.31)
+cmake_minimum_required(VERSION 4.4)
 
 set(MO_VERSION "0.0.1.0")
 set(MO_AUTHOR "GiantRobotLemur@na-se.co.uk")

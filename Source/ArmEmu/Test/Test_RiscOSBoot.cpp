@@ -38,6 +38,19 @@ protected:
 
     RiscOSBootTests()
     {
+        // Attempt to set the path to the ROM images files based on the
+        // theory that this unit test binary is somewhere inside the
+        // the source repository.
+        Ag::Fs::PathBuilder romPathBuilder;
+
+        if (Ag::Fs::Path::getProgramDirectory().tryFindAncestor("MightyOak", romPathBuilder))
+        {
+            romPathBuilder.pushElement("Source");
+            romPathBuilder.pushElement("MightyOakLib");
+            romPathBuilder.pushElement("Roms");
+
+            Options::setRomImageBasePath(romPathBuilder);
+        }
     }
 
     IArmSystemUPtr createSystem(IDiagnosticSinkUPtr &&diagnostics)
@@ -137,6 +150,9 @@ TEST_F(RiscOSBootTests, AdvancesPastI2CProbe)
     auto sink = sinkPtr.get();
     auto specimen = createSystem(std::move(sinkPtr));
     auto result = runUntilHaltOrBkpt(specimen.get(), 50000000);
+
+    EXPECT_GT(result.CycleCount, 0u);
+    EXPECT_GT(result.InstructionCount, 0u);
 
     uint32_t pc = specimen->getCoreRegister(CoreRegister::PC);
     EXPECT_GT(sink->getI2cToggleCount(), 1u) << "PC at 0x" << std::hex << pc;

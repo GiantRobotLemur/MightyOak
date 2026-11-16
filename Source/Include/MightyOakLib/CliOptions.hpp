@@ -29,7 +29,7 @@ namespace Mo {
 enum class AppCommand : std::underlying_type_t<Ag::SDL3::SdlCommand>
 {
     //! @brief Orders the application to start an emulator session.
-    RunSession = Ag::SDL3::SdlCommand::LastSdlCommand,
+    RunSession = Ag::toScalar(Ag::SDL3::SdlCommand::LastSdlCommand),
 };
 
 ////////////////////////////////////////////////////////////////////////////////

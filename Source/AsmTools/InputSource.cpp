@@ -2,7 +2,7 @@
 //! @brief The definition of an object which produces source code text to be
 //! interpreted.
 //! @author GiantRobotLemur@na-se.co.uk
-//! @date 2021-2023
+//! @date 2021-2026
 //! @copyright This file is part of the Mighty Oak project which is released
 //! under LGPL 3 license. See LICENSE file at the repository root or go to
 //! https://github.com/GiantRobotLemur/MightyOak for full license details.
@@ -11,6 +11,8 @@
 ////////////////////////////////////////////////////////////////////////////////
 // Header File Includes
 ////////////////////////////////////////////////////////////////////////////////
+#include <Ag/IO.hpp>
+
 #include "InputSource.hpp"
 
 namespace Mo {
@@ -24,10 +26,12 @@ namespace {
 class FileInputSource : public IInputSource
 {
 private:
-    Ag::StdFilePtr _input;
+    Ag::Fs::Path _fileName;
+    Ag::IO::TextInputStream _input;
 public:
-    FileInputSource(FILE *input) :
-        _input(input)
+    FileInputSource(Ag::IO::TextInputStream &&input, const Ag::Fs::Path &fileName) :
+        _fileName(fileName),
+        _input(std::move(input))
     {
     }
 
@@ -36,39 +40,7 @@ public:
     // Inherited from IInputSource.
     virtual size_t readCharacters(Ag::utf32_ptr_t buffer, size_t bufferSize) override
     {
-        size_t bufferUsed = 0;
-
-        // Read characters until the buffer is full or the stream ended.
-        while (_input && (bufferUsed < bufferSize))
-        {
-            Ag::Utf::FromWideConverter converter;
-            char32_t result;
-            bool hasError = false;
-
-            while (bufferUsed < bufferSize)
-            {
-                // Get the next character.
-                wint_t next = fgetwc(_input.get());
-
-                if (next == WEOF)
-                {
-                    // Close the file to ensure no further characters are read.
-                    _input.reset();
-                    break;
-                }
-                else if (converter.tryConvert(static_cast<wchar_t>(next),
-                                                result, hasError))
-                {
-                    buffer[bufferUsed++] = result;
-                }
-                else if (hasError)
-                {
-                    converter.reset();
-                }
-            }
-        }
-
-        return bufferUsed;
+        return _input.read(buffer, bufferSize);
     }
 };
 
@@ -148,18 +120,29 @@ public:
 bool tryCreateFileInputSource(const Ag::Fs::Path &fileName, IInputSourcePtr &ptr,
                               Ag::string_ref_t error)
 {
-    FILE *stream = nullptr;
-    bool isOK = false;
+    Ag::IFileStreamUPtr fileStream;
 
-    Ag::String path = fileName.toString(Ag::Fs::PathUsage::Kernel);
-
-    if (tryOpenFile(path, "r", stream, error))
+    if (Ag::IFileStream::tryOpen(fileStream, fileName,
+                                 Ag::FileAccess::OpenExisting | Ag::FileAccess::Read,
+                                 error))
     {
-        ptr = std::make_unique<FileInputSource>(stream);
-        isOK = true;
+        Ag::IO::TextInputOptions options;
+        options.setBOMExpectation(Ag::IO::TextInputOptions::BOMMode::Optional);
+        options.setPreferredEncoding(Ag::IO::TextEncoding::UTF8);
+
+        // Ensure we don't ignore invalid character combinations.
+        options.setErrorAction(Ag::IO::TextInputOptions::ErrorMode::Throw);
+
+        // Create an object to read raw bytes from the file and convert
+        // them to Unicode characters.
+        Ag::IO::TextInputStream textStream(std::move(fileStream), options);
+
+        ptr = std::make_unique<FileInputSource>(std::move(textStream), fileName);
+
+        return true;
     }
 
-    return isOK;
+    return false;
 }
 
 //! @brief Creates an input source which dispenses the contents of a text string.
